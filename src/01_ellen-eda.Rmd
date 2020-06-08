@@ -9,6 +9,8 @@ library(lubridate)
 library(purrr)
 library(dplyr)
 library(naniar)
+
+theme_set(theme_minimal())
 ```
 
 
@@ -34,8 +36,6 @@ ems_data_no_dups <- ems_data %>%
   top_n(1, num_na) # grabs the duplicate row with the most reported values
 ```
 
-```{r}
-```
 
 
 ```{r}
@@ -154,5 +154,24 @@ ems_data_no_dups %>%
          scene_gps_latitude,
          agency_name) %>% 
   gg_miss_upset()
+```
+
+Look at number of NAs over dataset
+
+```{r, fig.width= 9, fig.height= 7}
+# As points
+ems_data %>% 
+  ggplot() +
+  geom_point(aes(x = 1:nrow(ems_data), y = rowSums(is.na(ems_data)))) + 
+  labs(y = "Number of NA's", x = "index") +
+  ylim(0, 78)
+
+# As density
+
+ems_data %>% 
+  ggplot() +
+  geom_hex(aes(x = 1:nrow(ems_data), y = rowSums(is.na(ems_data))), color = "grey1", size = 0.2) + 
+  labs(y = "Number of NA's", x = "index") +
+  ylim(0, 78)
 ```
 
