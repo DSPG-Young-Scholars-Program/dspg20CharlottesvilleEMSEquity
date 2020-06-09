@@ -221,7 +221,7 @@ ems_data_no_dups_sf <- ems_data_no_dups %>%
   filter(!is.na(scene_gps_latitude)) %>% 
   st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude"), crs = 4326)
 
-albemarle_county_tracts <- tracts(state = "Virginia", county = "Albemarle", cb = TRUE) %>% 
+albemarle_county_block_groups <- block_groups(state = "Virginia", county = c("Albemarle", "Charlottesville"), cb = TRUE) %>% 
   st_as_sf() %>% 
   st_transform(crs = 4326)
 ```
@@ -229,14 +229,31 @@ albemarle_county_tracts <- tracts(state = "Virginia", county = "Albemarle", cb =
 ```{r}
 ems_data_no_dups_sf %>% 
   ggplot() +
-  geom_sf(data = albemarle_county_tracts, fill = NA) +
+  geom_sf(data = albemarle_county_block_groups, fill = NA) +
   geom_sf(alpha = 0.2)
 ```
 
 ```{r}
-# Very slow to navigate leaflet
-# leaflet(ems_data_no_dups) %>% 
-#   addTiles() %>% 
+# # Very slow to navigate leaflet
+# leaflet(ems_data_no_dups) %>%
+#   addTiles() %>%
 #   addCircleMarkers(lng = ~scene_gps_longitude, lat = ~scene_gps_latitude, radius = 1)
+```
+
+## Checking With Maps
+
+```{r}
+
+albemarle_county_block_groups <- albemarle_county_block_groups %>% 
+  mutate(num_incidents = map_dbl(st_intersects(st_geometry(albemarle_county_block_groups), ems_data_no_dups_sf), length))
+
+
+map_dbl(st_geometry(albemarle_county_block_groups), ems_data_no_dups_sf, ~sum(st_contains(.)))
+```
+
+```{r}
+albemarle_county_block_groups %>% 
+  ggplot() +
+  geom_sf(aes(fill = num_incidents))
 ```
 
