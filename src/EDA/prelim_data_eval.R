@@ -43,6 +43,8 @@ data <- data[rowSums(!is.na(data)) != 0,]
 ## Overall snapshot
 gg_miss_var(data)
 
+miss_summary <- miss_var_summary(data)
+
 ## Right now the concern is not the medical stuff - it's reasonable that many of these would be missing if they don't apply
 ## to a particular call. Missingness amongst "meta" data would be more concerning (e.g. incident id number, etc.)
 metaData <- data[,.(eResponse.03, eResponse.14, incidentType, Date, eScene.11, eScene.11.1, eScene.15, dAgency.03)]
@@ -79,3 +81,28 @@ my_vis_miss(has_inc_num)
 ## Still some data present without an incident number, though - are these unmatched to to other observations?
 no_inc_num <- data[which(is.na(data$eResponse.03))]
 my_vis_miss(no_inc_num)
+
+#########
+
+## Subset to rows with incident numbers
+inc_present_data <- data[!is.na(eResponse.03)]
+
+my_vis_miss(inc_present_data)
+
+## Number of calls by year for a quality check
+inc_totals <- inc_present_data[, .N, by = year(Date)][order(year)]
+
+## After removing duplicates
+inc_totals_no_dup <- inc_present_data[!duplicated(inc_present_data)][, .N, by = year(Date)][order(year)]
+
+## All data (after removing fully missing rows)
+data_totals <- data[, .N, by = year(Date)][order(year)]
+
+## Summary of number of values per year before and after subsetting to incident numbers present
+num_obs_summary <- merge(inc_totals, inc_totals_no_dup, by="year")
+num_obs_summary <- merge(num_obs_summary, data_totals, by="year")
+
+colnames(num_obs_summary) <- c("year", "inc_num", "inc_num_no_dup", "all_data")
+
+num_obs_summary
+
