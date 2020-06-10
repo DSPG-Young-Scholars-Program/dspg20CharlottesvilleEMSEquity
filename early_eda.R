@@ -1,5 +1,6 @@
 library(data.table)
 library(dplyr)
+library(ggplot2)
 
 df =read.csv("./data/original/CFD_CARS_EMS_DATA_121616TO51320.csv", na.strings = c(" ",""))
 dt = as.data.table(df)
@@ -63,10 +64,21 @@ summary(tmp$`Incident.Dispatch.Notified.To.Unit.Arrived.On.Scene.In.Minutes`)
 
 #heavy right skew
 ggplot(tmp, aes(x=Incident.Dispatch.Notified.To.Unit.Arrived.On.Scene.In.Minutes)) +
-  geom_histogram(color="black", fill="white")
+  geom_histogram(color="black", fill="white")+
+  facet_grid(vars(Patient.Race.List..ePatient.14.))
 
 # if you compare to the number of trips by agency then about 1/3 of rescue team trips take longer than 10 min, while
 # about 1/8 of the fire department trips do
 uniqdat %>% filter(Incident.Dispatch.Notified.To.Unit.Arrived.On.Scene.In.Minutes >10) %>%
   count(agency = Agency.Name..dAgency.03., sort = T)
+
+plot_1 = ggplot(subset(tmp, Patient.Race.List..ePatient.14. %in% c("White", "Black or African American")),
+                aes(x=Incident.Dispatch.Notified.To.Unit.Arrived.On.Scene.In.Minutes)) +
+  geom_histogram(color="black", fill="white") +
+  facet_grid(. ~ Patient.Race.List..ePatient.14., scale = "free_y")
+b = uniqdat %>% filter(Patient.Race.List..ePatient.14.=="Black or African American")
+summary(b$`Incident.Dispatch.Notified.To.Unit.Arrived.On.Scene.In.Minutes`)
+w = uniqdat %>% filter(Patient.Race.List..ePatient.14.=="White")
+summary(w$`Incident.Dispatch.Notified.To.Unit.Arrived.On.Scene.In.Minutes`)
+
 
