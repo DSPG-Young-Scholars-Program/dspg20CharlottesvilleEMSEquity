@@ -20,16 +20,12 @@ census_api_key(Sys.getenv("CENSUS_API_KEY"))
 #
 #
 
-## Use a simple ACS table to get the border polylines of the county and city
-# alb_border <- get_acs(geography = "county", state = 51, county = 003, 
-#                       table = tables[3], year = 2018, survey = "acs5", cache_table = TRUE, 
-#                       output = "wide", geometry = TRUE) %>% select(geometry) %>% st_transform("+init=epsg:4326")
-
+## Use a simple ACS table to get the border polylines of the city
 cville_border <- get_acs(geography = "county", state = 51, county = 540, 
                          table = tables[3], year = 2018, survey = "acs5", cache_table = TRUE, 
                          output = "wide", geometry = TRUE) %>% 
   select(geometry) %>% 
-  st_transform("+init=epsg:4326")
+  st_transform(crs = 4326)
 
 ## Get race data by block group for Albemarle
 alb_race <- get_acs(geography = "block group", state = 51, county = 003, 
@@ -61,7 +57,7 @@ alb_race <- alb_race %>% transmute(
   pct_multi = B02001_008E / B02001_001E * 100,
   geometry = geometry
 ) %>% 
-  st_transform("+init=epsg:4326")
+  st_transform(crs = 4326)
 
 ## Compute race percentages for Charlottesville city
 cville_race <- cville_race %>% transmute(
@@ -83,7 +79,7 @@ cville_race <- cville_race %>% transmute(
   pct_multi = B02001_008E / B02001_001E * 100,
   geometry = geometry
 ) %>% 
-  st_transform("+init=epsg:4326")
+  st_transform(crs = 4326)
 
 ## Convenience function to map race characteristics
 map_race <- function(data, border_data, fill_opacity = 0.6, 
@@ -201,7 +197,7 @@ alb_pov <- get_acs(geography = "tract", state = 51, county = 003,
 ## Compute poverty rate and transform geographic datum
 alb_pov <- alb_pov %>% 
   mutate(pov_rate = B17020_002E / B17020_001E * 100) %>% 
-  st_transform("+init=epsg:4326")
+  st_transform(crs = 4326)
 
 ## Poverty rate for Charlottesville
 cville_pov <- get_acs(geography = "tract", state = 51, county = 540, 
@@ -211,7 +207,7 @@ cville_pov <- get_acs(geography = "tract", state = 51, county = 540,
 ## Compute poverty rate and transform geographic datum
 cville_pov <- cville_pov %>% 
   mutate(pov_rate = B17020_002E / B17020_001E * 100) %>% 
-  st_transform("+init=epsg:4326")
+  st_transform(crs = 4326)
 
 ## Data for county and city together
 comb_pov_data <- rbind(cville_pov, alb_pov)
@@ -268,7 +264,7 @@ alb_income <- get_acs(geography = "block group", state = 51, county = 003,
 ## Rename variable and transform geographic datum
 alb_income <- alb_income %>% 
   rename(med_income = B19013_001E) %>% 
-  st_transform("+init=epsg:4326")
+  st_transform(crs = 4326)
 
 ## Median household income for Charlottesville
 cville_income <- get_acs(geography = "block group", state = 51, county = 540, 
@@ -278,7 +274,7 @@ cville_income <- get_acs(geography = "block group", state = 51, county = 540,
 ## Rename variable and transform geographic datum
 cville_income <- cville_income %>% 
   rename(med_income = B19013_001E) %>% 
-  st_transform("+init=epsg:4326")
+  st_transform(crs = 4326)
 
 ## Convenience function for leaflet map
 map_income <- function(data, border_data, fill_opacity = 0.7, 
