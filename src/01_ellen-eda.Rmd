@@ -246,9 +246,6 @@ ems_data_no_dups_sf %>%
 
 albemarle_county_block_groups <- albemarle_county_block_groups %>% 
   mutate(num_incidents = map_dbl(st_intersects(st_geometry(albemarle_county_block_groups), ems_data_no_dups_sf), length))
-
-
-map_dbl(st_geometry(albemarle_county_block_groups), ems_data_no_dups_sf, ~sum(st_contains(.)))
 ```
 
 ```{r}
