@@ -82,11 +82,16 @@ my_vis_miss(has_inc_num)
 no_inc_num <- data[which(is.na(data$eResponse.03))]
 my_vis_miss(no_inc_num)
 
-#########
+#
+#
+# Yearly call totals -----------------------------------------------------------------------------------------
+#
+#
 
 ## Subset to rows with incident numbers
 inc_present_data <- data[!is.na(eResponse.03)]
 
+## Summary of missingness
 my_vis_miss(inc_present_data)
 
 ## Number of calls by year for a quality check
