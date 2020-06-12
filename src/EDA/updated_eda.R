@@ -35,10 +35,37 @@ ems[`Patient Race List (ePatient.14)`=="White", .N, by = `Agency Name (dAgency.0
   geom_bar(stat="identity")+
   ggtitle('Number of calls by white patients per agency')
 
-albermarle = ems %>% filter(`Agency Name (dAgency.03)`=="Charlottesville-Albemarle Rescue Squad") %>%
-  count(race = `Patient Race List (ePatient.14)`, sort =T)
-fire_dept = ems %>% filter(`Agency Name (dAgency.03)`=="Charlottesville Fire Department") %>%
+albermarle = ems %>% filter(`Agency Name (dAgency.03)` == "Charlottesville-Albemarle Rescue Squad") %>%
+  count(race = `Patient Race List (ePatient.14)`, sort = T)
+fire_dept = ems %>% filter(`Agency Name (dAgency.03) `== "Charlottesville Fire Department") %>%
   count(race = `Patient Race List (ePatient.14)`, sort =T)
 #ratio of white to black patients by agency
-cat('The albermarle[1]$n/albermarle[2]$n
-fire_dept[1]$n/fire_dept[2]$n
+alb_ratio = albermarle$n[1]/albermarle$n[2]
+fire_ratio = fire_dept$n[1]/fire_dept$n[2]
+cat('The Charlottesville-Albemarle Rescue Squad saw', alb_ratio, 'white people for every black person
+    while the Charlottesville Fire Department saw',  fire_ratio, 'white people for every black person')
+
+summary(ems$`Incident Dispatch Notified To Unit Arrived On Scene In Minutes`)
+
+ems%>% filter(`Incident Dispatch Notified To Unit Arrived On Scene In Minutes`<60)%>%
+ggplot(aes(x=`Incident Dispatch Notified To Unit Arrived On Scene In Minutes`)) +
+  geom_histogram(color="black", fill="white")
+
+# if you compare to the number of trips by agency then about 1/3 of rescue team trips take longer than 10 min, while
+# about 1/8 of the fire department trips do
+ems %>% filter(`Incident Dispatch Notified To Unit Arrived On Scene In Minutes` >10) %>%
+  count(agency = `Agency Name (dAgency.03)`, sort = T)
+
+plot_1 = ggplot(subset(ems, `Patient Race List (ePatient.14)` %in% c("White", "Black or African American") &
+                         `Incident Dispatch Notified To Unit Arrived On Scene In Minutes`<60),
+                aes(x=`Incident Dispatch Notified To Unit Arrived On Scene In Minutes`)) +
+  geom_histogram(color="black", fill="white") +
+  facet_grid(. ~ `Patient Race List (ePatient.14)`, scale = "free_y")
+plot_1
+
+b = ems %>% filter(`Patient Race List (ePatient.14)`=="Black or African American" &
+                     `Incident Dispatch Notified To Unit Arrived On Scene In Minutes`<60)
+summary(b$`Incident Dispatch Notified To Unit Arrived On Scene In Minutes`)
+w = ems %>% filter(`Patient Race List (ePatient.14)`=="White" &
+                     `Incident Dispatch Notified To Unit Arrived On Scene In Minutes`<60)
+summary(w$`Incident Dispatch Notified To Unit Arrived On Scene In Minutes`)
