@@ -4,21 +4,21 @@ library(readr)
 library(tidyverse)
 library(lubridate)
 library(tigris)
+library(readxl)
+
 
 ## SETUP
 # set working directory
 setwd("/home/scd3dz/git/dspg20CharlottesvilleEMSEquity")
 # read data
 # read in everything as strings
-ems <- read_csv("./data/original/CFD_CARS_EMS_DATA_121616TO51320.csv", col_types = strrep("c", 78))
-head(ems) # all NA
-tail(ems) # some values, read in successfully
+ems <- read_excel("./data/original/CFD_CARS_EMS_DATA_121616TO60920.xlsx", 1) # there's only 1 sheet
+
 
 ## WORK
 # list names of all variables
 names(ems)
 # structure of each variable
-str(ems) # everything read in as characters
 date_char <- ems$`Incident Date`
 date_char <- date[!is.na(date)] # remove na values from date vector
 
