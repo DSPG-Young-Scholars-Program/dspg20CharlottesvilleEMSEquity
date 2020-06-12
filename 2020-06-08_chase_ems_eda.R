@@ -5,6 +5,7 @@ library(tidyverse)
 library(lubridate)
 library(tigris)
 library(readxl)
+library(ggplot2)
 
 
 ## SETUP
@@ -18,6 +19,16 @@ ems <- read_excel("./data/original/CFD_CARS_EMS_DATA_121616TO60920.xlsx", 1) # t
 ## WORK
 # list names of all variables
 names(ems)
+sum(is.na(ems$`Scene GPS Latitude (eScene.11)`)) # 543 NA values
+sum(is.na(ems_loc$`Scene GPS Longitude (eScene.11)`)) # 543 NA values
+# remove NA lat and long values
+predicate <- !is.na(ems$`Scene GPS Latitude (eScene.11)`) & !is.na(ems$`Scene GPS Longitude (eScene.11)`)
+ems_loc <- ems %>% filter(predicate)
+
+ggplot(data = ems_loc, aes(x = `Scene GPS Latitude (eScene.11)`, y = `Scene GPS Longitude (eScene.11)`)) +
+  geom_point(alpha=0.1)
+
+
 # structure of each variable
 date_char <- ems$`Incident Date`
 date_char <- date[!is.na(date)] # remove na values from date vector
