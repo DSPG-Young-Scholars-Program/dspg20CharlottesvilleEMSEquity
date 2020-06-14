@@ -1,0 +1,256 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(lubridate)
+library(purrr)
+library(dplyr)
+library(naniar)
+library(sf)
+library(tigris)
+library(leaflet)
+
+theme_set(theme_minimal())
+```
+
+
+```{r}
+ems_data <- vroom::vroom(here::here("data/original/CFD_CARS_EMS_DATA_121616TO51320.csv"), col_types = paste0(rep("c", 78), collapse = ""))
+```
+
+Update the names to be more code friendly
+
+```{r}
+ems_data <- ems_data %>% 
+  rename_with(~ tolower(gsub(r"([\. ])", "_", .x))) %>% 
+  rename_with(~gsub(r"(\(.*)", r"()", .x)) %>%
+  rename_with(~gsub(r"(_$)", "", .x)) %>% 
+  mutate(incident_date = date(as.POSIXct(incident_date, tz = "GMT", format = "%m/%d/%Y %H:%M:%S"))) %>% 
+  mutate(scene_gps_latitude = as.numeric(scene_gps_latitude), scene_gps_longitude = as.numeric(scene_gps_longitude)) 
+
+ems_data$incident_date[which(ems_data$incident_date == ymd("2000-01-01"))] <- NA # remove weird date from data
+
+ems_data_no_dups <- ems_data %>% 
+  mutate(num_na = rowSums(is.na(ems_data))) %>% 
+  filter(!is.na(response_incident_number)) %>% 
+  group_by(response_incident_number) %>% 
+  top_n(1, num_na) %>%  # grabs the duplicate row with the most reported values 
+  ungroup()
+```
+
+
+
+```{r}
+min(ems_data$incident_date, na.rm = TRUE)
+max(ems_data$incident_date, na.rm = TRUE)
+
+```
+
+```{r}
+map_dbl(ems_data, ~sum(is.na(.))) / nrow(ems_data)
+```
+
+## Working with dates
+
+```{r}
+ems_data %>% 
+  ggplot() +
+  geom_histogram(aes(x = incident_date))
+```
+
+Lets find how many responses before 2016, and are they all just 2000
+
+```{r}
+sum(ems_data$incident_date < ymd("2016-01-01"), na.rm = TRUE)
+```
+
+There's one that's messing up the vis
+
+```{r}
+which(ems_data$incident_date == ymd("2000-01-01"))
+```
+```{r}
+slice(ems_data, 176944)
+```
+ 
+Looks like its a real case, but I can't imagine the date is right, so I'm setting it to `NA`
+
+```{r}
+ems_data$incident_date[which(ems_data$incident_date == ymd("2000-01-01"))] <- NA
+```
+
+```{r}
+ems_data %>% 
+  ggplot() +
+  geom_histogram(aes(x = incident_date), bins = 1269, boundary = ymd("2019-05-13")) +
+  theme_minimal()
+```
+
+Plot incidents per day with no duplicates
+
+```{r}
+ems_data_no_dups %>% 
+  ggplot() +
+  geom_histogram(aes(x = incident_date), bins = 1269, boundary = ymd("2019-05-13")) +
+  theme_minimal()
+```
+
+Explore weekly patterns in data:
+
+```{r}
+ems_data_no_dups %>% 
+  mutate(incident_wday = wday(incident_date, label = TRUE)) %>% 
+  ggplot(aes(x = incident_wday)) +
+  geom_bar() +
+  theme_minimal()
+```
+As might be expected, calls are at a minimum on Wednesdays, and increase dramatically on Saturday and Sunday. 
+
+
+Check for monthly trends
+
+```{r}
+ems_data_no_dups %>% 
+  mutate(incident_mday = mday(incident_date)) %>% 
+  ggplot(aes(x = incident_mday)) +
+  geom_bar() +
+  theme_minimal()
+```
+
+There are no monthly trends. 
+
+Check for yearly trends:
+
+```{r}
+ems_data_no_dups %>% 
+  select(incident_date) %>% 
+  filter(incident_date %within% interval(ymd("2017-01-01"), ymd("2019-12-31"))) %>% 
+  mutate(incident_yday = yday(incident_date)) %>% 
+  ggplot(aes(x = incident_yday)) +
+  geom_histogram(bins = 365) +
+  theme_minimal()
+```
+
+No really yearly trends either. 
+
+Find how many days are covered:
+
+```{r}
+max(ems_data$incident_date, na.rm = T) - min(ems_data$incident_date, na.rm = T)
+```
+ 
+Find the real first and last day
+```{r}
+min(ems_data$incident_date, na.rm = T)
+max(ems_data$incident_date, na.rm = T)
+```
+
+Find days with most incidents
+
+```{r}
+ems_data_no_dups %>% 
+  filter(!is.na(incident_date)) %>% 
+  group_by(incident_date) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+
+## Visualizing missing data
+
+```{r, fig.width=10, fig.height=8}
+ems_data %>% 
+  select(incident_type, 
+         incident_date, 
+         response_incident_number,
+         response_ems_unit_call_sign,
+         scene_gps_latitude,
+         agency_name) %>% 
+  gg_miss_upset()
+
+ems_data %>% 
+  select(incident_type, 
+         incident_date, 
+         response_incident_number,
+         response_ems_unit_call_sign,
+         agency_name) %>% 
+  gg_miss_upset()
+```
+
+Based on this, I'm going to use response_incident_number to find duplicates
+
+
+Check the plot for no duplicates
+```{r}
+ems_data_no_dups %>% 
+  select(incident_type, 
+         incident_date, 
+         response_incident_number,
+         response_ems_unit_call_sign,
+         scene_gps_latitude,
+         agency_name) %>% 
+  gg_miss_upset()
+```
+
+Look at number of NAs over dataset
+
+```{r, fig.width= 9, fig.height= 7}
+# As points
+ems_data %>% 
+  ggplot() +
+  geom_point(aes(x = 1:nrow(ems_data), y = rowSums(is.na(ems_data))), alpha = 0.3) + 
+  labs(y = "Number of NA's", x = "index") +
+  ylim(0, 78)
+
+# As density
+
+ems_data %>% 
+  ggplot() +
+  geom_hex(aes(x = 1:nrow(ems_data), y = rowSums(is.na(ems_data))), color = "grey1", size = 0.2) + 
+  labs(y = "Number of NA's", x = "index") +
+  ylim(0, 78)
+```
+
+## Quick maps
+
+```{r}
+ems_data_no_dups_sf <- ems_data_no_dups %>% 
+  filter(!is.na(scene_gps_latitude)) %>% 
+  st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude"), crs = 4326)
+
+albemarle_county_block_groups <- block_groups(state = "Virginia", county = c("Albemarle", "Charlottesville"), cb = TRUE) %>% 
+  st_as_sf() %>% 
+  st_transform(crs = 4326)
+```
+
+```{r}
+ems_data_no_dups_sf %>% 
+  ggplot() +
+  geom_sf(data = albemarle_county_block_groups, fill = NA) +
+  geom_sf(alpha = 0.2)
+```
+
+```{r}
+# # Very slow to navigate leaflet
+# leaflet(ems_data_no_dups) %>%
+#   addTiles() %>%
+#   addCircleMarkers(lng = ~scene_gps_longitude, lat = ~scene_gps_latitude, radius = 1)
+```
+
+## Checking With Maps
+
+```{r}
+
+albemarle_county_block_groups <- albemarle_county_block_groups %>% 
+  mutate(num_incidents = map_dbl(st_intersects(st_geometry(albemarle_county_block_groups), ems_data_no_dups_sf), length))
+```
+
+```{r}
+albemarle_county_block_groups %>% 
+  ggplot() +
+  geom_sf(aes(fill = num_incidents))
+```
+
