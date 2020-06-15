@@ -7,6 +7,7 @@ ems <- read_excel("./dspg20CharlottesvilleEMSEquity/data/original/CFD_CARS_EMS_D
 str(ems)
 ems = as.data.table(ems)
 
+#top n many incidents reported
 incidents = ems %>% count(incident_type = `Incident Complaint Reported By Dispatch (eDispatch.01)`, sort =T)
 top_incidents = 7
 incidents$incident_type = factor(incidents$incident_type)
@@ -15,16 +16,17 @@ others = factor(rep("Other", times =nrow(ems)-length(x)))
 f = factor(c(levels(x)[x], levels(others)[others]))
 pie(table(f), main = 'Pie Chart of Incidents')
 
-
+#distribution of ages, primarily around 60 and 20, one person is 120 years old (has to be a misentry)
 summary(ems$`Patient Age (ePatient.15)`)
 boxplot(ems$`Patient Age (ePatient.15)`, xlab= 'Patient Age', main ='Histogram of Patient Age')
 hist(ems$`Patient Age (ePatient.15)`,xlab='Patient Age', main = 'Histogram of Patient Age')
 
-# would be better to have a facet grid or something
+#Rescue squad represents 67% of the entries
 agency = ems %>% count(agency = `Agency Name (dAgency.03)`, sort =T)
 prop.table(table(ems$`Agency Name (dAgency.03)`))
-ggplot(agency, aes(x=agency,y=n))+geom_bar(stat="identity")+ggtitle('Number of calls per agency')
+ggplot(ems, aes(x=`Agency Name (dAgency.03)`))+geom_bar(stat="identity")+ggtitle('Number of calls per agency')
 
+# would be better to have a facet grid or something
 ems[`Patient Race List (ePatient.14)`=="Black or African American", .N, by = `Agency Name (dAgency.03)`] %>%
   ggplot(aes(x=`Agency Name (dAgency.03)`,y=N))+
   geom_bar(stat="identity")+
@@ -69,3 +71,32 @@ summary(b$`Incident Dispatch Notified To Unit Arrived On Scene In Minutes`)
 w = ems %>% filter(`Patient Race List (ePatient.14)`=="White" &
                      `Incident Dispatch Notified To Unit Arrived On Scene In Minutes`<60)
 summary(w$`Incident Dispatch Notified To Unit Arrived On Scene In Minutes`)
+
+
+ems[, .N, by= `Incident Date`][order(N,decreasing=T)] %>%
+  ggplot(aes(`Incident Date`, N))+
+  geom_line(lwd= .2)
+
+ems[`Patient Race List (ePatient.14)`=="Black or African American",.N, by= `Incident Date`]%>%
+  ggplot(aes(`Incident Date`, N))+
+  geom_line(lwd= .2)
+
+ems[`Patient Race List (ePatient.14)`=="White",.N, by= `Incident Date`]%>%
+  ggplot(aes(`Incident Date`, N))+
+  geom_line(lwd= .2)
+
+sd(ems[`Patient Race List (ePatient.14)`=="White",.N, by= `Incident Date`]$N)
+sd(ems[`Patient Race List (ePatient.14)`=="Black or African American",.N, by= `Incident Date`]$N)
+
+ems %>%
+  filter(`Patient Race List (ePatient.14)` %chin% c("Black or African American","White","Asian",
+                                                    "Hispanic or Latino", "American Indian or Alaska Native"))%>%
+  count(date = `Incident Date`, race =`Patient Race List (ePatient.14)`)%>%
+  ggplot(aes(date, n,  color = race, group = race))+
+  geom_line(lwd= .2)
+
+ems %>%
+  filter(`Patient Race List (ePatient.14)` %chin% c("Black or African American","White"))%>%
+  count(date = `Incident Date`, race =`Patient Race List (ePatient.14)`)%>%
+  ggplot(aes(date, n,  color = race, group = race))+
+  geom_line(lwd= .2)
