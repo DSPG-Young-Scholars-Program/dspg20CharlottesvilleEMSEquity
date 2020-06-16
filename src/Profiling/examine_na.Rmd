@@ -48,3 +48,77 @@ ems_full %>%
   gg_miss_upset()
 ```
 
+
+Do the number of NAs vary with location in the table?
+
+```{r, fig.height= 8}
+# note these are printed out of order
+map(0:5, function(i) {
+  ems_full %>% 
+    select(incident_complaint_reported_by_dispatch,
+           response_incident_number,
+           response_ems_unit_call_sign,
+           incident_type,
+           incident_date,
+           scene_gps_latitude,
+           scene_gps_longitude,
+           agency_name) %>% 
+    slice((1 + 20000*i):min((20000*(i + 1)), nrow(ems_full))) %>% 
+    vis_miss() +
+    labs(title = paste((i*20000 + 1), min((20000*(i + 1)), nrow(ems_full)), sep = ":"))
+})
+```
+
+Looks like albemarle has a lot more NAs, possibly due to the shifted values on some rows. 
+
+Now lets look at number of NAs per row over index. 
+
+```{r}
+ems_full %>% 
+  mutate(total_na = rowSums(is.na(ems_full))) %>%
+  ggplot() + 
+  geom_point(aes(x = 1:nrow(ems_full), y = total_na), alpha = 0.3) + 
+  labs(y = "Number of NA's", x = "index") +
+  ylim(0, 90) +
+  geom_vline(xintercept = 60918, color = "red") +
+  theme_minimal()
+
+# As density
+
+ems_full %>% 
+  mutate(total_na = rowSums(is.na(ems_full))) %>%
+  ggplot() + 
+  geom_hex(aes(x = 1:nrow(ems_full), y = total_na), alpha = 1) + 
+  labs(y = "Number of NA's", x = "index") +
+  ylim(0, 90) +
+  geom_vline(xintercept = 60918, color = "red") +
+  theme_minimal()
+```
+
+Let's look at the density of NAs over time. 
+
+```{r}
+ems_full %>% 
+  mutate(total_na = rowSums(is.na(ems_full))) %>%
+  ggplot() + 
+  geom_point(aes(x = incident_date, y = total_na), alpha = 0.3) + 
+  labs(y = "Number of NA's", x = "index") +
+  ylim(0, 90) +
+  geom_vline(xintercept = 60918, color = "red") +
+  theme_minimal() +
+  facet_wrap(~source)
+
+# As density
+
+ems_full %>% 
+  mutate(total_na = rowSums(is.na(ems_full))) %>%
+  ggplot() + 
+  geom_hex(aes(x = incident_date, y = total_na), alpha = 1) + 
+  labs(y = "Number of NA's", x = "index") +
+  ylim(0, 90) +
+  geom_vline(xintercept = 60918, color = "red") +
+  theme_minimal() +
+  facet_wrap(~source)
+```
+
+To me this says most of the weird rows in ems_full also don't have a real date (expected)
