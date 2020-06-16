@@ -14,30 +14,30 @@ charlottesville <- readxl::read_xlsx(here("data/original/CFD_CARS_EMS_DATA_12161
 
 # can we just col_bind these dataframes?
 
-ncol(albemarle)
-ncol(charlottesville)
+# ncol(albemarle)
+# ncol(charlottesville)
 
 # there are the same number of rows
 
 # do they match names?
-which(names(albemarle) != names(charlottesville))
+# which(names(albemarle) != names(charlottesville))
 
 
-names(albemarle)[82]
-names(charlottesville)[82]
+# names(albemarle)[82]
+# names(charlottesville)[82]
 
 # these variables mean the same thing, so I'll just rename the albemarle one
 albemarle <- albemarle %>%
   rename(total_unit_response_time = incident_unit_notified_by_dispatch_to_unit_arrived_on_scene_in_minutes)
 
 
-which(names(albemarle) != names(charlottesville))
+# which(names(albemarle) != names(charlottesville))
 
 # looks like we caught all the name mismatches
 
 
 
-sum(map_chr(albemarle, class) != map_chr(charlottesville, ~(class(.x)[1]))) # extract 1st class of dates
+# sum(map_chr(albemarle, class) != map_chr(charlottesville, ~(class(.x)[1]))) # extract 1st class of dates
 # 36 class mismatches is a lot!
 # looks like albemarle is all characters, charlottesville tried to guess a lot.
 # due to the data in the wrong columns in albemarle, I'm going to set charlottesville to all characters
@@ -45,5 +45,5 @@ sum(map_chr(albemarle, class) != map_chr(charlottesville, ~(class(.x)[1]))) # ex
 ems_full <- bind_rows(albemarle, charlottesville)
 
 # check it worked:
-nrow(ems_full) == nrow(albemarle) + nrow(charlottesville)
+# nrow(ems_full) == nrow(albemarle) + nrow(charlottesville)
 
