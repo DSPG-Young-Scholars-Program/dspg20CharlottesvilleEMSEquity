@@ -1,0 +1,50 @@
+---
+title: "Examining NAs"
+output: html_document
+---
+
+```{r}
+library(naniar)
+library(ggplot2)
+
+source(here::here("src/Profiling/joining_albemarle_charlottesville.R"))
+```
+
+
+```{r}
+miss_var_summary(ems_full)
+```
+
+Get a list of variables that could reasonably exist on every call:
+
+```{r}
+head(ems_full, 100)
+names(ems_full)
+
+# non patient vars
+ems_full %>% 
+  select(incident_complaint_reported_by_dispatch, 
+         response_incident_number,
+         response_ems_unit_call_sign,
+         incident_type,
+         incident_date,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         agency_name) %>% 
+  gg_miss_var()
+```
+
+```{r}
+# non patient vars
+ems_full %>% 
+  select(incident_complaint_reported_by_dispatch,
+         response_incident_number,
+         response_ems_unit_call_sign,
+         incident_type,
+         incident_date,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         agency_name) %>%  
+  gg_miss_upset()
+```
+
