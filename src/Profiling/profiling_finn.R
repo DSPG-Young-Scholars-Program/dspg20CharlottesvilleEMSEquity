@@ -2,7 +2,7 @@
 library(data.table)
 library(naniar)
 library(visdat)
-#library(stringr)
+library(stringr)
 library(dplyr)
 library(here)
 library(lubridate)
@@ -16,12 +16,12 @@ cville_data <- readxl::read_xlsx(here("data", "original", "CFD_CARS_EMS_DATA_121
 alb_data <- alb_data %>%
   rename_with(~tolower(gsub(r"(\.\..*)", "", .x))) %>% # remove code after variable names
   rename_with(~gsub(r"(\.)", "_", .x)) #%>% # change periods to underscores
-  #as.data.table()
-  
+#as.data.table()
+
 cville_data <- cville_data %>%
   rename_with(~tolower(gsub(r"( \(.*)", "", .x))) %>% # remove code after variable names
   rename_with(~gsub(" ", "_", .x)) #%>% # change spaces to underscores
-  #as.data.table()
+#as.data.table()
 
 #
 #
@@ -29,39 +29,7 @@ cville_data <- cville_data %>%
 #
 #
 
-## Columns to check: 
-## incident_date, cardiac_arrest_date_time, cardiac_arrest_initial_cpr_date_time, cardiac_arrest_rosc_date_time, incident_psap_call_date_time
-
-## Duration columns
-## incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes, incident_unit_notified_by_dispatch_to_unit_arrived_on_scene_in_minutes
-
-## 2029 incident dates are fail to parse - only a few hundred are NA though.
-parse_fails <- which(is.na(ymd(as.character(alb_data$incident_date), tz="UTC")))
-
-## They appear to be misrecorded data?
-as.character(alb_data$incident_date)[parse_fails]
-
-## The entire rows for these observations are weird. I wonder if it is a data reading issue/something to do with encoding?
-## It looks like these rows are just shifted to the right or left. As if there was a missing comma on the end of the line or something.
-error_rows <- alb_data[parse_fails,]
-
-## Error rows either completely populated with nonsense or filled with nearly all NAs
-# vis_miss(error_rows)
-
-## Quick check to see if these are consecutive entries.
-values <- vector()
-
-for (i in seq_along(parse_fails)) {
-  val <- parse_fails[i+1] - parse_fails[i]
-  values <- append(values, val)
-}
-
-values ## Looks like there is a long sequence of errors, but that's not the only thing that's going on.
-
-
-# ------------------------------------------------------------------------------------------------------------------------------
-
-## All date time columns
+## All datetime columns
 cville_datetimes <- cville_data %>% select(incident_date, 
                                            incident_psap_call_date_time, 
                                            cardiac_arrest_date_time, 
@@ -97,46 +65,72 @@ compare_dates <- function(data, cols, indices = FALSE) {
 }
 
 ## Datetime columns for comparison
+## Note: "destination_cardiac_arrest_team_activation_date_time" also a time column but only has missing values
 comp_cols <- c("incident_date",
                "incident_psap_call_date_time",
                "cardiac_arrest_date_time",
-               "cardiac_arrest_initial_cpr_date_time",
-               "cardiac_arrest_rosc_date_time")
+               "cardiac_arrest_initial_cpr_date_time", ## Empty column
+               "cardiac_arrest_rosc_date_time") ## Empty column
 
 ## ID inconsistent dates
 date_errs <- compare_dates(cville_datetimes, comp_cols)
 date_errs
 
+# ------------------------------------------------------------------------------------------------------------------------------
 
+## Checking time logic (as opposed to date logic)
+test <- cville_datetimes %>% 
+  filter(!is.na(cardiac_arrest_date_time)) %>% 
+  select("incident_psap_call_date_time",
+         "cardiac_arrest_date_time") %>%
+  mutate(time_diff = difftime(cardiac_arrest_date_time, incident_psap_call_date_time))
 
+# 759 cases (58% of non-null cases) have a cardiac arrest before the incident is reported. How is the cardiac arrest time being recorded?
+length(which(test$time_diff < 0))
 
+# ------------------------------------------------------------------------------------------------------------------------------
 
+## Time duration variable checks ##
 
-## Next confirm that times make sense - not just dates
+## This suggests there are only 3 cases where total unit response is greater than the more restrictive dispatch_notified variable
+## Either I'm misunderstanding the variables or something isn't right in the data dictinoary, because this doesn't make logical sense.
+cville_data[which(cville_data$incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes < cville_data$total_unit_response_time),]
 
-## Then figure out what the hell is going on with county data
+#
+#
+# County data - data recording errors? --------------------------------------------------- 
+#
+#
 
+## 2029 incident dates are fail to parse - only a few hundred are NA though.
+parse_fails <- which(is.na(ymd(as.character(alb_data$incident_date), tz="UTC")))
 
-## 21 cases where cardiac arrest happened on different date than the call was made?
-cville_datetimes %>% 
-  filter(as.Date(incident_date) != as.Date(cardiac_arrest_date_time))
+## They appear to be misrecorded data?
+as.character(alb_data$incident_date)[parse_fails]
 
+## The entire rows for these observations are weird. I wonder if it is a data reading issue/something to do with encoding?
+## It looks like these rows are just shifted to the right or left. As if there was a missing comma on the end of the line or something.
+error_rows <- alb_data[parse_fails,]
 
+## Error rows either completely populated with nonsense or filled with nearly all NAs
+# vis_miss(error_rows)
 
-#-----------------
+## Quick check to see if these are consecutive entries.
+values <- vector()
 
-## County data - won't work until the file errors are fixed...
-alb_datetimes <- alb_data %>% select(incident_date, 
-                                           incident_psap_call_date_time, 
-                                           cardiac_arrest_date_time, 
-                                           cardiac_arrest_initial_cpr_date_time, 
-                                           cardiac_arrest_rosc_date_time)
+for (i in seq_along(parse_fails)) {
+  val <- parse_fails[i+1] - parse_fails[i]
+  values <- append(values, val)
+}
 
-## Confirm all datetime columns have same intial date as overall incident date
-which(as.Date(alb_datetimes$incident_date) != as.Date(alb_datetimes$incident_psap_call_date_time))
-which(as.Date(alb_datetimes$incident_date) != as.Date(alb_datetimes$cardiac_arrest_date_time))
-which(as.Date(alb_datetimes$incident_date) != as.Date(alb_datetimes$cardiac_arrest_initial_cpr_date_time))
-which(as.Date(alb_datetimes$incident_date) != as.Date(alb_datetimes$cardiac_arrest_rosc_date_time))
+values ## Looks like there is a long sequence of errors, but that's not the only thing that's going on.
 
+## Comparing dates - won't wory until data recording errors are fixed
+# alb_datetimes <- alb_data %>% select(incident_date, 
+#                                      incident_psap_call_date_time, 
+#                                      cardiac_arrest_date_time, 
+#                                      cardiac_arrest_initial_cpr_date_time, 
+#                                      cardiac_arrest_rosc_date_time)
 
+#compare_dates(alb_datetimes, comp_cols)
 
