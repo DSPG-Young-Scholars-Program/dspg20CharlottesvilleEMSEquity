@@ -30,7 +30,8 @@ cville_data <- cville_data %>%
 #
 
 ## All datetime columns
-cville_datetimes <- cville_data %>% select(incident_date, 
+cville_datetimes <- cville_data %>% select(response_incident_number,
+                                           incident_date, 
                                            incident_psap_call_date_time, 
                                            cardiac_arrest_date_time, 
                                            cardiac_arrest_initial_cpr_date_time, 
@@ -73,7 +74,7 @@ comp_cols <- c("incident_date",
                "cardiac_arrest_rosc_date_time") ## Empty column
 
 ## ID inconsistent dates
-date_errs <- compare_dates(cville_datetimes, comp_cols)
+date_errs <- compare_dates(cville_data, comp_cols)
 date_errs
 
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -133,4 +134,33 @@ values ## Looks like there is a long sequence of errors, but that's not the only
 #                                      cardiac_arrest_rosc_date_time)
 
 #compare_dates(alb_datetimes, comp_cols)
+
+#
+#
+# Duplication --------------------------------------------------- 
+#
+#
+
+## 27 full duplicate rows
+length(which(duplicated(cville_data)))
+
+## 20392 duplicated incident numbers
+length(which(duplicated(cville_data$response_incident_number)))
+#cville_data$response_incident_number[which(duplicated(cville_data$response_incident_number))]
+
+## 29517 unique incident numbers
+length(unique(cville_data$response_incident_number))
+
+## Function to tally number of duplicate entries by column
+my_dup_fun <- function(x) {
+  return(sum(as.numeric(duplicated(x))))
+}
+
+## Compute duplicate entries in each column for each incident number
+setDT(cville_data)
+dups <- cville_data[, lapply(.SD, my_dup_fun), by = response_incident_number]
+
+## Total number of duplicate values for each duplicate incident number
+#apply(dups[,-1], 1, sum)
+
 
