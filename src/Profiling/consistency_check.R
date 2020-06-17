@@ -1,5 +1,8 @@
-library(vroom)
-library(here)
+#todo
+#check date of incident_psap_call_date_time vs. incident date
+#check if cardiac_arrest_date_time is after incident date time and after "cardiac_arrest_initial_cpr_date_time"+
+#"cardiac_arrest_rosc_date_time" + destination_cardiac_arrest_team_activation_date_time
+
 library(dplyr)
 
 albemarle <- read.csv2("./data/original/Data4UVA.csv", fileEncoding="UTF-16LE", sep = ",", na.strings = "")
@@ -42,4 +45,7 @@ View(alb[a_inds,])
 # not the case for chr dataset
 c_inds = find_gps_mismatch(chr)
 View(chr[c_inds,])
+
+
+
 
