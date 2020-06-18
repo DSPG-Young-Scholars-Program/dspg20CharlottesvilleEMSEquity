@@ -1,8 +1,8 @@
 library(here)
 library(dplyr)
 
-albemarle <- read.csv2(here("data/original/Data4UVA.csv"), fileEncoding="UTF-16LE", sep = ",", na.strings = "")
-charlottesville <- readxl::read_xlsx(here("data/original/CFD_CARS_EMS_DATA_121616TO60920.xlsx"), 1)
+albemarle <- read.csv2(here("data","original","Data4UVA.csv"), fileEncoding="UTF-16LE", sep = ",", na.strings = "", colClasses = "character")
+charlottesville <- readxl::read_xlsx(here("data","original","CFD_CARS_EMS_DATA_121616TO60920.xlsx"), 1)
 
 
 albemarle_renamed <- albemarle %>%

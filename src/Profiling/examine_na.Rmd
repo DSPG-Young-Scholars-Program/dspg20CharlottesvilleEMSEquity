@@ -3,11 +3,11 @@ title: "Examining NAs"
 output: html_document
 ---
 
-```{r}
+```{r, warning = FALSE}
 library(naniar)
 library(ggplot2)
 
-source(here::here("src/Profiling/joining_albemarle_charlottesville.R"))
+source(here::here("src","Profiling","joining_albemarle_charlottesville.R"))
 ```
 
 ## NA Counts
