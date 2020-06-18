@@ -141,29 +141,66 @@ values ## Looks like there is a long sequence of errors, but that's not the only
 #
 #
 
-## 27 full duplicate rows
+## Remove 27 completely duplicated rows
 length(which(duplicated(cville_data)))
 
-## 20392 duplicated incident numbers
+## 20392 duplicated incident numbers - 20365 after removing complete duplicates
 length(which(duplicated(cville_data$response_incident_number)))
-#cville_data$response_incident_number[which(duplicated(cville_data$response_incident_number))]
+#dupl_rows <- cville_data[which(duplicated(cville_data$response_incident_number)),]
+dupl_numbers <- cville_data$response_incident_number[which(duplicated(cville_data$response_incident_number))]
 
 ## 29517 unique incident numbers
 length(unique(cville_data$response_incident_number))
 
-## Function to tally number of duplicate entries by column
+## function to create binary data frame to identify duplicate values
 my_dup_fun <- function(x) {
-  return(sum(as.numeric(duplicated(x))))
+  return(as.numeric(duplicated(x)))
 }
 
-## Compute duplicate entries in each column for each incident number
+# my_dup_fun <- function(x) {
+#   return(sum(as.numeric(duplicated(x))))
+# }
+
+## binary indicators for whether a cell is a duplicate (for a given incident number)
 setDT(cville_data)
 dupl_by_incident <- cville_data[, lapply(.SD, my_dup_fun), by = response_incident_number]
 
-## Total number of duplicate values for each duplicate incident number
-#apply(dups[,-1], 1, sum)
+#dupl_by_incident[response_incident_number ==  "2017-00001444"]
 
-num_dupl <- cville_data[, .N, by = response_incident_number][, c("response_incident_number", "N")]
+
+
+
+
+
+
+
+
+
+## -------------------------------------------------------------------------------------------------------------------------------------
+
+## SANDBOX 
+
+
+## Heatmap
+# test <- dupl_by_incident[duplicated(dupl_by_incident$response_incident_number),]
+# 
+# test <- as.data.frame(dupl_by_incident) %>%
+#   filter(response_incident_number %in% unique(dupl_numbers))
+# 
+# m <- as.matrix(test[,-1])
+# row.names(m) <- test[,1]
+# 
+# heatmap(m[1:4000,], scale="none", Colv = NA, margin = c(20, 10), keep.dendro = FALSE)
+
+## Function to tally number of duplicate entries by column
+# my_dup_fun <- function(x) {
+#   return(sum(as.numeric(duplicated(x))))
+# }
+# 
+# dupl_by_incident <- cville_data[, lapply(.SD, my_dup_fun), by = response_incident_number]
+
+
+num_dupl <- cville_data[, .N, by = response_incident_number][, c("response_incident_number", "N")][N > 1]
 
 ## Summary of duplciates - will help with identifying which columns are causing near duplication
 ## N = number of times incident number is duplicated
@@ -176,5 +213,9 @@ dupl_summary2 <- as.data.frame(dupl_summary) %>%
   select(-N) %>%
   merge(num_dupl)
 
+## Count times each variable is duplicated within duplicated incident numbers
+dupl_summary3 <- data.frame("count" = apply(sapply(dupl_summary2, function(x) (as.numeric(x != 1))), 2, sum))
+setDT(dupl_summary3, keep.rownames = TRUE)
 
-                   
+
+
