@@ -16,12 +16,11 @@ source(here::here("src","Profiling","joining_albemarle_charlottesville.R"))
 miss_var_summary(ems_full)
 ```
 
+### Core Administrative Variables
+
 Get a list of variables that could reasonably exist on every call:
 
 ```{r}
-head(ems_full, 100)
-names(ems_full)
-
 # non patient vars
 ems_full %>% 
   select(incident_complaint_reported_by_dispatch, 
@@ -35,7 +34,7 @@ ems_full %>%
   gg_miss_var()
 ```
 
-## NA Co-ocurrence
+#### NA Co-ocurrence
 
 ```{r}
 # non patient vars
@@ -80,6 +79,86 @@ charlottesville %>%
 ```
 
 For albemarle, incident date is most specific ie non dates will turn into NAs, so I bet rows with that messed up are rows with weird data specification. Compare to albemarle, were date is missing for 0 observations. 
+
+
+### Variables Relevant to Analysis
+
+Get a list of variables that would be useful to have for our analysis:
+
+```{r}
+# non patient vars
+ems_full %>% 
+  select(patient_race_list, 
+         patient_age,
+         patient_age_range_in_years,
+         patient_gender,
+         situation_provider_primary_impression_code_and_description,
+         total_unit_response_time,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         incident_psap_call_date_time,
+         patient_initial_pulse_oximetry,
+         patient_last_pulse_oximetry) %>% 
+  gg_miss_var()
+```
+
+#### NA Co-ocurrence
+
+```{r}
+# non patient vars
+ems_full %>% 
+  select(patient_race_list, 
+         patient_age,
+         patient_age_range_in_years,
+         patient_gender,
+         situation_provider_primary_impression_code_and_description,
+         total_unit_response_time,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         incident_psap_call_date_time,
+         patient_initial_pulse_oximetry,
+         patient_last_pulse_oximetry) %>% 
+  rename(primary_impression = situation_provider_primary_impression_code_and_description) %>%
+  gg_miss_upset()
+```
+
+Show for just albemarle and charlottesville respectively
+
+```{r}
+# non patient vars
+albemarle %>% 
+  select(patient_race_list, 
+         patient_age,
+         patient_age_range_in_years,
+         patient_gender,
+         situation_provider_primary_impression_code_and_description,
+         total_unit_response_time,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         incident_psap_call_date_time,
+         patient_initial_pulse_oximetry,
+         patient_last_pulse_oximetry) %>% 
+  rename(primary_impression = situation_provider_primary_impression_code_and_description) %>%
+  gg_miss_upset()
+
+# non patient vars
+charlottesville %>% 
+  select(patient_race_list, 
+         patient_age,
+         patient_age_range_in_years,
+         patient_gender,
+         situation_provider_primary_impression_code_and_description,
+         total_unit_response_time,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         incident_psap_call_date_time,
+         patient_initial_pulse_oximetry,
+         patient_last_pulse_oximetry) %>% 
+  rename(primary_impression = situation_provider_primary_impression_code_and_description) %>%
+  gg_miss_upset()
+```
+
+Most often if we have data on the patient, what we're missing is pulse oximetry data. However, this own occurs in ~4000 cases for charlottesville. Also of note is that we sometimes have demographic data, but no primary impression. Albemarle also tends to have more missing pulse oximetry data. 
 
 ## NA Distribution
 
