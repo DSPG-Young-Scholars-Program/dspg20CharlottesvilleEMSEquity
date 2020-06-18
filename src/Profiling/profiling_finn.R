@@ -107,7 +107,7 @@ cville_data[which(cville_data$incident_dispatch_notified_to_unit_arrived_on_scen
 parse_fails <- which(is.na(ymd(as.character(alb_data$incident_date), tz="UTC")))
 
 ## They appear to be misrecorded data?
-as.character(alb_data$incident_date)[parse_fails]
+# as.character(alb_data$incident_date)[parse_fails]
 
 ## The entire rows for these observations are weird. I wonder if it is a data reading issue/something to do with encoding?
 ## It looks like these rows are just shifted to the right or left. As if there was a missing comma on the end of the line or something.
@@ -158,9 +158,23 @@ my_dup_fun <- function(x) {
 
 ## Compute duplicate entries in each column for each incident number
 setDT(cville_data)
-dups <- cville_data[, lapply(.SD, my_dup_fun), by = response_incident_number]
+dupl_by_incident <- cville_data[, lapply(.SD, my_dup_fun), by = response_incident_number]
 
 ## Total number of duplicate values for each duplicate incident number
 #apply(dups[,-1], 1, sum)
 
+num_dupl <- cville_data[, .N, by = response_incident_number][, c("response_incident_number", "N")]
 
+## Summary of duplciates - will help with identifying which columns are causing near duplication
+## N = number of times incident number is duplicated
+## columns = number of times value is duplicated for that column within that incident number
+dupl_summary <- merge(dupl_by_incident, num_dupl)
+
+## Number of unique entries for each variable grouped by incident number
+dupl_summary2 <- as.data.frame(dupl_summary) %>% 
+  mutate_if(is.numeric, function(x) (dupl_summary$N - x)) %>%
+  select(-N) %>%
+  merge(num_dupl)
+
+
+                   
