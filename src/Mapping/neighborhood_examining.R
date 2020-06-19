@@ -8,12 +8,12 @@ library(tidyr)
 library(dplyr)
 library(RColorBrewer)
 
-census_api_key(census_key)
+# census_api_key(census_key)
 
 # download.file("http://widget.charlottesville.org/gis/zip_download/planning_area.zip", here("planning_area.zip"))
 # unzip(here("planning_area.zip"), exdir = here("planning_area"))
 
-planning_area <- st_read(here("planning_area/planning_area_06_04_2020.shp"))
+planning_area <- st_read(here("downloaded_data/planning_area/planning_area_06_04_2020.shp"))
 
 nrow(planning_area)
 
@@ -34,11 +34,11 @@ v18 <- load_variables(2018, "acs5", cache = TRUE)
 
 
 acs_data <- get_acs("block group",
-                      variables = c(total_pop = "B02001_001", black_alone = "B02001_003", white_alone = "B02001_002",
-                                    median_hhi = "B19013_001"),
-                      state = "VA",
-                      county = "Charlottesville city",
-                      year = 2018)
+                    variables = c(total_pop = "B02001_001", black_alone = "B02001_003", white_alone = "B02001_002",
+                                  median_hhi = "B19013_001"),
+                    state = "VA",
+                    county = "Charlottesville city",
+                    year = 2018)
 
 acs_data_sp <- acs_data %>%
   select(-moe) %>% # only plotting estimates
@@ -57,10 +57,10 @@ planning_area %>%
   addPolygons(data = acs_data_sp,
               fillColor = ~pal(median_hhi),
               fillOpacity = 0.8,
-              color = "#666",
+              color = "blue",
               weight = 1,
-              opacity = 0) %>%
-  addPolygons(color = "#555",
+              opacity = 1) %>%
+  addPolygons(color = "#111",
               opacity = 1,
               weight = 1.2,
               fillOpacity = 0 ,
