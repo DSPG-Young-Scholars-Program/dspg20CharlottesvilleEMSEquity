@@ -9,13 +9,14 @@ library(lubridate)
 library(ggplot2)
 
 ## Read in data for county and city
-alb_data <- read.csv(here("data", "original", "Data4UVA.csv"), fileEncoding="UTF-16LE", sep = ",", na.strings = "")
+#alb_data <- read.csv(here("data", "original", "Data4UVA.csv"), fileEncoding="UTF-16LE", sep = ",", na.strings = "")
+#alb_data <- readxl::read_xlsx(here("data", "original", "Data4UVA.xlsx"))
 cville_data <- readxl::read_xlsx(here("data", "original", "CFD_CARS_EMS_DATA_121616TO60920.xlsx"))
 
 ## Standardize column names for each dataset
-alb_data <- alb_data %>%
-  rename_with(~tolower(gsub(r"(\.\..*)", "", .x))) %>% # remove code after variable names
-  rename_with(~gsub(r"(\.)", "_", .x)) #%>% # change periods to underscores
+# alb_data <- alb_data %>%
+#   rename_with(~tolower(gsub(r"( \(.*)", "", .x))) %>% # remove code after variable names
+#   rename_with(~gsub(" ", "_", .x)) #%>% # change spaces to underscores
 #as.data.table()
 
 cville_data <- cville_data %>%
@@ -74,8 +75,7 @@ comp_cols <- c("incident_date",
                "cardiac_arrest_rosc_date_time") ## Empty column
 
 ## ID inconsistent dates
-date_errs <- compare_dates(cville_data, comp_cols)
-date_errs
+date_errs_cville <- compare_dates(cville_data, comp_cols)
 
 # ------------------------------------------------------------------------------------------------------------------------------
 
@@ -86,7 +86,7 @@ test <- cville_datetimes %>%
          "cardiac_arrest_date_time") %>%
   mutate(time_diff = difftime(cardiac_arrest_date_time, incident_psap_call_date_time))
 
-# 759 cases (58% of non-null cases) have a cardiac arrest before the incident is reported. How is the cardiac arrest time being recorded?
+# 528 cases have a cardiac arrest before the incident is reported. How is the cardiac arrest time being recorded?
 length(which(test$time_diff < 0))
 
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -103,11 +103,8 @@ cville_data[which(cville_data$incident_dispatch_notified_to_unit_arrived_on_scen
 #
 #
 
-## 2029 incident dates are fail to parse - only a few hundred are NA though.
+## Incident dates that fail to parse 
 parse_fails <- which(is.na(ymd(as.character(alb_data$incident_date), tz="UTC")))
-
-## They appear to be misrecorded data?
-# as.character(alb_data$incident_date)[parse_fails]
 
 ## The entire rows for these observations are weird. I wonder if it is a data reading issue/something to do with encoding?
 ## It looks like these rows are just shifted to the right or left. As if there was a missing comma on the end of the line or something.
@@ -127,13 +124,13 @@ for (i in seq_along(parse_fails)) {
 values ## Looks like there is a long sequence of errors, but that's not the only thing that's going on.
 
 ## Comparing dates - won't wory until data recording errors are fixed
-# alb_datetimes <- alb_data %>% select(incident_date, 
-#                                      incident_psap_call_date_time, 
-#                                      cardiac_arrest_date_time, 
-#                                      cardiac_arrest_initial_cpr_date_time, 
-#                                      cardiac_arrest_rosc_date_time)
+alb_datetimes <- alb_data %>% select(incident_date,
+                                     incident_psap_call_date_time,
+                                     cardiac_arrest_date_time,
+                                     cardiac_arrest_initial_cpr_date_time,
+                                     cardiac_arrest_rosc_date_time)
 
-#compare_dates(alb_datetimes, comp_cols)
+compare_dates(alb_datetimes, comp_cols)
 
 #
 #
@@ -141,81 +138,62 @@ values ## Looks like there is a long sequence of errors, but that's not the only
 #
 #
 
-## Remove 27 completely duplicated rows
-length(which(duplicated(cville_data)))
-
-## 20392 duplicated incident numbers - 20365 after removing complete duplicates
-length(which(duplicated(cville_data$response_incident_number)))
-#dupl_rows <- cville_data[which(duplicated(cville_data$response_incident_number)),]
-dupl_numbers <- cville_data$response_incident_number[which(duplicated(cville_data$response_incident_number))]
-
-## 29517 unique incident numbers
-length(unique(cville_data$response_incident_number))
-
-## function to create binary data frame to identify duplicate values
-my_dup_fun <- function(x) {
-  return(as.numeric(duplicated(x)))
-}
-
-# my_dup_fun <- function(x) {
-#   return(sum(as.numeric(duplicated(x))))
-# }
-
-## binary indicators for whether a cell is a duplicate (for a given incident number)
+to_drop <- c("patient_medical_history_obtained_from_list", 
+             "patient_advance_directives_list",
+             "cardiac_arrest_witnessed_by_list",
+             "injury_cause_of_injury",
+             "outcome_external_report_type",
+             "outcome_external_report_number",
+             "cardiac_arrest_initial_cpr_date_time",
+             "cardiac_arrest_who_initiated_cpr_with_code",
+             "medication_given_description_and_rxcui_code",
+             "patient_medication_given_descriptions_list",
+             "cardiac_arrest_rosc_date_time",
+             "destination_cardiac_arrest_team_activation_date_time",
+             "patient_weight_actual_or_estimate_pounds",
+             "injury_mechanism_of_injury_list",
+             "cad_crew_member_full_name_and_level_list",
+             "patient_suspected_influenza_type_illness",
+             "patient_mental_status_assessment_exam_details",
+             "patient_neurological_assessment_exam_details",
+             "patient_skin_assessment_exam_details",
+             "patient_head_assessment_exam_details",
+             "patient_respiratory_effort_list_")
+             
 setDT(cville_data)
-dupl_by_incident <- cville_data[, lapply(.SD, my_dup_fun), by = response_incident_number]
+cville_sub <- cville_data %>% select(-to_drop)
 
-#dupl_by_incident[response_incident_number ==  "2017-00001444"]
+## Remove 4220 full duplicates
+length(which(duplicated(cville_sub)))
+cville_sub <- cville_sub[!duplicated(cville_sub),]
 
+## 10819 distinct incident numbers have duplicates
+duplicates <- cville_sub[, .N, by = response_incident_number]
 
+## 7919 are doubles, 2900 have more than 2 duplicates
+double_entries <- duplicates[N == 2]
+multi_entries <- duplicates[N > 2]
 
+cville_doubles <- cville_sub[response_incident_number %in% double_entries$response_incident_number]
+cville_multi <- cville_sub[response_incident_number %in% multi_entries$response_incident_number]
 
+## This gives us a record of whether the call signs match for each doubled entry
+cville_doubles[, dup_sign := (uniqueN(response_ems_unit_call_sign) == 1), by = response_incident_number]
 
+## 5023 have duplicate call signs - this may account for the duplication here?
+length(cville_doubles[dup_sign == FALSE, unique(response_incident_number)])
 
+## That leaves 2896 doubles with call signs not the culprit of duplication and 2900 multi-duplicates
+## Peek at some of the remaining doubles
+cville_doubles[dup_sign == TRUE][1:2]
 
+## See whether one of the duplicate rows is entirely contained within another
+## 0 values indicate we can safely select the one with more data(?)
+test1 <- cville_doubles[dup_sign == TRUE][, sum(as.numeric(!(.SD[1,] %in% .SD[2,]))), by = response_incident_number]
+test2 <- cville_doubles[dup_sign == TRUE][, sum(as.numeric(!(.SD[2,] %in% .SD[1,]))), by = response_incident_number]
 
+test1[V1==0] ## 1387 likely can be merged safely - just a matter of selecting the row with more info/fewer NA
+test2[V1==0] ## 63 can likely be mreged safely - just a matter of selecting the row with more info/fewer NA
 
-
-## -------------------------------------------------------------------------------------------------------------------------------------
-
-## SANDBOX 
-
-
-## Heatmap
-# test <- dupl_by_incident[duplicated(dupl_by_incident$response_incident_number),]
-# 
-# test <- as.data.frame(dupl_by_incident) %>%
-#   filter(response_incident_number %in% unique(dupl_numbers))
-# 
-# m <- as.matrix(test[,-1])
-# row.names(m) <- test[,1]
-# 
-# heatmap(m[1:4000,], scale="none", Colv = NA, margin = c(20, 10), keep.dendro = FALSE)
-
-## Function to tally number of duplicate entries by column
-# my_dup_fun <- function(x) {
-#   return(sum(as.numeric(duplicated(x))))
-# }
-# 
-# dupl_by_incident <- cville_data[, lapply(.SD, my_dup_fun), by = response_incident_number]
-
-
-num_dupl <- cville_data[, .N, by = response_incident_number][, c("response_incident_number", "N")][N > 1]
-
-## Summary of duplciates - will help with identifying which columns are causing near duplication
-## N = number of times incident number is duplicated
-## columns = number of times value is duplicated for that column within that incident number
-dupl_summary <- merge(dupl_by_incident, num_dupl)
-
-## Number of unique entries for each variable grouped by incident number
-dupl_summary2 <- as.data.frame(dupl_summary) %>% 
-  mutate_if(is.numeric, function(x) (dupl_summary$N - x)) %>%
-  select(-N) %>%
-  merge(num_dupl)
-
-## Count times each variable is duplicated within duplicated incident numbers
-dupl_summary3 <- data.frame("count" = apply(sapply(dupl_summary2, function(x) (as.numeric(x != 1))), 2, sum))
-setDT(dupl_summary3, keep.rownames = TRUE)
-
-
+## 1446 doubles left to deal with
 
