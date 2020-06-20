@@ -180,7 +180,7 @@ cville_multi <- cville_sub[response_incident_number %in% multi_entries$response_
 ## This gives us a record of whether the call signs match for each doubled entry
 cville_doubles[, dup_sign := (uniqueN(response_ems_unit_call_sign) == 1), by = response_incident_number]
 
-## 5023 have duplicate call signs - this may account for the duplication here?
+## 5023 have different call signs - this may account for the duplication here?
 length(cville_doubles[dup_sign == FALSE, unique(response_incident_number)])
 
 ## That leaves 2896 doubles with call signs not the culprit of duplication and 2900 multi-duplicates
@@ -196,4 +196,70 @@ test1[V1==0] ## 1387 likely can be merged safely - just a matter of selecting th
 test2[V1==0] ## 63 can likely be mreged safely - just a matter of selecting the row with more info/fewer NA
 
 ## 1446 doubles left to deal with
+test_nums <- test1$response_incident_number
 
+## Function to help id columns that are often different despite other columns being duplicated
+## Not sure if this is really helpful. We still need to make a call about how we're going to deal with near duplicates
+id_near_duplicates <- function(test_nums, order = 1) {
+  
+  ## Initialize loop variables
+  storage <- list()
+  i <- 1
+  
+  ## Compare rows within incident numbers
+  for (num in test_nums) {
+    data_sub <- cville_doubles[response_incident_number == num]
+    
+    if (order == 1) {
+      vec <- data_sub[1,] %in% data_sub[2,]
+    } else if (order == 2) {
+      vec <- data_sub[2,] %in% data_sub[1,]
+    }
+    
+    storage[[i]] <- as.numeric(vec)
+    i <- i + 1
+  }
+  
+  ## Combine into df
+  names(storage) <- test_nums
+  df <- do.call(rbind, storage)
+  colnames(df) <- colnames(cville_doubles)
+  
+  ## number of times each column is a culprit in the near-duplication
+  return(colSums(df == 0))
+  
+}
+
+nums <- test1[V1==1]$response_incident_number
+
+id_near_duplicates(nums)
+
+
+#
+#
+# Uniqueness ----------------------------------------------------------------------------------------------------------------
+#
+#
+
+## Should be re-done after removing duplicates
+
+glimpse(cville_sub)
+
+chars <- cville_sub %>% select_if(is.character) %>% select(-response_incident_number)
+
+char_summary <- as.data.frame(apply(chars, 2, function(x) length(unique(x[!is.na(x)]))))
+colnames(char_summary) <- "num_unique"
+
+ggplot(char_summary) + 
+  geom_bar(aes(x=row.names(char_summary), y = num_unique), stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+##
+
+numerics <- cville_sub %>% select(which(sapply(.,class)=="numeric"))
+df1 <- as.data.frame(numerics)
+
+## Distributions of numeric variables
+ggplot(gather(df1), aes(value)) + 
+  geom_boxplot() + 
+  facet_wrap(~key, scales = 'free_x')
