@@ -1,0 +1,247 @@
+---
+title: "Examining NAs"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+---
+
+```{r, warning = FALSE}
+library(naniar)
+library(ggplot2)
+
+source(here::here("src","Profiling","joining_albemarle_charlottesville.R"))
+```
+
+## NA Counts
+
+```{r}
+miss_var_summary(ems_full)
+```
+
+### Core Administrative Variables
+
+Get a list of variables that could reasonably exist on every call:
+
+```{r}
+# non patient vars
+ems_full %>% 
+  select(incident_complaint_reported_by_dispatch, 
+         response_incident_number,
+         response_ems_unit_call_sign,
+         incident_type,
+         incident_date,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         agency_name) %>% 
+  gg_miss_var()
+```
+
+#### NA Co-ocurrence
+
+```{r}
+# non patient vars
+ems_full %>% 
+  select(incident_complaint_reported_by_dispatch,
+         response_incident_number,
+         response_ems_unit_call_sign,
+         incident_type,
+         incident_date,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         agency_name) %>%  
+  gg_miss_upset()
+```
+
+Show for just albemarle and charlottesville respectively
+
+```{r}
+# non patient vars
+albemarle %>% 
+  select(incident_complaint_reported_by_dispatch,
+         response_incident_number,
+         response_ems_unit_call_sign,
+         incident_type,
+         incident_date,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         agency_name) %>%  
+  gg_miss_upset()
+
+# non patient vars
+charlottesville %>% 
+  select(incident_complaint_reported_by_dispatch,
+         response_incident_number,
+         response_ems_unit_call_sign,
+         incident_type,
+         incident_date,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         agency_name) %>%  
+  gg_miss_upset()
+```
+
+For albemarle, incident date is most specific ie non dates will turn into NAs, so I bet rows with that messed up are rows with weird data specification. Compare to albemarle, were date is missing for 0 observations. 
+
+
+### Variables Relevant to Analysis
+
+Get a list of variables that would be useful to have for our analysis:
+
+```{r}
+# non patient vars
+ems_full %>% 
+  select(patient_race_list, 
+         patient_age,
+         patient_age_range_in_years,
+         patient_gender,
+         situation_provider_primary_impression_code_and_description,
+         total_unit_response_time,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         incident_psap_call_date_time,
+         patient_initial_pulse_oximetry,
+         patient_last_pulse_oximetry) %>% 
+  gg_miss_var()
+```
+
+#### NA Co-ocurrence
+
+```{r}
+# non patient vars
+ems_full %>% 
+  select(patient_race_list, 
+         patient_age,
+         patient_age_range_in_years,
+         patient_gender,
+         situation_provider_primary_impression_code_and_description,
+         total_unit_response_time,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         incident_psap_call_date_time,
+         patient_initial_pulse_oximetry,
+         patient_last_pulse_oximetry) %>% 
+  rename(primary_impression = situation_provider_primary_impression_code_and_description) %>%
+  gg_miss_upset()
+```
+
+Show for just albemarle and charlottesville respectively
+
+```{r}
+# non patient vars
+albemarle %>% 
+  select(patient_race_list, 
+         patient_age,
+         patient_age_range_in_years,
+         patient_gender,
+         situation_provider_primary_impression_code_and_description,
+         total_unit_response_time,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         incident_psap_call_date_time,
+         patient_initial_pulse_oximetry,
+         patient_last_pulse_oximetry) %>% 
+  rename(primary_impression = situation_provider_primary_impression_code_and_description) %>%
+  gg_miss_upset()
+
+# non patient vars
+charlottesville %>% 
+  select(patient_race_list, 
+         patient_age,
+         patient_age_range_in_years,
+         patient_gender,
+         situation_provider_primary_impression_code_and_description,
+         total_unit_response_time,
+         scene_gps_latitude,
+         scene_gps_longitude,
+         incident_psap_call_date_time,
+         patient_initial_pulse_oximetry,
+         patient_last_pulse_oximetry) %>% 
+  rename(primary_impression = situation_provider_primary_impression_code_and_description) %>%
+  gg_miss_upset()
+```
+
+Most often if we have data on the patient, what we're missing is pulse oximetry data. However, this own occurs in ~4000 cases for charlottesville. Also of note is that we sometimes have demographic data, but no primary impression. Albemarle also tends to have more missing pulse oximetry data. 
+
+## NA Distribution
+
+### Over Index
+
+Do the number of NAs vary with location in the table?
+
+```{r, fig.height= 8}
+# note these are printed out of order
+map(0:5, function(i) {
+  ems_full %>% 
+    select(incident_complaint_reported_by_dispatch,
+           response_incident_number,
+           response_ems_unit_call_sign,
+           incident_type,
+           incident_date,
+           scene_gps_latitude,
+           scene_gps_longitude,
+           agency_name) %>% 
+    slice((1 + 20000*i):min((20000*(i + 1)), nrow(ems_full))) %>% 
+    vis_miss() +
+    labs(title = paste((i*20000 + 1), min((20000*(i + 1)), nrow(ems_full)), sep = ":"))
+})
+```
+
+Looks like albemarle has a lot more NAs, possibly due to the shifted values on some rows. 
+
+Now lets look at number of NAs per row over index. 
+
+```{r}
+ems_full %>% 
+  mutate(total_na = rowSums(is.na(ems_full))) %>%
+  ggplot() + 
+  geom_point(aes(x = 1:nrow(ems_full), y = total_na), alpha = 0.3) + 
+  labs(y = "Number of NA's", x = "index") +
+  ylim(0, 90) +
+  geom_vline(xintercept = nrow(albemarle), color = "red") + # change between albemarle and charlottesville data 
+  geom_hline(yintercept = 74, color = "green") + # min number of variables to contain all admin data
+  theme_minimal()
+
+# As density
+
+ems_full %>% 
+  mutate(total_na = rowSums(is.na(ems_full))) %>%
+  ggplot() + 
+  geom_hex(aes(x = 1:nrow(ems_full), y = total_na), alpha = 1) + 
+  labs(y = "Number of NA's", x = "index") +
+  ylim(0, 90) +
+  geom_vline(xintercept = 60918, color = "red") +
+  geom_hline(yintercept = 74, color = "green") +
+  theme_minimal()
+```
+
+### Over Time
+
+Let's look at the density of NAs over time. 
+
+```{r}
+ems_full %>% 
+  mutate(total_na = rowSums(is.na(ems_full))) %>%
+  ggplot() + 
+  geom_point(aes(x = incident_date, y = total_na), alpha = 0.3) + 
+  labs(y = "Number of NA's", x = "index") +
+  ylim(0, 90) +
+  geom_hline(yintercept = 74, color = "green") +
+  theme_minimal() +
+  facet_wrap(~source)
+
+# As density
+
+ems_full %>% 
+  mutate(total_na = rowSums(is.na(ems_full))) %>%
+  ggplot() + 
+  geom_hex(aes(x = incident_date, y = total_na), alpha = 1) + 
+  labs(y = "Number of NA's", x = "index") +
+  ylim(0, 90) +
+  geom_hline(yintercept = 74, color = "green") +
+  theme_minimal() +
+  facet_wrap(~source)
+```
+
+To me this says most of the weird rows in ems_full also don't have a real date (expected)

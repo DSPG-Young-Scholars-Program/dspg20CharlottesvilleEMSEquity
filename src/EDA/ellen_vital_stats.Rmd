@@ -1,0 +1,74 @@
+---
+title: "ellen_vital_stats"
+output: html_document
+---
+
+```{r}
+library(here)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(naniar)
+
+theme_set(theme_minimal())
+```
+
+```{r}
+vital_stats <- vroom::vroom(here("data", "original", "vital_stats", "Death_dataset_from_2016_to_YTD.csv"),
+                            col_types = paste0(rep("c", 46), collapse = "")) %>% 
+  mutate(DATE_OF_DEATH = mdy(DATE_OF_DEATH))
+```
+
+```{r}
+head(vital_stats)
+tail(vital_stats)
+```
+
+Any mapping work will be difficult, maybe zip codes good enough
+
+```{r}
+miss_var_summary(vital_stats)
+```
+
+why is HISPANIC_ORIGIN missing 100% of the time??
+
+```{r}
+length(unique(vital_stats$RACE))
+length(unique(vital_stats$FACILITY_NAME))
+length(unique(vital_stats$CAUSE_OF_DEATH))
+```
+
+There's a lot of differnt causes of death, all coded, we need to know what those codes mean to do anything real. 
+
+```{r}
+table(vital_stats$GENDER)
+```
+
+About equal death breakdown, makes sense. 
+
+```{r}
+table(vital_stats$EDUC)
+```
+
+I wonder what these differnt catagoreies mean?
+
+```{r}
+vital_stats %>% 
+  mutate(year = as.character(year(DATE_OF_DEATH)),
+         yday = yday(DATE_OF_DEATH)) %>%
+  ggplot() +
+  geom_density(aes(x = yday,y = ..count.., color = year), alpha = 0.3)
+```
+
+Not the perfect vis for it, but no obvious increase in deaths this year. 
+
+```{r}
+vital_stats %>% 
+  mutate(AGE = as.numeric(AGE)) %>% 
+  ggplot() +
+  geom_histogram(aes(x = AGE), boundary = 0, binwidth = 5) +
+  geom_vline(aes(xintercept = median(AGE)), color = "red") +
+  xlim(0, 120)
+```
+
+Looks like either a lot of babies die while being born, they count miscarriages as death, or something odd is going on with recording people as dying at age 0. 
