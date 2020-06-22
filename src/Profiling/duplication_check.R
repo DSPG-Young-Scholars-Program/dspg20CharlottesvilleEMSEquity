@@ -300,9 +300,11 @@ str_extract_all(test_case_lines[2], ",\"\"[^,].*?\"\",")
 ## This may be working! Replaces "," with , but only in the relevant stretches of the string (where items are grouped)
 test_case_lines[2] <- gsubfn("(,\"\"[^,].*?\"\",)", function(g1) gsub("\",\"", ",", g1, fixed=TRUE), test_case_lines[2])
 
+## Then replace "" with " within the same substring
+test_case_lines[2] <- gsubfn(",\"\"[^,].*?\"\",", function(g1) gsub("\"\"", "\"", g1, fixed=TRUE), test_case_lines[2])
+
 ## But it doesn't read back in so it's messing something else up too apparently...?
-test_case_lines[2] <- str_replace_all(test_case_lines[2], "\\)\",\"", "\\),")
 writeLines(test_case_lines, here("data", "county_data_TEST.csv"))
-read.csv(here("data", "county_data_TEST.csv"))
+test <- read.csv(here("data", "county_data_TEST.csv"))
 
 
