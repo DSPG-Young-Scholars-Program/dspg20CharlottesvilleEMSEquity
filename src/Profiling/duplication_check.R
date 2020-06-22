@@ -8,6 +8,7 @@ library(here)
 library(lubridate)
 library(ggplot2)
 library(tidyr)
+library(gsubfn)
 
 ## Read in data for county and city
 #alb_data <- read.csv(here("data", "original", "Data4UVA.csv"), fileEncoding="UTF-16LE", sep = ",", na.strings = "")
@@ -307,4 +308,12 @@ test_case_lines[2] <- gsubfn(",\"\"[^,].*?\"\",", function(g1) gsub("\"\"", "\""
 writeLines(test_case_lines, here("data", "county_data_TEST.csv"))
 test <- read.csv(here("data", "county_data_TEST.csv"))
 
+## TRY ON WHOLE DATASET
+test_lines <- ar_text
+
+test_lines <- gsubfn("(,\"\"[^,].*?\"\",)", function(g1) gsub("\",\"", ",", g1, fixed=TRUE), test_lines)
+test_lines <- gsubfn("(,\"\"[^,].*?\"\",)", function(g1) gsub("\"\"", "\"", g1, fixed=TRUE), test_lines)
+
+writeLines(test_lines, here("data", "county_data_TEST.csv"))
+test <- read.csv(here("data", "county_data_TEST.csv"), na.strings = "")
 
