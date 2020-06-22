@@ -7,17 +7,24 @@ library(dplyr)
 library(here)
 library(lubridate)
 library(ggplot2)
+library(tidyr)
 
 ## Read in data for county and city
 #alb_data <- read.csv(here("data", "original", "Data4UVA.csv"), fileEncoding="UTF-16LE", sep = ",", na.strings = "")
-#alb_data <- readxl::read_xlsx(here("data", "original", "Data4UVA.xlsx"))
+alb_data <- readxl::read_xlsx(here("data", "original", "Data4UVA.xlsx"))
 cville_data <- readxl::read_xlsx(here("data", "original", "CFD_CARS_EMS_DATA_121616TO60920.xlsx"))
 
 ## Standardize column names for each dataset
-# alb_data <- alb_data %>%
-#   rename_with(~tolower(gsub(r"( \(.*)", "", .x))) %>% # remove code after variable names
-#   rename_with(~gsub(" ", "_", .x)) #%>% # change spaces to underscores
+alb_data <- alb_data %>%
+  rename_with(~tolower(gsub(r"( \(.*)", "", .x))) %>% # remove code after variable names
+  rename_with(~gsub(" ", "_", .x)) # change spaces to underscores
 #as.data.table()
+
+# alb_sub <- alb_data[str_detect(alb_data$response_incident_number, "[:alpha:]") & !is.na(alb_data$response_incident_number),]
+# 
+# city_complaints <- levels(as.factor(cville_data$incident_complaint_reported_by_dispatch))
+# 
+# test <- alb_data[!(alb_data$incident_complaint_reported_by_dispatch %in% city_complaints) & !is.na(alb_data$incident_complaint_reported_by_dispatch),]
 
 cville_data <- cville_data %>%
   rename_with(~tolower(gsub(r"( \(.*)", "", .x))) %>% # remove code after variable names
@@ -103,34 +110,34 @@ cville_data[which(cville_data$incident_dispatch_notified_to_unit_arrived_on_scen
 #
 #
 
-## Incident dates that fail to parse 
-parse_fails <- which(is.na(ymd(as.character(alb_data$incident_date), tz="UTC")))
-
-## The entire rows for these observations are weird. I wonder if it is a data reading issue/something to do with encoding?
-## It looks like these rows are just shifted to the right or left. As if there was a missing comma on the end of the line or something.
-error_rows <- alb_data[parse_fails,]
-
-## Error rows either completely populated with nonsense or filled with nearly all NAs
-# vis_miss(error_rows)
-
-## Quick check to see if these are consecutive entries.
-values <- vector()
-
-for (i in seq_along(parse_fails)) {
-  val <- parse_fails[i+1] - parse_fails[i]
-  values <- append(values, val)
-}
-
-values ## Looks like there is a long sequence of errors, but that's not the only thing that's going on.
-
-## Comparing dates - won't wory until data recording errors are fixed
-alb_datetimes <- alb_data %>% select(incident_date,
-                                     incident_psap_call_date_time,
-                                     cardiac_arrest_date_time,
-                                     cardiac_arrest_initial_cpr_date_time,
-                                     cardiac_arrest_rosc_date_time)
-
-compare_dates(alb_datetimes, comp_cols)
+# ## Incident dates that fail to parse 
+# parse_fails <- which(is.na(ymd(as.character(alb_data$incident_date), tz="UTC")))
+# 
+# ## The entire rows for these observations are weird. I wonder if it is a data reading issue/something to do with encoding?
+# ## It looks like these rows are just shifted to the right or left. As if there was a missing comma on the end of the line or something.
+# error_rows <- alb_data[parse_fails,]
+# 
+# ## Error rows either completely populated with nonsense or filled with nearly all NAs
+# # vis_miss(error_rows)
+# 
+# ## Quick check to see if these are consecutive entries.
+# values <- vector()
+# 
+# for (i in seq_along(parse_fails)) {
+#   val <- parse_fails[i+1] - parse_fails[i]
+#   values <- append(values, val)
+# }
+# 
+# values ## Looks like there is a long sequence of errors, but that's not the only thing that's going on.
+# 
+# ## Comparing dates - won't wory until data recording errors are fixed
+# alb_datetimes <- alb_data %>% select(incident_date,
+#                                      incident_psap_call_date_time,
+#                                      cardiac_arrest_date_time,
+#                                      cardiac_arrest_initial_cpr_date_time,
+#                                      cardiac_arrest_rosc_date_time)
+# 
+# compare_dates(alb_datetimes, comp_cols)
 
 #
 #
@@ -160,8 +167,9 @@ to_drop <- c("patient_medical_history_obtained_from_list",
              "patient_head_assessment_exam_details",
              "patient_respiratory_effort_list_")
              
-setDT(cville_data)
 cville_sub <- cville_data %>% select(-to_drop)
+
+setDT(cville_sub)
 
 ## Remove 4220 full duplicates
 length(which(duplicated(cville_sub)))
@@ -193,10 +201,13 @@ test1 <- cville_doubles[dup_sign == TRUE][, sum(as.numeric(!(.SD[1,] %in% .SD[2,
 test2 <- cville_doubles[dup_sign == TRUE][, sum(as.numeric(!(.SD[2,] %in% .SD[1,]))), by = response_incident_number]
 
 test1[V1==0] ## 1387 likely can be merged safely - just a matter of selecting the row with more info/fewer NA
-test2[V1==0] ## 63 can likely be mreged safely - just a matter of selecting the row with more info/fewer NA
+test2[V1==0] ## 63 can likely be merged safely - just a matter of selecting the row with more info/fewer NA
 
 ## 1446 doubles left to deal with
-test_nums <- test1$response_incident_number
+test_nums <- test1[V1==1]$response_incident_number
+
+look <- cville_doubles %>% filter(response_incident_number %in% test_nums)
+
 
 ## Function to help id columns that are often different despite other columns being duplicated
 ## Not sure if this is really helpful. We still need to make a call about how we're going to deal with near duplicates
@@ -234,6 +245,12 @@ nums <- test1[V1==1]$response_incident_number
 
 id_near_duplicates(nums)
 
+cville_doubles[dup_sign == TRUE]
+
+cville_doubles
+
+
+
 
 #
 #
@@ -263,3 +280,29 @@ df1 <- as.data.frame(numerics)
 ggplot(gather(df1), aes(value)) + 
   geom_boxplot() + 
   facet_wrap(~key, scales = 'free_x')
+
+
+
+#######
+
+## Trying to fix parsing issues
+
+test_case_alb <- alb_data[50137,]
+
+ar_text <- readLines(con <- file(here("data","original","Data4UVA.csv"), encoding = "UTF-16LE"))
+close(con)
+
+test_case_lines <- ar_text[c(1,50137)]
+
+## This will extract the grouped list and replace "," within that extraction, but not sure how to put back??
+str_extract_all(test_case_lines[2], ",\"\"[^,].*?\"\",")
+
+## This may be working! Replaces "," with , but only in the relevant stretches of the string (where items are grouped)
+test_case_lines[2] <- gsubfn("(,\"\"[^,].*?\"\",)", function(g1) gsub("\",\"", ",", g1, fixed=TRUE), test_case_lines[2])
+
+## But it doesn't read back in so it's messing something else up too apparently...?
+test_case_lines[2] <- str_replace_all(test_case_lines[2], "\\)\",\"", "\\),")
+writeLines(test_case_lines, here("data", "county_data_TEST.csv"))
+read.csv(here("data", "county_data_TEST.csv"))
+
+
