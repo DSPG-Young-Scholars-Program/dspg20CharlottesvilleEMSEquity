@@ -17,13 +17,13 @@ charlottesville %>%
   mutate(total_na = rowSums(is.na(.))) %>%
   select(total_na, everything()) %>% 
   # filter(response_incident_number == "2017-00002675")
-  group_by(response_incident_number) %>% 
+  group_by(response_incident_number) %>%
   count(sort = TRUE) %>% 
   group_by(n) %>% 
   count()
 
 charlottesville %>% 
-  group_by(response_incident_number) %>% 
+  group_by(response_incident_number) %>%
   mutate(num_dups = n()) %>% 
   filter(num_dups == 2)
 ```
@@ -128,12 +128,13 @@ Now I'm going to turn situation_provider_secondary_impression_description_and_co
 ```{r}
 combine_secondary <- fill_deduped %>% 
   group_by(response_incident_number, response_ems_unit_call_sign) %>% 
-  mutate(situation_provider_secondary_impression_description_and_code = list(unique(situation_provider_secondary_impression_description_and_code))) %>% 
+  mutate(situation_provider_secondary_impression_description_and_code = paste0(unique(situation_provider_secondary_impression_description_and_code), collapse = "|")) %>% 
   ungroup() %>% 
   filter(!duplicated(.))
 
 # down to 39023 rows, making progress!
 # nrow(combine_secondary)
+
 ```
 
 I'm going to try and remove vitals_level_of_responsiveness_avpu to see if that improves things (probably can't use it since its so messed up)
@@ -150,8 +151,35 @@ removed_responsiveness <- combine_secondary %>%
 Time to see whats going on with the age columns. 
 
 ```{r}
-removed_responsiveness %>% 
+remaining_duplicates <- removed_responsiveness %>% 
   group_by(response_incident_number, response_ems_unit_call_sign) %>% 
   filter(n() > 1)
 ```
+
+```{r}
+deduped_plot_data <- removed_responsiveness %>% 
+  group_by(response_incident_number, response_ems_unit_call_sign) %>% 
+  mutate(total_dups = n()) %>%
+  filter(total_dups > 1) %>% 
+  summarise(across(everything(), ~length(unique(.x[!is.na(.x)]))))
+```
+
+```{r, fig.height=12}
+deduped_plot_data %>% 
+  ungroup() %>% 
+  pivot_longer(cols = 3:60) %>% 
+  mutate(total_dups = 1/total_dups, value = total_dups * value) %>% 
+  ggplot(aes(x = value, y = name)) +
+  geom_density_ridges(panel_scaling = FALSE, scale = 3) +
+  theme_minimal() +
+  coord_cartesian(xlim= c(1.8, 5))
+```
+
+
+```{r}
+# readr::write_csv(remaining_duplicates, here("data", "working", "remaining_duplicates.csv"))
+```
+
+
+
 
