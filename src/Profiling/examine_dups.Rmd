@@ -147,4 +147,11 @@ removed_responsiveness <- combine_secondary %>%
 # nrow(removed_responsivness)
 ```
 
+Time to see whats going on with the age columns. 
+
+```{r}
+removed_responsiveness %>% 
+  group_by(response_incident_number, response_ems_unit_call_sign) %>% 
+  filter(n() > 1)
+```
 
