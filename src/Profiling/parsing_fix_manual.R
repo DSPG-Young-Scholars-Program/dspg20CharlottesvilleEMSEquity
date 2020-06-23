@@ -34,7 +34,7 @@ test_case_lines <- ar_text[c(1,50137)]
 test_case_lines[2] <- gsubfn("(,\"\"[^,].*?\"\",)", function(g1) gsub("\",\"", ",", g1, fixed=TRUE), test_case_lines[2])
 
 ## Then convert double quotes at beginning and end of list to single quotes
-test_case_lines[2] <- gsubfn(",\"\"[^,].*?\"\",", function(g1) gsub("\"\"", "\"", g1, fixed=TRUE), test_case_lines[2])
+test_case_lines[2] <- gsubfn("(,\"\"[^,].*?\"\",)", function(g1) gsub("\"\"", "\"", g1, fixed=TRUE), test_case_lines[2])
 
 ## To test, write to csv file and re-read
 ## It works for the test case here
