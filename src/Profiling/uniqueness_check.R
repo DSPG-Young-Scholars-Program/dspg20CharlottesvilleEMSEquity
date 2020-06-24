@@ -92,7 +92,10 @@ length(which(time_compare$time_diff < 0))
 
 ## This suggests there are only 3 cases where total unit response is greater than the more restrictive dispatch_notified variable
 ## Either I'm misunderstanding the variables or something isn't right in the data dictinoary, because this doesn't make logical sense.
-cville_data[which(cville_data$incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes < cville_data$total_unit_response_time),]
+cville_data %>% 
+  filter(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes <= total_unit_response_time) %>%
+  select(response_incident_number, incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes, total_unit_response_time)
+
 
 #
 #
