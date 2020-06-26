@@ -104,6 +104,7 @@ Start by removing full duplicates and filling NAs within observations with other
 charlottesville <- as_tibble(charlottesville) # coerce into a tibble
 
 fill_step <- charlottesville %>% 
+  mutate(situation_provider_secondary_impression_description_and_code = ifelse(situation_provider_secondary_impression_description_and_code %in% c("Not Applicable", "Not Recorded"), NA, situation_provider_secondary_impression_description_and_code)) %>% 
   select(-to_drop) %>% 
   filter(!duplicated(.)) %>%  # remove 6868 full duplicates sum(dulplicated(select(charlottesvill, -to_drop)))
   filter(response_incident_number != "0") %>%  # remove bogus response incident number
@@ -128,12 +129,14 @@ Now I'm going to turn situation_provider_secondary_impression_description_and_co
 ```{r}
 combine_secondary <- fill_deduped %>% 
   group_by(response_incident_number, response_ems_unit_call_sign) %>% 
-  mutate(situation_provider_secondary_impression_description_and_code = paste0(unique(situation_provider_secondary_impression_description_and_code), collapse = "|")) %>% 
+  mutate(situation_provider_secondary_impression_description_and_code = paste0(unique(situation_provider_secondary_impression_description_and_code[!is.na(situation_provider_secondary_impression_description_and_code)]), collapse = "|")) %>% 
   ungroup() %>% 
-  filter(!duplicated(.))
+  filter(!duplicated(.)) %>% 
+  mutate(situation_provider_secondary_impression_description_and_code = ifelse(situation_provider_secondary_impression_description_and_code == "", NA, situation_provider_secondary_impression_description_and_code))
 
 # down to 39023 rows, making progress!
 # nrow(combine_secondary)
+
 
 ```
 
