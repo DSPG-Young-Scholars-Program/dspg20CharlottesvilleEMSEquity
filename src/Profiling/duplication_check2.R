@@ -235,21 +235,3 @@ ggplot(dup_errors) +
   geom_tile(aes(x=variable1, y=variable2, fill = errors)) +
   scale_fill_viridis(na.value = "gray20") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-
-# ## QA Checks
-# temp <- data[, c("response_incident_number", "patient_age", "patient_age_range_in_years")]
-# 
-# setDT(temp)
-# temp[, c("N1", "N2") := .(uniqueN(patient_age), uniqueN(patient_age_range_in_years)), by = response_incident_number]
-# 
-# err_nums <- temp %>% filter(N1 > 1, N2 > 1) %>% select(response_incident_number)
-# err_nums <- unique(err_nums$response_incident_number)
-# 
-# temp2 <- temp %>%
-#       as.data.frame() %>%
-#       group_by(response_incident_number) %>%
-#       summarize(err1 = max(N1), err2 = max(N2)) %>%
-#       mutate(err_both = (err1 != 1) & (err2 != 1))
-# 
-# temp2 %>% filter(response_incident_number %in% err_nums)
