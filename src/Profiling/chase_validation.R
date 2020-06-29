@@ -263,6 +263,15 @@ plotFactor(var, 5)
 # scene_incident_street_address
 var <- ems$scene_incident_street_address
 basicInfo(var) # character with 14 NAs and 7964 levels
+ij_sorted(var, 1, 5)
+# the street address associated with the most observations is a nursing home (or
+# similar facility)
+
+ems %>% filter(is.na(scene_gps_latitude) | is.na(scene_gps_longitude)) %>% count() # 543
+ems %>% filter((is.na(scene_gps_latitude) | is.na(scene_gps_longitude)) & !is.na(scene_incident_street_address)) %>% count() # 532
+tmp <- ems %>%
+  filter((is.na(scene_gps_latitude) | is.na(scene_gps_longitude)) & !is.na(scene_incident_street_address))
+
 
 # outcome_external_report_type
 var <- ems$outcome_external_report_type
