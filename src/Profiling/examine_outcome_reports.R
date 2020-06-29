@@ -2,7 +2,6 @@
 library(data.table)
 library(stringr)
 library(dplyr)
-library(here)
 library(ggplot2)
 library(tidyr)
 
@@ -11,7 +10,7 @@ source(here::here("src","Profiling","joining_albemarle_charlottesville.R"))
 
 ## ID duplicate incident numbers
 duplicates <- albemarle %>%
-  filter(!is.na(response_incident_number), str_detect(response_incident_number, "[0-9]{4}-[0-9]{8}")) %>%
+  filter(!is.na(response_incident_number), str_detect(response_incident_number, "[0-9]{4}-[0-9]{8}")) %>% ## This can potentially be changed once parsing issues are figured out
   distinct() %>%
   group_by(response_incident_number) %>%
   mutate(N = n()) %>%
@@ -19,7 +18,7 @@ duplicates <- albemarle %>%
 
 ## Grouping by incident number, call sign, report type, and demographics
 outcome_report_summary_1 <- duplicates %>%
-  group_by(response_incident_number, response_ems_unit_call_sign, outcome_external_report_type, patient_race_list, patient_age, patient_gender) %>%
+  group_by(response_incident_number, response_ems_unit_call_sign, patient_race_list, patient_age, patient_gender) %>%
   summarize(count = n(), 
             non_na_outcome_nums = n_distinct(outcome_external_report_number, na.rm = TRUE), 
             non_na_report_types = n_distinct(outcome_external_report_type, na.rm = TRUE),
@@ -27,22 +26,18 @@ outcome_report_summary_1 <- duplicates %>%
 
 # ---- One person, multiple report numbers ---- #
 
-## 16 questionable incidents
+## 20 questionable incidents
 ## These are cases where we have one incident number, call sign, report type, and demo but still manage to have multiple non-NA outcome numbers
 ## Will have to decide whether we think these are cases where two people happened to have the same demographics, or if they are errors
 ## Might be worth just doing this manually - a glance suggests some seem to be the same person, others are more ambiguous
 outcome_report_summary_1 %>%
-  filter(count > 1, non_na_outcome_nums > 1)
+  filter(count > 1, non_na_outcome_nums > 1, non_na_report_types != non_na_outcome_nums)
 
 # ---- One person, report number + NA report numbers ---- #
 
-## 9 incidents where seemingly same person has both an outcome num and NA outcome nums - can probably just be filled in
-## except for when the NA is associated with a different record type
-duplicates %>% group_by(response_incident_number, response_ems_unit_call_sign, patient_race_list, patient_gender, patient_age) %>%
-  mutate(count = n(),
-         non_na_outcome_nums = n_distinct(outcome_external_report_number, na.rm = TRUE), 
-         na_outcome_nums = sum(is.na(outcome_external_report_number))) %>%
-  select(response_incident_number, response_ems_unit_call_sign, outcome_external_report_type, patient_race_list, patient_age, patient_gender, count, non_na_outcome_nums, na_outcome_nums) %>%
+## 10 incidents where potentially same person has both an outcome num and NA outcome nums
+## Most of these probably represent the same person and can fill in the NA number?
+outcome_report_summary_1 %>% 
   filter(count > 1, na_outcome_nums > 0, count != na_outcome_nums)
 
 # ---- One set of demographics, multiple report numbers ---- #
@@ -64,7 +59,7 @@ multi_demo_cases %>% filter(!is.na(outcome_external_report_number))
 # -----
 
 ## For manual inspection of cases
-View(albemarle %>% filter(response_incident_number == "2019-00013313"))
+View(albemarle %>% filter(response_incident_number == "2017-00007706"))
 
 # -----
 
