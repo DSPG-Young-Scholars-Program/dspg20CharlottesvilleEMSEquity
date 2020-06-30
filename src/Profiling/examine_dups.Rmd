@@ -40,29 +40,7 @@ Going forward, I'm going to consider a unique observation to be a (response_inci
 Lets get a more formal look at where the mismatches are:
 
 ```{r}
-to_drop <- c("patient_medical_history_obtained_from_list", 
-             "patient_advance_directives_list",
-             "cardiac_arrest_witnessed_by_list",
-             "injury_cause_of_injury",
-             "cardiac_arrest_initial_cpr_date_time",
-             "cardiac_arrest_who_initiated_cpr_with_code",
-             "medication_given_description_and_rxcui_code",
-             "patient_medication_given_descriptions_list",
-             "cardiac_arrest_rosc_date_time",
-             "destination_cardiac_arrest_team_activation_date_time",
-             "patient_weight_actual_or_estimate_pounds",
-             "injury_mechanism_of_injury_list",
-             "cad_crew_member_full_name_and_level_list",
-             "patient_suspected_influenza_type_illness",
-             "patient_mental_status_assessment_exam_details",
-             "patient_neurological_assessment_exam_details",
-             "patient_skin_assessment_exam_details",
-             "patient_head_assessment_exam_details",
-             "patient_respiratory_effort_list",
-             "vitals_cardiac_rhythm_ecg_findings_list")
-
 unique_elements <- charlottesville %>% 
-  select(-to_drop) %>% 
   filter(response_incident_number != "0") %>% # an error response incident number
   group_by(response_incident_number, response_ems_unit_call_sign, outcome_external_report_number) %>% 
   mutate(total_dups = n()) %>%
@@ -104,7 +82,6 @@ charlottesville <- as_tibble(charlottesville) # coerce into a tibble
 
 fill_step <- charlottesville %>% 
   mutate(situation_provider_secondary_impression_description_and_code = ifelse(situation_provider_secondary_impression_description_and_code %in% c("Not Applicable", "Not Recorded"), NA, situation_provider_secondary_impression_description_and_code)) %>% 
-  select(-to_drop) %>% 
   filter(!duplicated(.)) %>%  # remove 6868 full duplicates sum(dulplicated(select(charlottesvill, -to_drop)))
   filter(response_incident_number != "0") %>%  # remove bogus response incident number
   select(response_incident_number, response_ems_unit_call_sign, everything()) %>% 
@@ -260,7 +237,6 @@ I'm going to try and run the deduplication steps on these new units of observati
 prepared_charlottesville <- charlottesville %>% 
   as_tibble() %>% 
   mutate(situation_provider_secondary_impression_description_and_code = ifelse(situation_provider_secondary_impression_description_and_code %in% c("Not Applicable", "Not Recorded"), NA, situation_provider_secondary_impression_description_and_code)) %>% 
-  select(-all_of(to_drop)) %>% 
   mutate(scene_incident_street_address = str_replace(toupper(scene_incident_street_address), "AVENUE", "AVE") %>% 
                                          str_replace(r"(\.)", "") %>% 
                                          ifelse((. == "-1" | . == "0" | . == "0 <UNKNOWN>" | . == "1"), NA, .) %>% 
