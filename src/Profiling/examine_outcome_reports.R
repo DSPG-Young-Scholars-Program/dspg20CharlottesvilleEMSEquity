@@ -9,8 +9,8 @@ library(tidyr)
 source(here::here("src", "Profiling", "joining_albemarle_charlottesville.R"))
 
 ## Fix outcome report numbers with leading zeros in county data - move this to joining_albemarle_charlottesville.R?
-ems_full <- ems_full %>% 
-  mutate(outcome_external_report_number = str_replace(outcome_external_report_number, "(?<![0-9])0+", ""))
+# ems_full <- ems_full %>% 
+#   mutate(outcome_external_report_number = str_replace(outcome_external_report_number, "(?<![0-9])0+", ""))
 
 #
 #
@@ -61,8 +61,7 @@ report_num_summary %>%
 ## If we group by incident, unit, and report type, how many times do we have distinct set of demographic characteristics?
 multi_demo_cases <- ems_duplicates %>% 
   group_by(response_incident_number, response_ems_unit_call_sign, outcome_external_report_type, outcome_external_report_number) %>%
-  mutate(demo_comb = paste(paste(patient_race_list, patient_age, sep = "|"), patient_gender, sep = "|")) %>%
-  mutate(n_demo = n_distinct(demo_comb)) %>%
+  mutate(demo_comb = paste(paste(patient_race_list, patient_age, sep = "|"), patient_gender, sep = "|"), n_demo = n_distinct(demo_comb)) %>%
   select(response_incident_number, response_ems_unit_call_sign, outcome_external_report_type, outcome_external_report_number, demo_comb, n_demo) %>%
   filter(n_demo > 1)
 
