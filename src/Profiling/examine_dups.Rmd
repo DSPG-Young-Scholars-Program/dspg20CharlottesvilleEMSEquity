@@ -249,10 +249,12 @@ prepared_charlottesville <- charlottesville %>%
   select(response_incident_number, response_ems_unit_call_sign, everything()) # reorder columns for ease of reading
 
 
+nrow(prepared_charlottesville)
+
 # fill missing values that have existing values within unit of observation
 # because NAs will make their own group, going to do some complicated thing to fill in age, gender, race, address, and report number
 # filled_charlottesville <- 
-prepared_charlottesville %>% 
+filled_grouping_columns <- prepared_charlottesville %>% 
   group_by(response_incident_number) %>% 
   mutate(across(c(outcome_external_report_number, 
                   scene_incident_street_address, 
@@ -260,18 +262,23 @@ prepared_charlottesville %>%
                   patient_gender,
                   patient_race_list),
                 function(column) {
-                  if(length(unique(patient_age[!is.na(patient_age)])) <= 1 |
-                     length(unique(patient_gender[!is.na(patient_gender)])) <= 1 |
-                     length(unique(patient_race_list[!is.na(patient_race_list)])) <= 1 |
-                     length(unique(scene_incident_street_address[!is.na(scene_incident_street_address)])) <= 1 |
+                  if(length(unique(patient_age[!is.na(patient_age)])) <= 1 &
+                     length(unique(patient_gender[!is.na(patient_gender)])) <= 1 &
+                     length(unique(patient_race_list[!is.na(patient_race_list)])) <= 1 &
+                     length(unique(scene_incident_street_address[!is.na(scene_incident_street_address)])) <= 1 &
                      length(unique(outcome_external_report_number[!is.na(outcome_external_report_number)])) <= 1) {
                     
                     column = ifelse(length(unique(column[!is.na(column)])) == 0, NA, unique(column[!is.na(column)])) # catch where all NA
                   } else {
                     column
                   }
-                }))
+                })) %>% 
   ungroup() %>% 
+  distinct()
+
+nrow(filled_grouping_columns)
+
+filled_charlottesville <- filled_grouping_columns %>% 
   group_by(response_incident_number, outcome_external_report_number, scene_incident_street_address, patient_age, patient_gender, patient_race_list) %>% 
   fill(3:ncol(.), .direction = "updown") %>% 
   ungroup() %>% 
@@ -298,18 +305,106 @@ nrow(combined_sec_impress)
 ```
 
 Now to combine unit call signs
+
+First find out how many units can show up at most
+
 ```{r}
 combined_sec_impress %>% 
+  group_by(response_incident_number) %>% 
+  summarize(unique_call_signs = length(unique(response_ems_unit_call_sign[!is.na(response_ems_unit_call_sign)]))) %>% 
+  arrange(desc(unique_call_signs))
+```
+
+
+```{r}
+combined_departments <- combined_sec_impress %>% 
   group_by(response_incident_number, 
            outcome_external_report_number, 
            scene_incident_street_address, 
            patient_age, 
            patient_gender, 
            patient_race_list) %>% 
-  mutate(response_ems_unit_call_sign = paste0(unique(response_ems_unit_call_sign[!is.na(response_ems_unit_call_sign)]), collapse = "|")) %>% 
+  mutate(across(c("response_ems_unit_call_sign",
+                  "incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes",
+                  "total_unit_response_time",
+                  "scene_incident_location_type",
+                  "agency_name",
+                  "incident_crew_member_full_name_list",
+                  "incident_crew_member_level_list"
+                  ), 
+                function(column) {
+                    comb_col = paste0(unique(column[!is.na(column)]), collapse = "|")
+                  ifelse(comb_col == "", NA, comb_col)
+                })) %>% 
   ungroup() %>% 
   mutate(response_ems_unit_call_sign = ifelse(response_ems_unit_call_sign == "", NA, response_ems_unit_call_sign)) %>% 
   distinct()
 ```
 
+```{r}
+nrow(combined_departments)
+
+combined_departments %>% 
+  group_by(response_incident_number, 
+           outcome_external_report_number, 
+           scene_incident_street_address, 
+           patient_age, 
+           patient_gender, 
+           patient_race_list) %>% 
+  filter(n() > 1)
+
+combined_departments %>% 
+  select(-patient_head_assessment_findings_list,
+         -patient_skin_assessment_findings_list,
+         -patient_eye_assessment_findings_list,
+         -patient_mental_status_assessment_findings_list,
+         -patient_neurological_assessment_findings_list) %>% 
+  distinct() %>% 
+  group_by(response_incident_number, 
+           outcome_external_report_number, 
+           scene_incident_street_address, 
+           patient_age, 
+           patient_gender, 
+           patient_race_list) %>% 
+  count()
+  filter(n() > 1)
+```
+
+```{r}
+charlottesville %>% filter(response_incident_number == "2016-00006454")
+```
+
+
+
+```{r}
+unique_elements_dept <- combined_departments %>% 
+  filter(response_incident_number != "0") %>% # an error response incident number
+  group_by(response_incident_number, 
+           outcome_external_report_number, 
+           scene_incident_street_address, 
+           patient_age, 
+           patient_gender, 
+           patient_race_list) %>% 
+  mutate(total_dups = n()) %>%
+  filter(total_dups > 1) %>% 
+  summarise(across(everything(), ~length(unique(.x[!is.na(.x)]))))
+```
+
+This figure shows which variables with duplicated rows have more than one unique element in each column. It has been scaled to exagerrate the effect. The variables with peaks at 2 or greater are problem variables, meaning many of them have data that conflict with eachother. Examples of this include vitals_level_of_responsivness_avpu, which can read someone is alert for one duplicate and unresponsive for the other. 
+```{r, fig.height = 10}
+unique_elements_dept %>% 
+  ungroup() %>% 
+  pivot_longer(cols = -c(response_incident_number, 
+           outcome_external_report_number, 
+           scene_incident_street_address, 
+           patient_age, 
+           patient_gender, 
+           patient_race_list, 
+           total_dups)) %>% 
+  mutate(total_dups = 1/total_dups, value = total_dups * value) %>% 
+  ggplot(aes(x = value, y = name)) +
+  geom_density_ridges(panel_scaling = FALSE, scale = 5) +
+  theme_minimal() +
+  coord_cartesian(xlim= c(1.8, 5.5))
+```
 
