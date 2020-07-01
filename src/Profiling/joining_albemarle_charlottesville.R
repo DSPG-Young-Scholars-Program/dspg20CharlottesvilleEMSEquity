@@ -1,52 +1,55 @@
+
 library(dplyr)
 library(here)
 library(purrr)
 
+## Columns mutually selected to be removed based on irrelevance or data quality issues
+drop_cols <- c("cad_crew_member_full_name_and_level_list",
+               "cardiac_arrest_etiology_with_code",
+               "cardiac_arrest_initial_cpr_date_time",
+               "cardiac_arrest_indications_resuscitation_attempted_by_ems_with_code_list",
+               "cardiac_arrest_rosc_date_time",
+               "cardiac_arrest_who_initiated_cpr_with_code",
+               "cardiac_arrest_witnessed_by_list",
+               "destination_cardiac_arrest_team_activation_date_time",
+               "incident_type",
+               "injury_cause_of_injury",
+               "injury_cause_of_injury_description_list",
+               "injury_mechanism_of_injury_list",
+               "medication_given_description_and_rxcui_code",
+               "patient_advance_directives_list",
+               "patient_cincinnati_stroke_scale_used",
+               "patient_environmental_food_allergies_list",
+               "patient_head_assessment_exam_details",
+               "patient_initial_stroke_scale_type",
+               "patient_last_oral_intake_date_time",
+               "patient_medical_history_obtained_from_list",
+               "patient_medication_allergies_and_type_list",
+               "patient_medication_given_descriptions_list",
+               "patient_mental_status_assessment_exam_details",
+               "patient_neurological_assessment_exam_details",
+               "patient_respiratory_effort_list",
+               "patient_skin_assessment_exam_details",
+               "patient_weight_actual_or_estimate_pounds",
+               "vitals_cardiac_rhythm_ecg_findings_list",
+               "vitals_level_of_responsiveness_avpu")
 
-albemarle <- read.csv(here("data","original","Data4UVA.csv"),
-                       fileEncoding="UTF-16LE",
-                       sep = ",", na.strings = "",
-                      colClasses = "character") %>%
-  rename_with(~tolower(gsub(r"(\.\..*)", "", .x))) %>% # remove code after variable names
-  rename_with(~gsub(r"(\.)", "_", .x)) %>%  # change periods to underscores
-  mutate(incident_date = lubridate::ymd(incident_date))
-charlottesville <- readxl::read_xlsx(here("data","original","CFD_CARS_EMS_DATA_121616TO60920.xlsx"), 1) %>%
+albemarle <- readxl::read_xlsx(here("data","original","Data4UVA.xlsx"), 1, col_types = c(rep("text", 4), "date", rep("text", 78))) %>%
+  rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
+  rename_with(~gsub(r"( )", "_", .x)) %>%  # change periods to underscores
+  select(-all_of(drop_cols))
+    
+charlottesville <- readxl::read_xlsx(here("data","original","CFD_CARS_EMS_DATA_121616TO60920.xlsx"), 1, col_types = c(rep("text", 4), "date", rep("text", 78))) %>%
   rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
   rename_with(~gsub(" ", "_", .x)) %>% # change spaces to underscores
-  mutate(across(c(1:4, 6:83), as.character))
-# can we just col_bind these dataframes?
-
-# ncol(albemarle)
-# ncol(charlottesville)
-
-# there are the same number of rows
-
-# do they match names?
-# which(names(albemarle) != names(charlottesville))
-
-
-# names(albemarle)[82]
-# names(charlottesville)[82]
-
-# these variables mean the same thing, so I'll just rename the albemarle one
+  select(-all_of(drop_cols))
+  
+# these variables probably mean the same thing, so I'll just rename the albemarle one
 albemarle <- albemarle %>%
   rename(total_unit_response_time = incident_unit_notified_by_dispatch_to_unit_arrived_on_scene_in_minutes)
 
-
-# which(names(albemarle) != names(charlottesville))
-
-# looks like we caught all the name mismatches
-
-
-
-# sum(map_chr(albemarle, class) != map_chr(charlottesville, ~(class(.x)[1]))) # extract 1st class of dates
-# 36 class mismatches is a lot!
-# looks like albemarle is all characters, charlottesville tried to guess a lot.
-# due to the data in the wrong columns in albemarle, I'm going to set charlottesville to all characters
-
+## Combine data
 ems_full <- bind_rows(mutate(albemarle, source = "albemarle"),
                       mutate(charlottesville, source = "charlottesville")) # tag on source variable
 
-# check it worked:
-# nrow(ems_full) == nrow(albemarle) + nrow(charlottesville)
 

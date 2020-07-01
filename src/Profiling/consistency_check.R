@@ -4,6 +4,7 @@
 
 library(dplyr)
 library(data.table)
+library(lubridate)
 
 albemarle <- read.csv2("./data/original/Data4UVA.csv", fileEncoding="UTF-16LE", sep = ",", na.strings = "")
 charlottesville <- readxl::read_xlsx("./data/original/CFD_CARS_EMS_DATA_121616TO60920.xlsx", 1)
@@ -70,5 +71,49 @@ View(chr_date)
 # alb_date = find_date_mismatch(alb)
 # View(alb_date)
 
-na.exclude(chr$cardiac_arrest_date_time<chr$cardiac_arrest_initial_cpr_date_time)
-chr[which(!is.na(chr$cardiac_arrest_date_time)),][which(!as.Date(chr$incident_psap_call_date_time, "%Y-%m-%d") < as.Date(chr$cardiac_arrest_date_time)),]
+# na.exclude(chr$cardiac_arrest_date_time<chr$cardiac_arrest_initial_cpr_date_time)
+# chr[which(!is.na(chr$cardiac_arrest_date_time)),][which(!as.Date(chr$incident_psap_call_date_time, "%Y-%m-%d") < as.Date(chr$cardiac_arrest_date_time)),]
+
+
+find_date_mismatch = function(df){
+  df[which(!as.Date(df$incident_psap_call_date_time, "%Y-%m-%d") == as.Date(df$incident_date)),]
+}
+
+
+tmp = chr[which(!format(as.Date(chr$patient_last_oral_intake_date_time),"%m-%d")==format(as.Date(chr$incident_date), "%m-%d")),]
+View(tmp[,c("patient_last_oral_intake_date_time","incident_date")])
+
+time.interval = chr$patient_last_oral_intake_date_time %--% chr$incident_date
+span_in_seconds = time.interval %>% int_length()
+#gives incidents where last intake is after incident date?
+late_response = chr[span_in_seconds<= -86400,] %>% filter(!is.na(patient_last_oral_intake_date_time))
+View(late_response[,c("patient_last_oral_intake_date_time","incident_date" )])
+
+
+span_reverse = time.interval %>% int_flip() %>% int_length()
+
+opp = chr[span_reverse<= -86400,] %>% filter(!is.na(patient_last_oral_intake_date_time))
+View(opp[,c("patient_last_oral_intake_date_time","incident_date" )])
+
+
+tmp_psap = chr[which(!format(as.Date(chr$patient_last_oral_intake_date_time),"%m-%d")==format(as.Date(chr$incident_psap_call_date_time), "%m-%d")),]
+View(tmp_psap[,c("patient_last_oral_intake_date_time","incident_psap_call_date_time", "incident_date")])
+
+time.interval_psap = chr$patient_last_oral_intake_date_time %--% chr$incident_psap_call_date_time
+span_in_seconds_psap = time.interval_psap %>% int_length()
+#gives incidents where last intake is after incident date?
+late_response_psap = chr[span_in_seconds_psap<= -86400,] %>% filter(!is.na(patient_last_oral_intake_date_time))
+View(late_response_psap[,c("patient_last_oral_intake_date_time","incident_psap_call_date_time" )])
+
+
+span_reverse_psap = time.interval_psap %>% int_flip() %>% int_length()
+
+opp_psap = chr[span_reverse_psap<= -86400,] %>% filter(!is.na(patient_last_oral_intake_date_time))
+View(opp_psap[,c("patient_last_oral_intake_date_time","incident_psap_call_date_time" )])
+
+
+View(chr[which(format(as.Date(chr$patient_last_oral_intake_date_time),"%Y")=="2001"),c("patient_last_oral_intake_date_time","incident_psap_call_date_time", "incident_date")])
+
+year(chr[which(format(as.Date(chr$patient_last_oral_intake_date_time),"%Y")=="2001"),]$patient_last_oral_intake_date_time) = year(chr[which(format(as.Date(chr$patient_last_oral_intake_date_time),"%Y")=="2001"),]$incident_psap_call_date_time)
+
+chr[which(year(chr$patient_last_oral_intake_date_time)==2001),]
