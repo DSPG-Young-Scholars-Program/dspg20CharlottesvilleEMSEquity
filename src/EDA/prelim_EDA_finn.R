@@ -1,5 +1,4 @@
 
-library(data.table)
 library(stringr)
 library(dplyr)
 library(ggplot2)
@@ -27,13 +26,22 @@ plot_complaint_volume <- function(data, vars) {
                          is.na(n) ~ 0))
     
   ggplot(plot_data) + 
-    geom_smooth(aes(x = incident_date, y= n, color = incident_complaint_reported_by_dispatch), se = F) +
-    geom_line(aes(x = incident_date, y= n, color = incident_complaint_reported_by_dispatch), alpha = 0.3)
+    geom_smooth(aes(x = incident_date, y= n, color = incident_complaint_reported_by_dispatch), se = F)
+    #geom_line(aes(x = incident_date, y= n, color = incident_complaint_reported_by_dispatch), alpha = 0.3)
   
 }
 
 ## Complaints to view
-complaints <- c("Breathing Problem", "Chest Pain (Non-Traumatic)")
+unique(charlottesville$incident_complaint_reported_by_dispatch)
+top_complaints <- charlottesville %>% group_by(incident_complaint_reported_by_dispatch) %>% summarize(n = n()) %>% filter(n > 1000)
+
+complaints <- c("Breathing Problem", "Chest Pain (Non-Traumatic)", "Sick Person")
+#complaints <- top_complaints$incident_complaint_reported_by_dispatch
 
 ## Plot
 plot_complaint_volume(charlottesville, vars = complaints)
+
+## ---------
+
+
+
