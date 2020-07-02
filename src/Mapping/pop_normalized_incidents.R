@@ -23,6 +23,11 @@ acs_total_pop_tract_sp <- tigris::tracts(state = "VA", county = c("charlottesvil
   left_join(acs_total_pop_tract, by = "GEOID")
 
 
+city_border <- tigris::counties(state = "VA",
+                                cb = TRUE, year = 2018, class = "sf") %>%
+  filter(COUNTYFP == 540) %>%
+  st_transform(crs = 4326)
+
 ems_full_sp <- ems_full %>%
   distinct %>%
   filter(!is.na(scene_gps_latitude), !is.na(scene_gps_longitude)) %>%
@@ -51,6 +56,9 @@ summed_data %>%
               fillColor = ~color_scale(rate_per_1000),
               label = ~map(glue("{NAME.y}<br/>
                                 Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML)) %>%
+  addPolygons(data = city_border,
+              color = "#222222", weight = 3, smoothFactor = 0.5,
+              fillOpacity = 0) %>%
   addLegend("bottomright", pal = color_scale, values = ~rate_per_1000,
             title = "Incident Rate Per 1000",
             opacity = .8)
