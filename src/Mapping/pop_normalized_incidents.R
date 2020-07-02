@@ -7,17 +7,6 @@ library(lubridate)
 
 source(here::here("src", "Profiling", "joining_albemarle_charlottesville.R"))
 
-char_dedup <- readr::read_csv(here::here("data", "working", "deduplicated_data_wip.csv"),
-                              col_types = paste0(rep("c", 54), collapse = "")) %>%
-  mutate(source = "charlottesville",
-         incident_date = as_datetime(incident_date))
-
-
-
-ems_full_char_dedup <- ems_full %>%
-  filter(source == "albemarle") %>%
-  bind_rows(char_dedup)
-
 
 acs_total_pop_tract <- get_acs(geography = "tract",
                                    year = 2018,
@@ -34,12 +23,13 @@ acs_total_pop_tract_sp <- tigris::tracts(state = "VA", county = c("charlottesvil
   left_join(acs_total_pop_tract, by = "GEOID")
 
 
-ems_full_char_dedup_sp <- ems_full_char_dedup %>%
+ems_full_sp <- ems_full %>%
+  distinct %>%
   filter(!is.na(scene_gps_latitude), !is.na(scene_gps_longitude)) %>%
   st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude"), remove = FALSE, crs = 4326)
 
 
-joined <- st_join(acs_total_pop_tract_sp, ems_full_char_dedup_sp, join = st_contains)
+joined <- st_join(acs_total_pop_tract_sp, ems_full_sp, join = st_contains)
 
 summed_data <- joined %>%
   group_by(NAME.y, total_population_estimate) %>%
@@ -51,7 +41,7 @@ summed_data <- joined %>%
 range(summed_data$rate_per_1000)
 hist(summed_data$rate_per_1000)
 
-color_scale <- colorBin("BuPu", c(0,1600), c(0, 200, 400, 800, 1200, 1600))
+color_scale <- colorBin("BuPu", c(0,1600), c(0, 200, 400, 700, 1000, 2000))
 
 summed_data %>%
   leaflet() %>%
