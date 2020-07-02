@@ -1,5 +1,5 @@
 ---
-title: "complaint_EDA"
+title: "Exploration of Reported Complaints"
 output: html_document
 ---
 
@@ -7,16 +7,18 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r prep}
+```{r prep, include = FALSE}
 library(stringr)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(lubridate)
 library(plotly)
+library(here)
 
 ## Read in data
-source(here::here("src", "Profiling", "joining_albemarle_charlottesville.R"))
+#source(here("src", "Profiling", "joining_albemarle_charlottesville.R"))
+ems_full <- readr::read_csv(here("data", "working", "deduplicated_data_wip.csv"))
 
 ems_full <- ems_full %>% 
   mutate(incident_date = ymd(incident_date), 
@@ -25,22 +27,29 @@ ems_full <- ems_full %>%
          dy = as.character(day(incident_date)))
 ```
 
-```{r}
-plot_data <- ems_full %>% filter(incident_complaint_reported_by_dispatch %in% c("Breathing Problem")) %>%
-  group_by(yr, mo, source) %>%
-  count() %>%
-  filter(yr != 2016)
+```{r, include = FALSE}
+# A similar plot to Kathryn's layout, but grouped by call source. Needs cleaned ems_full data
 
-cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
-
-ggplot(plot_data) +
-  geom_point(aes(x = as.numeric(mo), y = n, color = yr), alpha = 0.7, shape = 1) +
-  geom_line(aes(x = as.numeric(mo), y = n, color = yr)) +
-  scale_colour_manual(values=cbPalette) +
-  facet_grid(~source)
+# plot_data <- ems_full %>% filter(incident_complaint_reported_by_dispatch %in% c("Breathing Problem")) %>%
+#   group_by(yr, mo, source) %>%
+#   count() %>%
+#   filter(yr != 2016)
+# 
+# cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
+# 
+# ggplot(plot_data) +
+#   geom_point(aes(x = as.numeric(mo), y = n, color = yr), alpha = 0.7, shape = 1) +
+#   geom_line(aes(x = as.numeric(mo), y = n, color = yr)) +
+#   scale_colour_manual(values=cbPalette) +
+#   facet_grid(~source)
 ```
 
+Here is a quick exploration of the temporal trends in call volume when grouped by complaint type.
+
+We start with a function just to make it easier to manually select different sets of complaints to view.
+
 ```{r}
+## Function to plot subset of complaints in a faceted plot
 plot_complaint_volume <- function(data, vars) {
   
   plot_data <- data %>% filter(incident_complaint_reported_by_dispatch %in% vars) %>%
@@ -50,19 +59,22 @@ plot_complaint_volume <- function(data, vars) {
   
   cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
   
-  ggplot(plot_data) + 
+  p <- ggplot(plot_data) + 
     geom_line(aes(x = mo_yr, y = n, color = incident_complaint_reported_by_dispatch), alpha = 1) + 
     geom_point(aes(x = mo_yr, y = n, color = incident_complaint_reported_by_dispatch), alpha = 0.7) +
     geom_vline(xintercept = dmy("02-01-2020"), linetype = "dashed", alpha = 0.8) +
     scale_color_manual(values = cbPalette) +
-    facet_wrap(~incident_complaint_reported_by_dispatch, ncol = 1)
+    facet_wrap(~incident_complaint_reported_by_dispatch, ncol = 1) +
+    labs(x = "Date", y = "Monthly Incidents", color = "Complaint")
+  
+  return(p)
 }
 ```
 
+For now, let's look at the top 3 complaints by frequency (breathing problems, sick person, and falls).
 
-```{r}
-## Complaints to view
-# unique(ems_full$incident_complaint_reported_by_dispatch)
+```{r, message = FALSE, fig.align="center"}
+## View top 3 complaints
 top_complaints <- ems_full %>% 
   group_by(incident_complaint_reported_by_dispatch) %>% 
   summarize(n = n()) %>% 
@@ -71,10 +83,14 @@ top_complaints <- ems_full %>%
 complaints <- top_complaints$incident_complaint_reported_by_dispatch
 
 ## Plot
-plot_complaint_volume(ems_full, vars = complaints)
+plot_complaint_volume(ems_full, vars = complaints) + 
+  labs(title = "Trends in Top 3 Complaints: Charlottesville") + 
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 ```
 
-```{r}
+Plotting without faceting quickly gets too busy, but converting to an interactive layout with plotly can help with this by allowing for highlighting. Here are the top 8 complaints plotted together for better comparison.
+
+```{r, message = FALSE}
 #vars <- complaints
 top_complaints <- ems_full %>% 
   group_by(incident_complaint_reported_by_dispatch) %>% 
@@ -88,11 +104,13 @@ plot_data <- ems_full %>% filter(incident_complaint_reported_by_dispatch %in% va
   group_by(mo_yr, incident_complaint_reported_by_dispatch) %>%
   count()
 
-cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
+# cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
 
+## Key to tell plotly what variable to highlight by
 key <- highlight_key(plot_data, ~incident_complaint_reported_by_dispatch)
 
-plt <- ggplot(key) + 
+## Create ggplot
+plt <- ggplot(key, aes(text = paste('Complaint', incident_complaint_reported_by_dispatch, sep = ": "))) +
   geom_line(aes(x = mo_yr, y = n, color = incident_complaint_reported_by_dispatch), alpha = 1) + 
   #geom_point(aes(x = mo_yr, y = n), alpha = 0.7) +
   geom_vline(xintercept = dmy("02-01-2020"), linetype = "dashed", alpha = 0.8) +
@@ -101,15 +119,11 @@ plt <- ggplot(key) +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5))
 
-plt_highlight <- ggplotly(plt, tooltip = ".crossTalkKey") %>% 
+## Convert to plotly and set highlight options
+plt_highlight <- ggplotly(plt, tooltip = c("text")) %>% 
   highlight(on = "plotly_hover", off = "plotly_doubleclick") %>%
   layout(showlegend = FALSE)
 
 plt_highlight
-
 ```
 
-```{r }
-
-
-```
