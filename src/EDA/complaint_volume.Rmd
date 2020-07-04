@@ -1,5 +1,5 @@
 ---
-title: "Exploration of Reported Complaints"
+title: "Initial Exploration of Complaints + Response Times"
 output: html_document
 ---
 
@@ -18,19 +18,21 @@ library(here)
 
 ## Read in data
 #source(here("src", "Profiling", "joining_albemarle_charlottesville.R"))
-ems_full <- readr::read_csv(here("data", "working", "deduplicated_data_wip.csv"))
+cville_data <- readr::read_csv(here("data", "working", "deduplicated_data_wip.csv"))
 
-ems_full <- ems_full %>% 
+cville_data <- cville_data %>% 
   mutate(incident_date = ymd(incident_date), 
          yr = as.factor(year(incident_date)), 
          mo = as.factor(month(incident_date)), 
-         dy = as.character(day(incident_date)))
+         dy = as.character(day(incident_date)),
+         mo_yr = dmy(paste0("01-", mo, "-", yr)),
+         incident_psap_call_date_time = as.POSIXct(cville_data$incident_psap_call_date_time * (60 * 60 * 24), origin = "1899-12-30"))
 ```
 
 ```{r, include = FALSE}
-# A similar plot to Kathryn's layout, but grouped by call source. Needs cleaned ems_full data
+# A similar plot to Kathryn's layout, but grouped by call source. Needs cleaned cville_data data
 
-# plot_data <- ems_full %>% filter(incident_complaint_reported_by_dispatch %in% c("Breathing Problem")) %>%
+# plot_data <- cville_data %>% filter(incident_complaint_reported_by_dispatch %in% c("Breathing Problem")) %>%
 #   group_by(yr, mo, source) %>%
 #   count() %>%
 #   filter(yr != 2016)
@@ -51,21 +53,20 @@ ems_full <- ems_full %>%
 We start with a function just to make it easier to manually select different sets of complaints to view.
 
 ```{r}
+cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
+
 ## Function to plot subset of complaints in a faceted plot
-plot_complaint_volume <- function(data, vars) {
+plot_complaint_volume <- function(data, vars, pal) {
   
   plot_data <- data %>% filter(incident_complaint_reported_by_dispatch %in% vars) %>%
-    mutate(mo_yr = dmy(paste0("01-", mo, "-", yr))) %>%
     group_by(mo_yr, incident_complaint_reported_by_dispatch) %>%
     count()
-  
-  cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
   
   p <- ggplot(plot_data) + 
     geom_line(aes(x = mo_yr, y = n, color = incident_complaint_reported_by_dispatch), alpha = 1) + 
     geom_point(aes(x = mo_yr, y = n, color = incident_complaint_reported_by_dispatch), alpha = 0.7) +
     geom_vline(xintercept = dmy("02-01-2020"), linetype = "dashed", alpha = 0.8) +
-    scale_color_manual(values = cbPalette) +
+    scale_color_manual(values = pal) +
     facet_wrap(~incident_complaint_reported_by_dispatch, ncol = 1) +
     labs(x = "Date", y = "Monthly Incidents", color = "Complaint")
   
@@ -76,16 +77,20 @@ plot_complaint_volume <- function(data, vars) {
 For now, let's look at the top 3 complaints by frequency (breathing problems, sick person, and falls).
 
 ```{r, message = FALSE, fig.align="center"}
-## View top 3 complaints
-top_complaints <- ems_full %>% 
-  group_by(incident_complaint_reported_by_dispatch) %>% 
-  summarize(n = n()) %>% 
-  top_n(3, n)
+select_complaints <- function(n) {
+  ## View top 3 complaints
+  top_complaints <- cville_data %>% 
+    group_by(incident_complaint_reported_by_dispatch) %>% 
+    summarize(count = n()) %>% 
+    top_n(n, count)
+  
+  return(top_complaints$incident_complaint_reported_by_dispatch)
+}
 
-complaints <- top_complaints$incident_complaint_reported_by_dispatch
+complaints <- select_complaints(3)
 
 ## Plot
-plot_complaint_volume(ems_full, vars = complaints) + 
+plot_complaint_volume(cville_data, vars = complaints, cbPalette) + 
   labs(title = "Trends in Top 3 Complaints: Charlottesville") + 
   theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 ```
@@ -94,14 +99,14 @@ Plotting without faceting quickly gets too busy, but converting to an interactiv
 
 ```{r, message = FALSE}
 #vars <- complaints
-top_complaints <- ems_full %>% 
+top_complaints <- cville_data %>% 
   group_by(incident_complaint_reported_by_dispatch) %>% 
   summarize(n = n()) %>% 
   top_n(8, n)
 
 vars <- top_complaints$incident_complaint_reported_by_dispatch
 
-plot_data <- ems_full %>% filter(incident_complaint_reported_by_dispatch %in% vars) %>%
+plot_data <- cville_data %>% filter(incident_complaint_reported_by_dispatch %in% vars) %>%
   mutate(mo_yr = dmy(paste0("01-", mo, "-", yr))) %>%
   group_by(mo_yr, incident_complaint_reported_by_dispatch) %>%
   count()
@@ -128,4 +133,126 @@ plt_highlight <- ggplotly(plt, tooltip = c("text")) %>%
 
 plt_highlight
 ```
+
+```{r}
+## Helper function since we will probably have to clean the response time variable this way a lot
+## Allows us to look at response times at the unit call sign level of analysis
+clean_response_times <- function(data) {
+  
+  ## Split incidents with multiple units into multiple rows
+  cln_data <- data %>% 
+    distinct() %>% ## Avoid double counting for calls with multiple patients
+    mutate(total_unit_response_time = str_split(total_unit_response_time, "\\|")) %>% ## Split 
+    unnest(total_unit_response_time) %>%
+    mutate(total_unit_response_time = as.numeric(total_unit_response_time))
+  
+  return(cln_data)
+  
+}
+
+## Function to unlist multiple columns. Maybe Ellen has already put something togehter to do this more efficiently. 
+## Not even sure this is matching the correct units to the correct times so maybe just use different data would be the best way to go.
+## Only works on cases where the numbers of list items in each of the columns are consistent with each other
+unlist_data <- function(data) {
+  
+  cln_data <- data %>%
+    distinct() %>%
+    mutate(total_unit_response_time = str_split(total_unit_response_time, "\\|"),
+           response_ems_unit_call_sign = str_split(response_ems_unit_call_sign, "\\|")) %>%
+    unnest(c(total_unit_response_time, response_ems_unit_call_sign))
+  
+  return(cln_data)
+}
+
+```
+
+#### Response Time EDA
+
+Here we take a look at the average response time over time. Two obvious outliers emerge - one on April 7, 2017, and one on August 12, 2017. The latter is obviously the Unite the Right rally that took place in Charlottesville on that date. I'm not yet sure about the April 7 incident - we should ask contacts in Charlottesville if they know why this might be.
+
+```{r fig.align = "center"}
+## This is going to be at the response unit level, so clean up duplicate individuals and split response times for separate units at single incident
+## Outlier spikes on April 7 and August 12 of 2017. August 12 is obviously the Unite the Right rally. Not sure about April 7
+cville_data %>% 
+  clean_response_times() %>%
+  group_by(incident_date) %>%
+  mutate(avg_response = mean(total_unit_response_time, na.rm = TRUE)) %>%
+  ggplot() +
+  geom_line(aes(x = incident_date, y = avg_response))
+```
+It's curious that it happens on August 12, but that incident still looks like an outlier to me. These spikes are driven by two very long responses, and not because all the calls on that day were abnormally long. Both calls were about 24 hours so I thought it might have to do with an impoperly recorded date (one day ahead or somemthing), but the psap date time and incident date are consistent. 
+
+```{r}
+cville_data %>% 
+  clean_response_times() %>% 
+  filter(total_unit_response_time > 1000) %>%
+  select(response_incident_number, incident_date, total_unit_response_time, incident_psap_call_date_time)
+```
+
+Here we have the same thing (with outliers removed) but averaged at the monthly level to see if any longer-term trends emerge. Looks like response times are trending upwards a bit.
+
+```{r fig.align = "center"}
+## Same thing but grouped by month for clearer sense of trends
+cville_data %>% 
+  filter(total_unit_response_time < 1000) %>%
+  clean_response_times() %>%
+  group_by(mo_yr) %>%
+  mutate(avg_response = mean(total_unit_response_time, na.rm = TRUE)) %>%
+  ggplot() +
+  geom_line(aes(x = mo_yr, y = avg_response)) +
+  labs(title = "Average Total Response Times by Month", y = "Mean Response Time (min)", x = "Date") +
+  theme(plot.title = element_text(hjust = 0.5), 
+        legend.position = "none")
+```
+
+```{r, include = FALSE}
+## Filter out the cases where the number of response times and the number of units is not compatible.
+## We'll have to figure out how we want to deal with these. Maybe we should just have different datasets at different levels of analysis rather
+## Than trying to convert between analyzing incidents, units, and partients all the time?
+incons_incidents <- cville_data %>% 
+  distinct() %>%
+  mutate(total_unit_response_time = str_split(total_unit_response_time, "\\|"),
+         response_ems_unit_call_sign = str_split(response_ems_unit_call_sign, "\\|")) %>%
+  mutate(n_resp = unlist(lapply(response_ems_unit_call_sign, length)),
+         n_units = unlist(lapply(total_unit_response_time, length))) %>%
+  filter(n_resp != n_units) ## Filter out cases where there are more/less units than unique response times.
+
+cville_data %>% 
+  filter(!response_incident_number %in% incons_incidents$response_incident_number, total_unit_response_time < 1000) %>%
+  unlist_data() %>%
+  group_by(mo_yr, response_ems_unit_call_sign) %>%
+  mutate(avg_response = mean(as.numeric(total_unit_response_time), na.rm = TRUE)) %>%
+  ggplot() +
+  geom_line(aes(x = mo_yr, y = avg_response, color = response_ems_unit_call_sign)) +
+  labs(title = "Average Total Response Times by Month", y = "Mean Response Time (min)", x = "Date") +
+  theme(plot.title = element_text(hjust = 0.5), 
+        legend.position = "none")
+```
+
+
+```{r message = FALSE, fig.align = "center"}
+complaints <- select_complaints(3)
+
+## Look at response times by complaint type - might have to just select minimum response time for multi-unit calls to avoid double counting
+cville_data %>%
+  filter(total_unit_response_time < 1000) %>%
+  clean_response_times() %>% 
+  group_by(response_incident_number) %>%
+  filter(!is.na(total_unit_response_time), incident_complaint_reported_by_dispatch %in% complaints) %>%
+  mutate(min_total_time = min(total_unit_response_time)) %>%
+  ungroup() %>%
+  group_by(mo_yr, incident_complaint_reported_by_dispatch) %>%
+  mutate(avg_response = mean(as.numeric(total_unit_response_time), na.rm = TRUE)) %>%
+  ggplot() +
+  geom_line(aes(x = mo_yr, y = avg_response, color = incident_complaint_reported_by_dispatch), alpha = 0.4) +
+  geom_smooth(aes(x = mo_yr, y = avg_response, color = incident_complaint_reported_by_dispatch, fill = incident_complaint_reported_by_dispatch), alpha=0.2, show.legend = FALSE) +
+  scale_color_manual(values = cbPalette) +
+  scale_fill_manual(values = cbPalette) +
+  labs(title = "Average Total Response Times by Month", y = "Mean Response Time (min)", x = "Date", color = "Complaint") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+
 
