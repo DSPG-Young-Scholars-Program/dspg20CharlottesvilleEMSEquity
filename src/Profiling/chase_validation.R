@@ -28,6 +28,14 @@ plotFactor <- function(var, n) {
     theme(axis.text.x = element_text(angle = 75, vjust = 1, hjust=1))
 }
 
+ij_sorted <- function(var, i, j) {
+  table(var) %>%
+    data.frame(.) %>%
+    arrange(desc(Freq)) %>%
+    mutate(var = factor(var, unique(var))) %>%
+    .[i:j,]
+}
+
 # getwd() # make sure that working directory = /sfs/qumulo/qhome/scd3dz/git/dspg20CharlottesvilleEMSEquity/
 # setwd("/sfs/qumulo/qhome/scd3dz/git/dspg20CharlottesvilleEMSEquity")
 # ems <- as.data.table(read_excel("./data/original/CFD_CARS_EMS_DATA_121616TO60920.xlsx", 1))
@@ -47,6 +55,9 @@ table(var) %>%
   top_n(n=10, Freq) %>% # can get lowest values by supplying negative number
   ggplot(., aes(x = var, y = Freq)) +
   geom_bar(stat = 'identity')
+ij_sorted(var, 5, 10)
+# could also be compared with one patient primary complaint and other
+# columns
 
 # Response Incident Number (eResponse.03)
 var = ems$`response_incident_number`
@@ -183,6 +194,8 @@ summary(var)
 # everything looks normaly except for the max of 120, are babies' ages rounded
 # up to 1?
 
+ems %>% filter(is.na(patient_age) & !is.na(patient_age_range_in_years)) %>% count()
+
 # patient_suspected_influenza_type_illness
 var <- ems$`patient_suspected_influenza_type_illness`
 basicInfo(var) # logical with 49909 NAs and 0 levels
@@ -250,6 +263,15 @@ plotFactor(var, 5)
 # scene_incident_street_address
 var <- ems$scene_incident_street_address
 basicInfo(var) # character with 14 NAs and 7964 levels
+ij_sorted(var, 1, 5)
+# the street address associated with the most observations is a nursing home (or
+# similar facility)
+
+ems %>% filter(is.na(scene_gps_latitude) | is.na(scene_gps_longitude)) %>% count() # 543
+ems %>% filter((is.na(scene_gps_latitude) | is.na(scene_gps_longitude)) & !is.na(scene_incident_street_address)) %>% count() # 532
+tmp <- ems %>%
+  filter((is.na(scene_gps_latitude) | is.na(scene_gps_longitude)) & !is.na(scene_incident_street_address))
+
 
 # outcome_external_report_type
 var <- ems$outcome_external_report_type
@@ -355,27 +377,18 @@ basicInfo(var) # all NA
 var <- ems$injury_cause_of_injury_description_and_code_list
 basicInfo(var) # char with 42269 NAs and 203 levels
 
-top_n_sorted <- function(var, i, j) {
-  table(var) %>%
-    data.frame(.) %>%
-    arrange(desc(Freq)) %>%
-    mutate(var = factor(var, unique(var))) %>%
-    .[i:j,]
-}
-
-
 # situation_primary_complaint_statement_list
 var <- ems$situation_primary_complaint_statement_list
 basicInfo(var) # character with 13423 NAs and 8650 levels
 plotFactor(var, 5)
-top_n_sorted(var, 1, 5)
+ij_sorted(var, 1, 5)
 
 var_l <- var %>%
   as.array(.) %>%
   apply(., 1, tolower) %>%
   data.frame(.)
 
-top_n_sorted(var_l, 1, 5) # when converted to all lowercase, we can see that "chest pain"
+ij_sorted(var_l, 1, 5) # when converted to all lowercase, we can see that "chest pain"
 # is the number one primary complaint
 
 # look at the numer of flu symptoms cases
@@ -387,14 +400,14 @@ ems %>%
 var <- ems$situation_secondary_complaint_statement_list
 basicInfo(var) # character with 49552 NAs and 136 levels
 plotFactor(var, 5)
-top_n_sorted(var, 1, 5)
+ij_sorted(var, 1, 5)
 
 var_l <- var %>%
   as.array(.) %>%
   apply(., 1, tolower) %>%
   data.frame(.)
 
-top_n_sorted(var_l, 1, 5)
+ij_sorted(var_l, 1, 5)
 
 # situation_complaint_duration
 var <- ems$situation_complaint_duration
@@ -415,3 +428,182 @@ basicInfo(var) # character with 11730 NAs and 11 levels
 plotFactor(var, 5)
 
 # should try validating situation_primary_complaint with anatomic location?
+
+# patient_alcohol_drug_use_indicators_list
+var <- ems$patient_alcohol_drug_use_indicators_list
+basicInfo(var) # character with 42292 NAs and 96 levels
+ij_sorted(var, 10, 20)
+
+# patient_weight_actual_or_estimate_pounds
+var <- ems$patient_weight_actual_or_estimate_pounds
+basicInfo(var) # all NA
+
+# injury_cause_of_injury
+var <- ems$injury_cause_of_injury
+basicInfo(var) # character with 41830 NAs and 132 levels
+ij_sorted(var, 1, 5)
+# just without the codes?
+
+# injury_cause_of_injury_description_list
+var <- ems$injury_cause_of_injury_description_list
+basicInfo(var) # character with 41831 NAs and 205 levels
+ij_sorted(var, 1, 10)
+# just without the codes?
+
+# injury_mechanism_of_injury_list
+var <- ems$injury_mechanism_of_injury_list
+basicInfo(var) # all NA
+
+# incident_protocols_used_list
+var <- ems$incident_protocols_used_list
+basicInfo(var) # char with 47645 NAs and 155 levels
+ij_sorted(var, 1, 10)
+# COPD in this column
+# could be compared with patient primary complaint
+
+# patient_mental_status_assessment_exam_details
+var <- ems$patient_mental_status_assessment_exam_details
+basicInfo(var) # all NA
+
+# patient_mental_status_assessment_findings_list
+var <- ems$patient_mental_status_assessment_findings_list
+basicInfo(var) # character with 35578 NAs and 535 levels
+ij_sorted(var, 1, 5)
+
+# patient_neurological_assessment_exam_details
+var <- ems$patient_neurological_assessment_exam_details
+basicInfo(var) # all NA
+
+# patient_neurological_assessment_findings_list
+var <- ems$patient_neurological_assessment_findings_list
+basicInfo(var) # character with 40076 NAs and 510 levels
+ij_sorted(var, 50, 60)
+
+# patient_skin_assessment_exam_details
+var <- ems$patient_skin_assessment_exam_details
+basicInfo(var) # all NA
+
+# patient_skin_assessment_findings_list
+var <- ems$patient_skin_assessment_findings_list
+basicInfo(var) # character with 37265 NAs and 312 levels
+ij_sorted(var, 20, 30)
+
+# patient_head_assessment_exam_details
+var <- ems$patient_head_assessment_exam_details
+basicInfo(var) # all NA
+
+# patient_head_assessment_findings_list
+var <- ems$patient_head_assessment_findings_list
+basicInfo(var) # char with 42542 NAs and 176 levels
+ij_sorted(var, 10, 20)
+
+# patient_eye_assessment_findings_list
+# vitals_level_of_responsiveness_avpu
+var <- ems$vitals_level_of_responsiveness_avpu
+basicInfo(var) # character with 12660 NAs and 6 levels
+ij_sorted(var, 1, 6)
+
+# patient_respiratory_effort_list_
+var <- ems$patient_respiratory_effort_list_
+basicInfo(var) # all NA
+
+# patient_initial_pulse_oximetry
+var <- ems$patient_initial_pulse_oximetry
+basicInfo(var) # numeric with 15372 NAs and 69 levels
+hist(var, breaks = 20)
+
+# patient_last_pulse_oximetry
+var <- ems$patient_last_pulse_oximetry
+basicInfo(var) # numeric with 15372 NAs and 68 levels
+hist(var, breaks = 20)
+
+# patient_last_blood_glucose_level
+var <- ems$patient_last_blood_glucose_level
+basicInfo(var) # numeric with 33735 NAs and 516 levels
+
+# vitals_cardiac_rhythm_ecg_findings_list
+var <- ems$vitals_cardiac_rhythm_ecg_findings_list
+basicInfo(var) # character with 41913 NAs and 131 levels
+ij_sorted(var, 1, 10)
+
+# patient_initial_pain_scale_score
+var <- ems$patient_initial_pain_scale_score
+basicInfo(var) # numeric with 40192 NAs and 11 levels
+hist(var, breaks = 11)
+
+# patient_last_pain_scale_score
+var <- ems$patient_last_pain_scale_score
+basicInfo(var) # numeric with 40192 NAs and 11 levels
+hist(var, breaks = 11)
+
+ems %>% filter(!is.na(patient_initial_pain_scale_score)) %>% count() # 9717
+ems %>% filter(!is.na(patient_initial_pain_scale_score) & !is.na(patient_last_pain_scale_score)) %>% count() # 9717
+# every patient that has an initial pain scale score also has a last pain scale score
+
+# patient_initial_body_temperature_in_fahrenheit
+var <- ems$patient_initial_body_temperature_in_fahrenheit
+basicInfo(var) # numeric with 44624 NAs and 120 levels
+hist(var, breaks = 20)
+summary(var)
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's
+#  36.39   97.89   98.29   98.48   98.90  110.30   44624
+# hm, assuming the min value is messed up
+# look at the count of values below 95
+ems %>% filter(patient_initial_body_temperature_in_fahrenheit < 95) %>% count # 46
+ems %>% filter(patient_initial_body_temperature_in_fahrenheit < 90) %>% count # 11
+ems %>% filter(patient_initial_body_temperature_in_fahrenheit < 80) %>% count # 7
+below80 <- ems %>% filter(patient_initial_body_temperature_in_fahrenheit < 80)
+below80$injury_cause_of_injury
+# injuries don't really explain why their temps would be that low
+
+# patient_last_body_temperature_in_fahrenheit
+var <- ems$patient_last_body_temperature_in_fahrenheit
+basicInfo(var) # numeric with 44624 NAs and 120 levels
+hist(var, breaks = 20)
+summary(var)
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's
+#  36.39   97.89   98.29   98.46   98.90  110.30   44624
+
+# medication_given_description_and_rxcui_code
+var <- ems$medication_given_description_and_rxcui_code
+basicInfo(var) # character with 38735 NAs and 40 levels
+ij_sorted(var, 1, 5)
+
+# patient_medication_given_descriptions_list
+var <- ems$patient_medication_given_descriptions_list
+basicInfo(var) # character with 38701 NAs and 584 levels
+ij_sorted(var, 1, 5)
+
+# patient_medication_given_description_and_rxcui_codes_list
+var <- ems$patient_medication_given_description_and_rxcui_codes_list
+basicInfo(var) # char with 38701 NAs and 584 levels
+ij_sorted(var, 1, 5)
+
+# incident_psap_call_date_time
+var <- ems$incident_psap_call_date_time
+basicInfo(var) # POSIXt with 26 NAs and 29571 levels
+hist(var, breaks = 100)
+
+# incident_crew_member_full_name_list
+var <- ems$incident_crew_member_full_name_list
+basicInfo(var) # character with 473 NAs and 6692 levels
+ij_sorted(var, 1, 10)
+head(var)
+
+# incident_crew_member_level_list
+var <- ems$incident_crew_member_level_list
+basicInfo(var) # character with 475 NAs and 286 levels
+ij_sorted(var, 1, 5)
+
+# total_unit_response_time
+var <- ems$total_unit_response_time
+basicInfo(var) # numeric with 2355 NAs and 1425 levels
+hist(var, breaks = 20)
+summary(var)
+#  Min.  1st Qu.   Median     Mean  3rd Qu.     Max.     NA's
+# 0.000    4.420    5.870    6.672    7.700 1445.280     2355
+
+# patient_attempted_procedure_descriptions_and_codes_list
+var <- ems$patient_attempted_procedure_descriptions_and_codes_list
+basicInfo(var) # character with 33639 NAs and 1048 levels
+ij_sorted(var, 1, 5)
