@@ -68,7 +68,8 @@ plot_complaint_volume <- function(data, vars, pal) {
     geom_vline(xintercept = dmy("02-01-2020"), linetype = "dashed", alpha = 0.8) +
     scale_color_manual(values = pal) +
     facet_wrap(~incident_complaint_reported_by_dispatch, ncol = 1) +
-    labs(x = "Date", y = "Monthly Incidents", color = "Complaint")
+    labs(x = "Date", y = "Monthly Incidents", color = "Complaint") +
+    theme_minimal()
   
   return(p)
 }
@@ -92,7 +93,46 @@ complaints <- select_complaints(3)
 ## Plot
 plot_complaint_volume(cville_data, vars = complaints, cbPalette) + 
   labs(title = "Trends in Top 3 Complaints: Charlottesville") + 
-  theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+  theme(plot.title = element_text(hjust = 0.5, size = 16), 
+        legend.position = "none")
+
+# ggsave(here("output", "temporal_top_complaints_volume.png"))
+```
+
+The top complaints differ from the top provider impressions. We were told that the dispatch complaint report may not be as reliable. May be interesting to explore whether there is systematic variation in these variables (do the impressions differ from the complaints for particular types of incidents? For different demographic characteristics? Spatially?)
+
+```{r}
+## Extract most frequent impressions
+top_impressions <- cville_data %>% 
+  filter(!is.na(situation_provider_primary_impression_code_and_description)) %>%
+  group_by(situation_provider_primary_impression_code_and_description) %>% 
+  count() %>% 
+  ungroup() %>%
+  top_n(5) %>%
+  arrange(desc(n))
+
+top_impressions <- top_impressions$situation_provider_primary_impression_code_and_description
+
+## Pool incidents by month
+plot_data <- cville_data %>%
+  filter(situation_provider_primary_impression_code_and_description %in% top_impressions) %>%
+  group_by(mo_yr, situation_provider_primary_impression_code_and_description) %>%
+  count() %>%
+  mutate(situation_provider_primary_impression_code_and_description = factor(situation_provider_primary_impression_code_and_description, levels = top_impressions))
+
+## Plot temporal trends in volume
+ggplot(plot_data) + 
+  geom_line(aes(x = mo_yr, y = n, color = situation_provider_primary_impression_code_and_description), alpha = 1) + 
+  geom_point(aes(x = mo_yr, y = n, color = situation_provider_primary_impression_code_and_description), alpha = 0.7) +
+  geom_vline(xintercept = dmy("02-01-2020"), linetype = "dashed", alpha = 0.8) +
+  scale_color_manual(values = cbPalette) +
+  facet_wrap(~situation_provider_primary_impression_code_and_description, ncol = 1) +
+  labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions: Charlottesville") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "none")
+
+# ggsave(here("output", "top_impression_volume.png"), height = 10, width = 8)
 ```
 
 Plotting without faceting quickly gets too busy, but converting to an interactive layout with plotly can help with this by allowing for highlighting. Here are the top 8 complaints plotted together for better comparison.
@@ -229,9 +269,10 @@ cville_data %>%
         legend.position = "none")
 ```
 
+This is super tentative, but could be an interesting idea: after the pandemic begins, do we see the response times go down for more "concerning" dispatch reports? There's a bit of evidence that maybe response times for complaints of breathing problems and sick people go down while chest pain and falls increase. These are obviously just a tiny subset of complaints, but worth exploring further?
 
 ```{r message = FALSE, fig.align = "center"}
-complaints <- select_complaints(3)
+complaints <- select_complaints(4)
 
 ## Look at response times by complaint type - might have to just select minimum response time for multi-unit calls to avoid double counting
 cville_data %>%
@@ -249,7 +290,11 @@ cville_data %>%
   scale_color_manual(values = cbPalette) +
   scale_fill_manual(values = cbPalette) +
   labs(title = "Average Total Response Times by Month", y = "Mean Response Time (min)", x = "Date", color = "Complaint") +
-  theme(plot.title = element_text(hjust = 0.5))
+  guides(color = guide_legend(override.aes = list(alpha = 1))) +
+  theme(plot.title = element_text(hjust = 0.5, size = 16),
+        legend.key = element_blank())
+
+# ggsave(here("output", "response_times_by_month_top_complaints.png"), height = 8, width = 13)
 ```
 
 
