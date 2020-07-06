@@ -1,7 +1,7 @@
-
 library(dplyr)
 library(here)
 library(purrr)
+library(stringr)
 
 ## Columns mutually selected to be removed based on irrelevance or data quality issues
 drop_cols <- c("cad_crew_member_full_name_and_level_list",
@@ -34,35 +34,24 @@ drop_cols <- c("cad_crew_member_full_name_and_level_list",
                "vitals_cardiac_rhythm_ecg_findings_list",
                "vitals_level_of_responsiveness_avpu")
 
-<<<<<<< HEAD
-## County data
-albemarle <- readxl::read_xlsx(here("data","original","Data4UVA.xlsx"), 1, col_types = c(rep("text", 4), "date", rep("text", 78))) %>%
-  rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
-  rename_with(~gsub(r"( )", "_", .x)) %>%  # change periods to underscores
-  select(-all_of(drop_cols)) %>%
-  mutate(outcome_external_report_number = str_replace(outcome_external_report_number, "(?<![0-9])0+", "")) # Remove leading zeros in outcome report numbers
-  
-## City data
-=======
 albemarle <- readxl::read_xlsx(here("data","original","Data4UVA.xlsx"), 1, col_types = c(rep("text", 4), "date", rep("text", 78))) %>%
   rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
   rename_with(~gsub(r"( )", "_", .x)) %>%  # change periods to underscores
   select(-all_of(drop_cols))
-    
->>>>>>> 66b0bdbca6b99613f257fef12ae9f713f6a58e65
+  
+  ## Add this to scrub leading zeros from outcome numbers so they will match with city data - make sure this isn't messing up when numbers have dashes, etc.
+  # mutate(outcome_external_report_number = str_replace(outcome_external_report_number, "(?<![0-9])0+", ""))
+
 charlottesville <- readxl::read_xlsx(here("data","original","CFD_CARS_EMS_DATA_121616TO60920.xlsx"), 1, col_types = c(rep("text", 4), "date", rep("text", 78))) %>%
   rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
   rename_with(~gsub(" ", "_", .x)) %>% # change spaces to underscores
   select(-all_of(drop_cols))
-  
+
 # these variables probably mean the same thing, so I'll just rename the albemarle one
 albemarle <- albemarle %>%
   rename(total_unit_response_time = incident_unit_notified_by_dispatch_to_unit_arrived_on_scene_in_minutes)
 
-<<<<<<< HEAD
-## Combine into single dataset
-=======
 ## Combine data
->>>>>>> 66b0bdbca6b99613f257fef12ae9f713f6a58e65
 ems_full <- bind_rows(mutate(albemarle, source = "albemarle"),
                       mutate(charlottesville, source = "charlottesville")) # tag on source variable
+
