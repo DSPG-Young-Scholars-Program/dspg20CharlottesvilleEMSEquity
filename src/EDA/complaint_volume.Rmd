@@ -27,6 +27,13 @@ cville_data <- cville_data %>%
          dy = as.character(day(incident_date)),
          mo_yr = dmy(paste0("01-", mo, "-", yr)),
          incident_psap_call_date_time = as.POSIXct(cville_data$incident_psap_call_date_time * (60 * 60 * 24), origin = "1899-12-30"))
+
+plot_theme <- theme(plot.title = element_text(hjust = 0.5, size = 20),
+                    axis.text = element_text(size = 14),
+                    axis.title = element_text(size = 18),
+                    legend.key = element_blank(),
+                    legend.text = element_text(size = 14),
+                    legend.title = element_text(size = 16))
 ```
 
 ```{r, include = FALSE}
@@ -129,10 +136,10 @@ ggplot(plot_data) +
   facet_wrap(~situation_provider_primary_impression_code_and_description, ncol = 1) +
   labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions: Charlottesville") +
   theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5),
-        legend.position = "none")
+  plot_theme +
+  theme(legend.position = "none")
 
-# ggsave(here("output", "top_impression_volume.png"), height = 10, width = 8)
+ggsave(here("output", "top_impression_volume.png"), height = 10, width = 10)
 ```
 
 Plotting without faceting quickly gets too busy, but converting to an interactive layout with plotly can help with this by allowing for highlighting. Here are the top 8 complaints plotted together for better comparison.
@@ -241,8 +248,9 @@ cville_data %>%
   ggplot() +
   geom_line(aes(x = mo_yr, y = avg_response)) +
   labs(title = "Average Total Response Times by Month", y = "Mean Response Time (min)", x = "Date") +
-  theme(plot.title = element_text(hjust = 0.5), 
-        legend.position = "none")
+  theme_minimal() +
+  plot_theme +
+  theme(legend.position = "none")
 ```
 
 ```{r, include = FALSE}
@@ -265,8 +273,9 @@ cville_data %>%
   ggplot() +
   geom_line(aes(x = mo_yr, y = avg_response, color = response_ems_unit_call_sign)) +
   labs(title = "Average Total Response Times by Month", y = "Mean Response Time (min)", x = "Date") +
-  theme(plot.title = element_text(hjust = 0.5), 
-        legend.position = "none")
+  plot_theme +
+  theme_minimal() +
+  theme(legend.position = "none")
 ```
 
 This is super tentative, but could be an interesting idea: after the pandemic begins, do we see the response times go down for more "concerning" dispatch reports? There's a bit of evidence that maybe response times for complaints of breathing problems and sick people go down while chest pain and falls increase. These are obviously just a tiny subset of complaints, but worth exploring further?
@@ -289,10 +298,10 @@ cville_data %>%
   geom_smooth(aes(x = mo_yr, y = avg_response, color = incident_complaint_reported_by_dispatch, fill = incident_complaint_reported_by_dispatch), alpha=0.2, show.legend = FALSE) +
   scale_color_manual(values = cbPalette) +
   scale_fill_manual(values = cbPalette) +
-  labs(title = "Average Total Response Times by Month", y = "Mean Response Time (min)", x = "Date", color = "Complaint") +
+  labs(title = "Average Total Response Times by Month: Charlottesville", y = "Mean Response Time (min)", x = "Date", color = "Complaint") +
   guides(color = guide_legend(override.aes = list(alpha = 1))) +
-  theme(plot.title = element_text(hjust = 0.5, size = 16),
-        legend.key = element_blank())
+  theme_minimal() +
+  plot_theme
 
 # ggsave(here("output", "response_times_by_month_top_complaints.png"), height = 8, width = 13)
 ```
