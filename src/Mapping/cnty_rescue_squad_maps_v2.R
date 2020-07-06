@@ -115,7 +115,7 @@ leaflet(data = response_areas) %>%
               smoothFactor = 0.7
   ) %>%
   addPolygons(fillColor = ~pal2(FIRE_1st), 
-               fillOpacity = 0.7,
+              fillOpacity = 0.7,
               stroke = TRUE,
               weight = 2,
               color = "black",
@@ -177,8 +177,8 @@ leaflet(data = response_areas) %>%
 # get census blocks for Albemarle County - finer grained than rescue squad map
 
 #cnty_blocks <- blocks(state = "Virginia", county = c("Albemarle")) #, cb = TRUE) #%>%
-  #st_as_sf() %>%
-  #st_transform(crs = 4326)
+#st_as_sf() %>%
+#st_transform(crs = 4326)
 
 # leaflet(cnty_tracts) %>%
 #   addTiles() %>%
@@ -190,5 +190,3 @@ leaflet(data = response_areas) %>%
 # 2) CARS on station data?
 # 3) add c-ville stations: 01, 10, HQ
 # 4) find 05X1 on map.
-
-
