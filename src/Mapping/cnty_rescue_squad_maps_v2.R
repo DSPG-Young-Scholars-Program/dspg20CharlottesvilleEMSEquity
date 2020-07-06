@@ -129,7 +129,7 @@ leaflet(data = response_areas) %>%
                                             "border-color" = "rgba(0,0,0,0.5)",
                                             direction = "auto"
                                           ))
-  ) %>%
+              ) %>%
   # addPolygons(fillColor = ~pal3(Rescue_1st), 
   #             fillOpacity = 0.7,
   #             stroke = TRUE,
@@ -141,33 +141,33 @@ leaflet(data = response_areas) %>%
   #             label = response_areas_labels,
   #             labelOptions = labelOptions(direction = "bottom",
   #                                         style = list(
-#                                           "font-size" = "12px",
-#                                           "border-color" = "rgba(0,0,0,0.5)",
-#                                           direction = "auto"
-#                                         ))
-# ) %>%
-# addPolygons(fillColor = ~pal4(Rescue_1_1), 
-#             fillOpacity = 0.7,
-#             stroke = TRUE,
-#             weight = 2,
-#             color = "black",
-#             smoothFactor = 0.7,
-#             group = "Rescue First Response - Night",
-#             layerId = ~Name,
-#             label = response_areas_labels,
-#             labelOptions = labelOptions(direction = "bottom",
-#                                         style = list(
-#                                           "font-size" = "12px",
-#                                           "border-color" = "rgba(0,0,0,0.5)",
-#                                           direction = "auto"
-#                                         ))
-#) %>%
-addCircleMarkers(data = pts, radius = 7, fillColor = ~pal(STTYPE), fillOpacity = 0.7, 
-                 stroke = TRUE, color = "black", opacity = 1, weight = 1,  popup = pts_labels) %>%
+  #                                           "font-size" = "12px",
+  #                                           "border-color" = "rgba(0,0,0,0.5)",
+  #                                           direction = "auto"
+  #                                         ))
+  # ) %>%
+  # addPolygons(fillColor = ~pal4(Rescue_1_1), 
+  #             fillOpacity = 0.7,
+  #             stroke = TRUE,
+  #             weight = 2,
+  #             color = "black",
+  #             smoothFactor = 0.7,
+  #             group = "Rescue First Response - Night",
+  #             layerId = ~Name,
+  #             label = response_areas_labels,
+  #             labelOptions = labelOptions(direction = "bottom",
+  #                                         style = list(
+  #                                           "font-size" = "12px",
+  #                                           "border-color" = "rgba(0,0,0,0.5)",
+  #                                           direction = "auto"
+  #                                         ))
+  #) %>%
+  addCircleMarkers(data = pts, radius = 7, fillColor = ~pal(STTYPE), fillOpacity = 0.7, 
+                   stroke = TRUE, color = "black", opacity = 1, weight = 1,  popup = pts_labels) %>%
   addLayersControl(baseGroups = c("Fire First Response", "Rescue First Response - Day", 
                                   "Rescue First Response - Night"),
                    options = layersControlOptions(collapsed = FALSE))
-# #addLegendCustom(colors, labels, sizes, shapes, borders)
+  # #addLegendCustom(colors, labels, sizes, shapes, borders)
 
 
 
