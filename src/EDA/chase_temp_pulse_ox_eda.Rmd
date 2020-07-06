@@ -1,0 +1,34 @@
+---
+title: "Exploring Temperature & Pulse Oximetry"
+author: "Chase Dawson"
+date: "7/6/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+ems <- charlottesville_renamed
+```
+## Temperature
+We select observationst that have temperature readings.
+```{r}
+has_temp <- ems %>% filter(!is.na(patient_initial_body_temperature_in_fahrenheit))
+has_temp$patient_initial_body_temperature_in_fahrenheit <- as.numeric(has_temp$patient_initial_body_temperature_in_fahrenheit)
+```
+
+```{r cars}
+summary(cars)
+```
+
+## Pulse Oximetry
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
