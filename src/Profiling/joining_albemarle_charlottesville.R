@@ -38,12 +38,12 @@ albemarle <- readxl::read_xlsx(here("data","original","Data4UVA.xlsx"), 1, col_t
   rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
   rename_with(~gsub(r"( )", "_", .x)) %>%  # change periods to underscores
   select(-all_of(drop_cols))
-    
+
 charlottesville <- readxl::read_xlsx(here("data","original","CFD_CARS_EMS_DATA_121616TO60920.xlsx"), 1, col_types = c(rep("text", 4), "date", rep("text", 78))) %>%
   rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
   rename_with(~gsub(" ", "_", .x)) %>% # change spaces to underscores
   select(-all_of(drop_cols))
-  
+
 # these variables probably mean the same thing, so I'll just rename the albemarle one
 albemarle <- albemarle %>%
   rename(total_unit_response_time = incident_unit_notified_by_dispatch_to_unit_arrived_on_scene_in_minutes)
@@ -51,5 +51,26 @@ albemarle <- albemarle %>%
 ## Combine data
 ems_full <- bind_rows(mutate(albemarle, source = "albemarle"),
                       mutate(charlottesville, source = "charlottesville")) # tag on source variable
+
+## Read in new data
+
+
+# set column types
+col_spec <- rep("c", 84)
+col_spec[5] <- "D" # Incident Date
+col_spec[77] <- "T" # Incident PSAP Call Date Time
+col_spec <- paste0(col_spec, collapse = "")
+
+# change variables that changed names
+drop_cols[which(drop_cols == "cad_crew_member_full_name_and_level_list")] <- "incident_crew_member_full_name_and_level_list"
+drop_cols <- drop_cols[which(!(drop_cols %in% c("vitals_cardiac_rhythm_ecg_findings_list", "medication_given_description_and_rxcui_code")))]
+
+
+
+new_ems_data <- vroom::vroom(here("data", "original", "2020 UVA Project County Bulk Export_Export.csv"),
+                        col_types = col_spec) %>%
+  rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
+  rename_with(~gsub(r"( )", "_", .x)) %>%  # change periods to underscores
+  select(-all_of(drop_cols))
 
 
