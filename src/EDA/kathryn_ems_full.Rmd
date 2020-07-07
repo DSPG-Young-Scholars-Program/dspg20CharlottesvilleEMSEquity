@@ -1,0 +1,121 @@
+---
+title: "EMS data EDA"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Basic EDA
+
+Looking for anything in the data that we need to ask questions about.
+
+```{r, message=FALSE}
+library(naniar)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+```
+
+```{r}
+ems_full <- read.csv("../../data/working/ems_full_v1.csv", colClasses = c(rep("character", 4), "POSIXct", rep("character", 78)))
+
+#head(ems_full)
+#summary(ems_full)
+
+```
+
+```{r}
+str(ems_full)
+```
+
+```{r}
+missing <- miss_var_summary(ems_full) %>%
+  mutate_if(is.numeric, round, digits = 2)
+missing
+
+#ggplot(data=missing, aes(x=reorder(variable, -pct_miss), y=pct_miss)) +
+#  geom_bar(stat='identity') +
+#  theme(axis.text.x = element_text(angle = 60))
+
+```
+
+```{r}
+table(ems_full$source)
+table(ems_full$incident_type)  # all EMS, 8 that are not are from parsing errors
+
+```
+
+```{r}
+table(ems_full$agency_name)
+
+#ems_full[ems_full$agency_name == '118',]  # also giving results where agency_name is NA
+#ems_full[which(ems_full$agency_name == '118'), ]
+```
+
+```{r}
+
+```
+
+## Counting number of incidents by year and month
+
+**Noted issues in data - There are 19020 duplicated incident numbers with non-matching dates!** Sometimes these are very close dates, but for now I'm just keeping the first listed incident number and corresponding date.
+
+```{r}
+#table(ems_full$incident_date)
+
+dates <- data.frame(inc_num = ems_full$response_incident_number,
+                    yr = as.factor(year(ems_full$incident_date)), 
+                    mo = as.factor(month(ems_full$incident_date)), 
+                    dy = as.character(day(ems_full$incident_date)) )
+
+miss_var_summary(dates)  # 106 missing indicent numbers (unique incidents or not?), 17 missing dates.  
+                         # For now - leave these out                 
+
+# find only dates for unique incidents
+
+comp_dates <- dates[complete.cases(dates), ] # removes 116 rows with at least one NA
+unique_incidents_idx <- !duplicated(comp_dates$inc_num)  
+u_dates <- comp_dates[unique_incidents_idx, ]
+
+```
+
+```{r}
+yr_mo <- u_dates %>%
+            group_by(yr, mo) %>%
+            count()
+yr_mo  
+
+```
+
+```{r}
+
+#years_count <- table(dates$yr)
+#barplot(years_count)
+
+cbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
+
+ggplot(data=u_dates) +
+  geom_bar(mapping = aes(x = mo, fill = yr), position = 'dodge') +
+  scale_fill_manual(values=cbPalette) +
+  labs(title = "Number of Incidents by Month and Year ", 
+       x = "Month", y = "Number of Incidents") 
+ 
+  
+```
+
+```{r}
+cbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
+
+ggplot(data=yr_mo) +
+  geom_point(mapping = aes(x = mo, y = n, colour = yr)) +
+  geom_line(mapping = aes(x = as.numeric(mo), y = n, colour = yr)) +
+  labs(title = "Number of Incidents by Month and Year ", 
+       x = "Month", y = "Number of Incidents") +
+  scale_colour_manual(values=cbPalette)
+  
+```
+
+## Next Step - looking at the incident_complaint_reported_by dispatch and situation_provider_primary_impression_code_and_description
+
