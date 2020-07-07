@@ -1,7 +1,7 @@
-
 library(dplyr)
 library(here)
 library(purrr)
+library(stringr)
 
 ## Columns mutually selected to be removed based on irrelevance or data quality issues
 drop_cols <- c("cad_crew_member_full_name_and_level_list",
@@ -39,6 +39,9 @@ albemarle <- readxl::read_xlsx(here("data","original","Data4UVA.xlsx"), 1, col_t
   rename_with(~gsub(r"( )", "_", .x)) %>%  # change periods to underscores
   select(-all_of(drop_cols))
 
+  ## Add this to scrub leading zeros from outcome numbers so they will match with city data - make sure this isn't messing up when numbers have dashes, etc.
+  # mutate(outcome_external_report_number = str_replace(outcome_external_report_number, "(?<![0-9])0+", ""))
+
 charlottesville <- readxl::read_xlsx(here("data","original","CFD_CARS_EMS_DATA_121616TO60920.xlsx"), 1, col_types = c(rep("text", 4), "date", rep("text", 78))) %>%
   rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
   rename_with(~gsub(" ", "_", .x)) %>% # change spaces to underscores
@@ -72,5 +75,4 @@ new_ems_data <- vroom::vroom(here("data", "original", "2020 UVA Project County B
   rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
   rename_with(~gsub(r"( )", "_", .x)) %>%  # change periods to underscores
   select(-all_of(drop_cols))
-
 
