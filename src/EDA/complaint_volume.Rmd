@@ -28,12 +28,13 @@ cville_data <- cville_data %>%
          mo_yr = dmy(paste0("01-", mo, "-", yr)),
          incident_psap_call_date_time = as.POSIXct(cville_data$incident_psap_call_date_time * (60 * 60 * 24), origin = "1899-12-30"))
 
-plot_theme <- theme(plot.title = element_text(hjust = 0.5, size = 20),
-                    axis.text = element_text(size = 14),
-                    axis.title = element_text(size = 18),
+plot_theme <- theme(plot.title = element_text(hjust = 0.5, size = 22),
+                    axis.text = element_text(size = 16),
+                    axis.title = element_text(size = 20),
+                    strip.text = element_text(size = 18),
                     legend.key = element_blank(),
-                    legend.text = element_text(size = 14),
-                    legend.title = element_text(size = 16))
+                    legend.text = element_text(size = 16),
+                    legend.title = element_text(size = 18))
 ```
 
 ```{r, include = FALSE}
@@ -134,12 +135,12 @@ ggplot(plot_data) +
   geom_vline(xintercept = dmy("02-01-2020"), linetype = "dashed", alpha = 0.8) +
   scale_color_manual(values = cbPalette) +
   facet_wrap(~situation_provider_primary_impression_code_and_description, ncol = 1) +
-  labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions: Charlottesville") +
+  labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions: Charlottesville\n") +
   theme_minimal() +
   plot_theme +
   theme(legend.position = "none")
 
-ggsave(here("output", "top_impression_volume.png"), height = 10, width = 10)
+# ggsave(here("output", "top_impression_volume.png"), height = 10, width = 10)
 ```
 
 Plotting without faceting quickly gets too busy, but converting to an interactive layout with plotly can help with this by allowing for highlighting. Here are the top 8 complaints plotted together for better comparison.
