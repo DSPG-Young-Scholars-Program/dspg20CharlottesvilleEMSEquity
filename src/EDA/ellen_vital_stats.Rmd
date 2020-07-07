@@ -57,7 +57,8 @@ vital_stats %>%
   mutate(year = as.character(year(DATE_OF_DEATH)),
          yday = yday(DATE_OF_DEATH)) %>%
   ggplot() +
-  geom_density(aes(x = yday,y = ..count.., color = year), alpha = 0.3)
+  geom_histogram(aes(x = yday,y = ..count..), binwidth = 20) +
+  facet_wrap(~year)
 ```
 
 Not the perfect vis for it, but no obvious increase in deaths this year. 
