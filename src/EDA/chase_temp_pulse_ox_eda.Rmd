@@ -7,16 +7,24 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(vroom)
+library(here)
+
+# load the data
+ems <- vroom::vroom(here("data", "original", "2020 UVA Project County Bulk Export_Export.csv"),
+                        col_types = col_spec) %>%
+  rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
+  rename_with(~gsub(r"( )", "_", .x)) %>%  # change periods to underscores
+  select(-all_of(drop_cols))
 ```
 
-```{r}
-ems <- charlottesville_renamed
-```
 ## Temperature
-We select observationst that have temperature readings.
+Number of incidents with no temperature data:
 ```{r}
-has_temp <- ems %>% filter(!is.na(patient_initial_body_temperature_in_fahrenheit))
-has_temp$patient_initial_body_temperature_in_fahrenheit <- as.numeric(has_temp$patient_initial_body_temperature_in_fahrenheit)
+ems %>%
+  filter(is.na(patient_initial_body_temperature_in_fahrenheit) & is.na(patient_last_body_temperature_in_fahrenheit)) %>%
+  count()
 ```
 
 ```{r cars}
