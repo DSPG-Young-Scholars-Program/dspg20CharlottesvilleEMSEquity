@@ -172,7 +172,7 @@ tmp <- ems %>%
 
 tmp %>%
   ggplot(., aes(x = incident_month, y = n, fill = dispatch_complaint_potenial_covid)) +
-  geom_bar(stat = "identity", position = "identity") +
+  geom_bar(stat = "identity", position = "stack") +
 
   labs(title = "City of Charlottesville Incidents in 2020",
        y = "Number of Incidents",
