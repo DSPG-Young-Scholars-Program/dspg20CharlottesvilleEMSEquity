@@ -1,7 +1,12 @@
+library(dplyr)
 library(lubridate)
 library(ggplot2)
+library(here)
+library(vroom)
 
-ems <- charlottesville_renamed
+# run joining_albermarle_charlottesville.R to get ems data frame
+head(new_ems_data)
+ems <- new_ems_data
 
 # temp variable
 ems$patient_initial_body_temperature_in_fahrenheit
@@ -200,7 +205,8 @@ levels(as.factor(ems$situation_provider_secondary_impression_description_and_cod
 # plot covid cases
 covid <- ems %>%
   filter(situation_provider_primary_impression_code_and_description == "Infectious - Coronavirus (B97.21)" |
-           situation_provider_secondary_impression_description_and_code == "Infectious - Coronavirus (B97.21)")
+           str_detect(situation_provider_secondary_impression_description_and_code_list, "Infectious - Coronavirus (B97.21)"))
+nrow(covid)
 
 # convert to lower case
 ems$situation_primary_complaint_statement_list <- tolower(ems$situation_primary_complaint_statement_list)
@@ -252,4 +258,6 @@ ems <- ems %>%
          mo_yr = dmy(paste0("01-", mo, "-", yr)))
 
 # look at covid-like symptoms by race
-ems
+ems$patient_race_first_listed = gsub("^(.*?),.*", "\\1", ems$patient_race_list)
+nrow(ems) # 85446
+
