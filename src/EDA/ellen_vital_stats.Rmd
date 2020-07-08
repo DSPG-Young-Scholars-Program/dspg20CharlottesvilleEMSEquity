@@ -59,33 +59,34 @@ cbPalette <- c(rev(alpha(grey.colors(4, end = 0.7), 0.5)), "#d400d0")
 vital_stats %>% 
   mutate(year = as.character(year(DATE_OF_DEATH)),
          yday = yday(DATE_OF_DEATH),
-         month = month(DATE_OF_DEATH),
+         month = month(DATE_OF_DEATH, label = TRUE, abbr = FALSE),
          yday_group = 15 * (yday %/% 15)) %>%
-  group_by(yday_group, year) %>% 
-  summarize(n = n()/20) %>% 
-  filter(!(year == 2020 & yday_group == 165)) %>% 
+  group_by(month, year) %>% 
+  summarize(n = n()) %>% 
+  mutate(n = ifelse(year == 2020 & month == "June", n*30/14, n)) %>% 
   ggplot() +
-  geom_point(aes(x = yday_group, y = n, color = year)) +
-  geom_line(aes(x = yday_group,y = n, color = year)) +
-  lims(y = c(0, 8)) +
-  labs(x = "Days since January 1st",
-       y = "Daily Deaths",
-       title = "Daily Deaths in Virginia by Year") +
-theme(plot.title = element_text(hjust = 0.5, size = 22),
-                    axis.text = element_text(size = 16),
-                    axis.title = element_text(size = 20),
-                    strip.text = element_text(size = 18),
-                    legend.key = element_blank(),
-                    legend.text = element_text(size = 16),
-                    #legend.title = element_text(size = 18),
-                    legend.title = element_blank()) +
-  scale_color_manual(values = cbPalette)
+  geom_point(aes(x = month, y = n, color = year)) +
+  geom_line(aes(x = month,y = n, color = year, group = year)) +
+  labs(x = NULL,
+       y = "Monthly Deaths",
+       title = "Charlottesville and Albemarle\nMonthly Deaths by Year") +
+  theme(plot.title = element_text(hjust = 0.5, size = 22),
+        axis.text = element_text(size = 16, 
+                                 angle = 90,
+                                 hjust = 1),
+        axis.title = element_text(size = 20),
+        strip.text = element_text(size = 18),
+        legend.key = element_blank(),
+        legend.text = element_text(size = 16),
+        #legend.title = element_text(size = 18),
+        legend.title = element_blank()) +
+  scale_color_manual(values = cbPalette) +
+  lims(y = c(0, 230))
 
 
 
 
 ggsave(here::here("output", "mortality.png"), device = "png", width = 10, height = 6)
-
 ```
 
 Not the perfect vis for it, but no obvious increase in deaths this year. 
