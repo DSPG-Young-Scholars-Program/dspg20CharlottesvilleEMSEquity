@@ -64,7 +64,7 @@ plot_theme <- theme(plot.title = element_text(hjust = 0.5, size = 22),
 
 
 ## Race
-
+Plot shows distribution of patient ages broken up by they're gender and race for the incidents in Charlottesville. We see that most of the patients are White or Black and in these two populations there is a bump in patients who are male and around 55 years of age. However, for women in these races their distribution of ages seems to be flatter and more uniform throughout. In comparison, there aren't many patients who are of other racial identities. In both Asians and Hispanics we see a greater density of patients who are in their 20s, these incidents might be contributed by students attending UVA.
 ```{r race, fig.width=10, fig.height=8}
 #takes the first lsited race of people who were listed as multiple races
 charlottesville$patient_race_list = gsub("^(.*?),.*", "\\1", charlottesville$patient_race_list)
@@ -108,9 +108,8 @@ ggplot(aes(patient_race_list, as.numeric(patient_age), fill = patient_gender)) +
 
 ```
 
-## 
-
-
+##  Age
+Looking at Race dist over Ages, age dist of gender as well.
 ```{r age, echo=FALSE}
 charlottesville %>% 
   replace_with_na(replace = list(patient_race_list = c("Not Recorded", "Not Applicable"))) %>% # groups not recorded, etc. into NAs
@@ -144,6 +143,7 @@ ggplot(aes(patient_gender, as.numeric(patient_age))) +
 
 ```
 
+## Pain
 
 ```{r, pain race}
 
