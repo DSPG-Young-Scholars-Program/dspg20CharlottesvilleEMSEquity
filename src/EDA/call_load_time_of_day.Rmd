@@ -1,0 +1,69 @@
+---
+title: "Call Loads by Time of Day"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(lubridate)
+library(ggplot2)
+
+source(here::here("src", "Profiling", "joining_albemarle_charlottesville.R"))
+```
+
+```{r include = FALSE}
+new_ems_data <- new_ems_data %>%
+  ## Breaking down time of day info
+  mutate(psap_time_of_day = ymd_hms(paste("2020-01-01", strftime(incident_psap_call_date_time, format="%H:%M:%S"), sep = " ")),
+         psap_hour = hour(psap_time_of_day),
+         psap_minute = minute(psap_time_of_day)) %>%
+  ## Categorizing primary impressions manually:
+  mutate(primary_impression_category = case_when(str_detect(situation_provider_primary_impression_code_and_description, "lcohol") ~ "Abuse of Alcohol",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "Abuse") ~ "Abuse of Substance",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "Allergic") ~ "Allergic Reaction",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "OB") ~ "OB",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "Endocrine") ~ "Endocrine",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "GI") ~ "GI/GU",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, " - ") ~ str_extract(situation_provider_primary_impression_code_and_description, "[^-]+"), 
+                                                 !str_detect(situation_provider_primary_impression_code_and_description, " - ") ~ str_extract(situation_provider_primary_impression_code_and_description, "[^\\(]+")))
+```
+
+```{r include = FALSE}
+top_impressions <- new_ems_data %>% 
+  filter(!is.na(situation_provider_primary_impression_code_and_description)) %>%
+  group_by(situation_provider_primary_impression_code_and_description) %>% 
+  count() %>% 
+  ungroup() %>%
+  top_n(5) %>%
+  arrange(desc(n))
+
+top_impressions <- top_impressions$situation_provider_primary_impression_code_and_description
+
+top_impression_categories <- new_ems_data %>% 
+  filter(!is.na(primary_impression_category)) %>%
+  group_by(primary_impression_category) %>% 
+  count() %>% 
+  ungroup() %>%
+  top_n(10) %>%
+  arrange(desc(n))
+
+top_impression_categories <- top_impression_categories$primary_impression_category
+```
+
+Start with a baseline call load density for various impression categories:
+
+``` {r}
+new_ems_data %>%
+  filter(!is.na(situation_provider_primary_impression_code_and_description), !is.na(psap_time_of_day), primary_impression_category %in% top_impression_categories) %>%
+  ggplot() +
+  geom_density(aes(x = psap_time_of_day, color = primary_impression_category), alpha = 0.3) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+Want to see how these may have changed before/after COVID
+
+
+
+
