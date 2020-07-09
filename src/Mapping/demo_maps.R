@@ -279,7 +279,7 @@ cville_income <- cville_income %>%
 ## Convenience function for leaflet map
 map_income <- function(data, border_data, fill_opacity = 0.7, 
                        border_color = "#4D4D4D", smoothing = 0.5, 
-                       fill_pal = colorBin("RdBu", data$med_income, bins=10, pretty=TRUE)) {
+                       fill_pal = colorBin("YlGn", data$med_income, bins=10, pretty=TRUE)) {
   
   leaflet(data = data) %>%
     addProviderTiles("CartoDB.PositronNoLabels") %>%
