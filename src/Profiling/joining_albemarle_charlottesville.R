@@ -38,7 +38,7 @@ albemarle <- readxl::read_xlsx(here("data","original","Data4UVA.xlsx"), 1, col_t
   rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
   rename_with(~gsub(r"( )", "_", .x)) %>%  # change periods to underscores
   select(-all_of(drop_cols))
-  
+
   ## Add this to scrub leading zeros from outcome numbers so they will match with city data - make sure this isn't messing up when numbers have dashes, etc.
   # mutate(outcome_external_report_number = str_replace(outcome_external_report_number, "(?<![0-9])0+", ""))
 
@@ -54,4 +54,25 @@ albemarle <- albemarle %>%
 ## Combine data
 ems_full <- bind_rows(mutate(albemarle, source = "albemarle"),
                       mutate(charlottesville, source = "charlottesville")) # tag on source variable
+
+## Read in new data
+
+
+# set column types
+col_spec <- rep("c", 84)
+col_spec[5] <- "D" # Incident Date
+col_spec[77] <- "T" # Incident PSAP Call Date Time
+col_spec <- paste0(col_spec, collapse = "")
+
+# change variables that changed names
+drop_cols[which(drop_cols == "cad_crew_member_full_name_and_level_list")] <- "incident_crew_member_full_name_and_level_list"
+drop_cols <- drop_cols[which(!(drop_cols %in% c("vitals_cardiac_rhythm_ecg_findings_list", "medication_given_description_and_rxcui_code")))]
+
+
+
+new_ems_data <- vroom::vroom(here("data", "original", "2020 UVA Project County Bulk Export_Export.csv"),
+                        col_types = col_spec) %>%
+  rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
+  rename_with(~gsub(r"( )", "_", .x)) %>%  # change periods to underscores
+  select(-all_of(drop_cols))
 
