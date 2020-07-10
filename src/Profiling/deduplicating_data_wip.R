@@ -95,6 +95,19 @@ combined_departments <- combined_sec_impress %>%
 # Working with new combined data
 ##############################################################################
 
+# considering one observation to be a unique combination of the following:
+#
+# response_incident_number,
+# outcome_external_report_number,
+# scene_incident_street_address,
+# patient_age,
+# patient_gender,
+# patient_race_list,
+# disposition_destination_name_delivered_transferred_to,
+# incident_date
+
+# change column types, clean up address names, force all text to lowercase, and remove invalid data
+
 enforce_numeric <- c("scene_gps_latitude",
                      "scene_gps_longitude",
                      "incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes",
@@ -112,9 +125,12 @@ enforce_numeric <- c("scene_gps_latitude",
 
 ems_prepared <- new_ems_data %>%
   as_tibble() %>%
-  mutate(situation_provider_secondary_impression_description_and_code_list = ifelse(situation_provider_secondary_impression_description_and_code_list %in% c("\"Not Applicable\"", " \"Not Recorded\""),
+  mutate(situation_provider_secondary_impression_description_and_code_list = ifelse(str_detect(situation_provider_secondary_impression_description_and_code_list, r"(\"[Nn]ot [Aa]pplicable\"|\" *[Nn]ot [Rr]ecorded\")"),
                                                                                     NA,
-                                                                                    situation_provider_secondary_impression_description_and_code_list)) %>%
+                                                                                    situation_provider_secondary_impression_description_and_code_list),
+         situation_provider_primary_impression_code_and_description = ifelse(str_detect(situation_provider_primary_impression_code_and_description, r"([Nn]ot [Aa]pplicable| *[Nn]ot [Rr]ecorded)"),
+                                                                             NA,
+                                                                             situation_provider_primary_impression_code_and_description)) %>%
   mutate(scene_incident_street_address = str_replace(toupper(scene_incident_street_address), "AVENUE", "AVE") %>%
            str_replace(r"(\.)", "") %>%
            ifelse((. == "-1" | . == "0" | . == "0 <UNKNOWN>" | . == "1"), NA, .) %>%
@@ -130,8 +146,12 @@ ems_prepared <- new_ems_data %>%
   mutate(across(where(is.character), tolower)) # turn all characters to lowercase
 
 
+
+# only fill demographic data and other grouping data if there are no mismatches in any of the grouping variables
+
 ems_filled_grouping_columns <- ems_prepared %>%
-  group_by(response_incident_number) %>%
+  group_by(response_incident_number,
+           incident_date) %>%
   mutate(across(c(outcome_external_report_number,
                   scene_incident_street_address,
                   patient_age,
@@ -152,8 +172,19 @@ ems_filled_grouping_columns <- ems_prepared %>%
   ungroup() %>%
   distinct()
 
+
+
+# fill missing values when an existing value exists within the unit of observation
+
 ems_filled <- ems_filled_grouping_columns %>%
-  group_by(response_incident_number, outcome_external_report_number, scene_incident_street_address, patient_age, patient_gender, patient_race_list) %>%
+  group_by(response_incident_number,
+           outcome_external_report_number,
+           scene_incident_street_address,
+           patient_age,
+           patient_gender,
+           patient_race_list,
+           disposition_destination_name_delivered_transferred_to,
+           incident_date) %>%
   fill(3:ncol(.), .direction = "updown") %>%
   ungroup() %>%
   distinct()
@@ -161,6 +192,7 @@ ems_filled <- ems_filled_grouping_columns %>%
 
 
 # turn list columns into real lists to help with merging soon
+
 enforce_list_quoted_comma <- c("injury_cause_of_injury_description_and_code_list",
                                "situation_provider_secondary_impression_description_and_code_list",
                                "situation_primary_complaint_statement_list",
@@ -197,8 +229,8 @@ ems_listed <- ems_filled %>%
                 .fns = ~map(.x, ~map_chr(.x, ~str_trim(str_replace_all(.x, "\"", "")), side = "both"))))
 
 
-# Collapse departments into one
 
+# Collapse departments into one
 
 ems_collapsed <- ems_listed %>%
   group_by(response_incident_number,
@@ -206,13 +238,17 @@ ems_collapsed <- ems_listed %>%
            scene_incident_street_address,
            patient_age,
            patient_gender,
-           patient_race_list) %>%
+           patient_race_list,
+           disposition_destination_name_delivered_transferred_to,
+           incident_date) %>%
   mutate(across(c("response_ems_unit_call_sign",
                   "incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes",
                   "total_unit_response_time",
                   "scene_incident_location_type",
                   "agency_name",
-                  "incident_complaint_reported_by_dispatch"),
+                  "incident_complaint_reported_by_dispatch",
+                  "response_vehicle_full_address",
+                  "response_vehicle_type"),
          function(column) {
            comb_col = paste0(unique(column[!is.na(column)]), collapse = "|")
            ifelse(comb_col == "", NA, comb_col)
@@ -221,15 +257,42 @@ ems_collapsed <- ems_listed %>%
   distinct()
 
 
-group_vars <- c("response_incident_number",
-                "outcome_external_report_number",
-                "scene_incident_street_address",
-                "patient_age",
-                "patient_gender",
-                "patient_race_list")
 
-temp <- ems_collapsed %>%
-  group_by(all_of(group_vars)) %>%
-  summarize(across(.cols = all_of(enforce_list),
-                .fns = ~flatten(.x)))
+# Collapse all list columns into a single cell
 
+ems_fully_collapsed <- ems_collapsed %>%
+  group_by(response_incident_number,
+           outcome_external_report_number,
+           scene_incident_street_address,
+           patient_age,
+           patient_gender,
+           patient_race_list,
+           disposition_destination_name_delivered_transferred_to,
+           incident_date) %>%
+  mutate_at(enforce_list, function(x) {
+      combined <- unique(flatten(x))
+      pasted <- paste0(combined[!is.na(combined)], collapse = "|")
+      ifelse(pasted == "", NA, pasted)
+    }) %>%
+  ungroup() %>%
+  distinct()
+
+ems_primary_combined <- ems_fully_collapsed %>%
+  group_by(response_incident_number,
+           outcome_external_report_number,
+           scene_incident_street_address,
+           patient_age,
+           patient_gender,
+           patient_race_list,
+           disposition_destination_name_delivered_transferred_to,
+           incident_date) %>%
+  mutate(across(c(situation_provider_primary_impression_code_and_description,
+                  situation_chief_complaint_anatomic_location),
+                function(column) {
+                  comb_col = paste0(unique(column[!is.na(column)]), collapse = "|")
+                  ifelse(comb_col == "", NA, comb_col)
+                })) %>%
+  ungroup() %>%
+  distinct()
+
+write.csv(ems_primary_combined, here::here("data", "working", "current_deduplicated_data.csv"))
