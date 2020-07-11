@@ -8,6 +8,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(lubridate)
 library(ggplot2)
+library(plotly)
 
 source(here::here("src", "Profiling", "joining_albemarle_charlottesville.R"))
 ```
@@ -100,4 +101,25 @@ new_ems_data %>%
 
 ```
 
+```{r}
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
+
+plot_data <- new_ems_data %>%
+  filter(!is.na(agency_name), 
+         !is.na(psap_time_of_day),
+         !str_detect(agency_name, "Test")) 
+
+ggplot(plot_data) +
+  geom_density(aes(x = psap_time_of_day, fill = agency_name, color = agency_name), alpha = 0.2, position = "identity") +
+  scale_color_manual(values = cbPalette) +
+  scale_fill_manual(values = cbPalette) +
+  facet_grid(agency_name ~ .) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45),
+        axis.text.y = element_blank())
+
+
+
+```
 
