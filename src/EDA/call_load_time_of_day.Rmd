@@ -26,7 +26,8 @@ new_ems_data <- new_ems_data %>%
                                                  str_detect(situation_provider_primary_impression_code_and_description, "Endocrine") ~ "Endocrine",
                                                  str_detect(situation_provider_primary_impression_code_and_description, "GI") ~ "GI/GU",
                                                  str_detect(situation_provider_primary_impression_code_and_description, " - ") ~ str_extract(situation_provider_primary_impression_code_and_description, "[^-]+"), 
-                                                 !str_detect(situation_provider_primary_impression_code_and_description, " - ") ~ str_extract(situation_provider_primary_impression_code_and_description, "[^\\(]+")))
+                                                 !str_detect(situation_provider_primary_impression_code_and_description, " - ") ~ str_extract(situation_provider_primary_impression_code_and_description, "[^\\(]+")),
+         primary_impression_category = trimws(primary_impression_category))
 ```
 
 ```{r include = FALSE}
@@ -55,15 +56,48 @@ Start with a baseline call load density for various impression categories:
 
 ``` {r}
 new_ems_data %>%
-  filter(!is.na(situation_provider_primary_impression_code_and_description), !is.na(psap_time_of_day), primary_impression_category %in% top_impression_categories) %>%
+  filter(!is.na(situation_provider_primary_impression_code_and_description), 
+         !is.na(psap_time_of_day), 
+         primary_impression_category %in% top_impression_categories) %>%
   ggplot() +
   geom_density(aes(x = psap_time_of_day, color = primary_impression_category), alpha = 0.3) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45))
 ```
 
-Want to see how these may have changed before/after COVID
+Some evidence of changes in call load pre/post COVID. But it seems to be more driven by alcohol related incidents rather than overall changes:
 
+```{r}
+new_ems_data %>% 
+  mutate(is_recent = ifelse(incident_date > "2020-03-01", "Post 03/01/2020", "Pre 03/01/2020")) %>%
+  filter(!is.na(situation_provider_primary_impression_code_and_description), 
+         !is.na(psap_time_of_day), 
+         primary_impression_category %in% top_impression_categories) %>%
+  group_by(is_recent) %>%
+  ggplot() +
+  geom_density(aes(x = psap_time_of_day, color = primary_impression_category), alpha = 0.3) +
+  theme_minimal() +
+  facet_grid(is_recent ~ .) +
+  theme(axis.text.x = element_text(angle = 45),
+        legend.position = "none")
+```
 
+```{r}
+
+new_ems_data %>%
+  filter(!is.na(situation_provider_primary_impression_code_and_description), 
+         !is.na(psap_time_of_day), 
+         primary_impression_category %in% top_impression_categories) %>%
+  ## Can include this stuff if you want to facet by agency
+  # group_by(agency_name) %>%
+  # mutate(n = n()) %>%
+  # filter(n > 1000) %>%
+  ggplot() +
+  geom_density(aes(x = psap_time_of_day, color = primary_impression_category), alpha = 0.3) +
+  theme_minimal() +
+  # facet_grid(~agency_name) +
+  theme(axis.text.x = element_text(angle = 45))
+
+```
 
 
