@@ -61,10 +61,11 @@ incident_points <- new_ems_data %>%
 
 ## Function to plot color of incidents for given variable and break it down across another grouping variable:
 map_incidents <- function(data,
-                          scale_var, ## Variable to color incident points by
                           group_var, ## Variable to split into overlay toggle groups
-                          palette, ## Color palette for scale_var
-                          thin_n = 5000 ## Number of rows to sample from original data
+                          scale_var = NULL, ## Variable to color incident points by. Default just plots the points with no color scale
+                          palette = NULL, ## Color palette for scale_var. Not needed if scale_var not provided
+                          thin_n = 5000, ## Number of rows to sample from original data
+                          overlay = TRUE ## Control whether you want checkboxes or radio buttons for overlay. Defauls to checkboxes
 ) {
   
   ## Thin data by sampling rows
@@ -76,36 +77,72 @@ map_incidents <- function(data,
     leaflet() %>%
     addProviderTiles("CartoDB.Positron")
   
-  ## Add layer for each agency to allow for toggling
-  for (group_level in unique(map_data[[group_var]])) {
+  ## If no scale variable provided, just plot points
+  if (length(scale_var) == 0) {
     
-    #print(group_level)
-    filt_data <- map_data[map_data[[group_var]] == group_level,]
+    ## Add layer for each agency to allow for toggling
+    for (group_level in unique(map_data[[group_var]])) {
+      
+      filt_data <- map_data[map_data[[group_var]] == group_level,]
+      
+      map <- map %>%
+        addCircleMarkers(data = filt_data,
+                         lng = ~scene_gps_longitude,
+                         lat = ~scene_gps_latitude,
+                         fillColor = "red",
+                         fillOpacity = 0.8,
+                         opacity = 0,
+                         weight = 0,
+                         radius = 3,
+                         group = group_level)
+    }
+
+    ## otherwise plot with color scale for the scale variable
+  } else {
     
-    map <- map %>%
-      addCircleMarkers(data = filt_data,
-                       lng = ~scene_gps_longitude,
-                       lat = ~scene_gps_latitude,
-                       fillColor = ~palette(map_data[[scale_var]]),
-                       fillOpacity = 0.8,
-                       opacity = 0,
-                       weight = 0,
-                       radius = 3,
-                       label = ~map_data[[scale_var]],
-                       group = group_level)
+    ## Add layer for each agency to allow for toggling
+    for (group_level in unique(map_data[[group_var]])) {
+      
+      filt_data <- map_data[map_data[[group_var]] == group_level,]
+      
+      map <- map %>%
+        addCircleMarkers(data = filt_data,
+                         lng = ~scene_gps_longitude,
+                         lat = ~scene_gps_latitude,
+                         fillColor = ~palette(map_data[[scale_var]]),
+                         fillOpacity = 0.8,
+                         opacity = 0,
+                         weight = 0,
+                         radius = 3,
+                         label = ~map_data[[scale_var]],
+                         group = group_level)
+    }
   }
   
-  ## Add layers control for toggling
-  map <- map %>% 
-    addLayersControl(
-      overlayGroups = unique(map_data[[group_var]]),
-      options = layersControlOptions(collapsed = TRUE)
-    ) %>% 
-    addLegend(
-      position = "bottomright",
-      pal = palette,
-      values = map_data[[scale_var]]
-    )
+  if (overlay == TRUE) {
+    ## Add layers control for toggling
+    map <- map %>% 
+      addLayersControl(
+        overlayGroups = unique(map_data[[group_var]]),
+        options = layersControlOptions(collapsed = TRUE)
+      )
+  } else {
+    ## Add layers control for toggling
+    map <- map %>% 
+      addLayersControl(
+        baseGroups = unique(map_data[[group_var]]),
+        options = layersControlOptions(collapsed = TRUE)
+      )
+  }
+  
+  if (length(scale_var) != 0) {
+    map <- map %>% 
+      addLegend(
+        position = "bottomright",
+        pal = palette,
+        values = map_data[[scale_var]]
+      )
+  }
   
   map
   
@@ -134,20 +171,23 @@ map_incidents(pal_data, scale_var = "total_unit_response_time", group_var = "age
 #
 
 ## Map of incident points (thinned by sampling)
-map_data <- incident_points %>% filter(!is.na(patient_age))
+map_data <- incident_points %>% filter(!is.na(patient_age), patient_age < 100)
 
 age_pal <- colorBin("Purples", domain = range(map_data$patient_age, na.rm=TRUE), bins = 8)
 
-map_incidents(map_data, scale_var = "patient_age", group_var = "agency_name", palette = age_pal, thin_n = 1000)
+map_incidents(map_data, group_var = "agency_name", scale_var = "patient_age", palette = age_pal, thin_n = 1000)
 
 #
 #
-# Response Time Map by Call Type ------------------------------------------------------------------------------------------------------------------
+# Map by Call Type ------------------------------------------------------------------------------------------------------------------
 #
 #
 
+## Would prefer this to be a heatmap displaying the relative rate of these incidents to some baseline.
 
+impressions <- incident_points %>% filter(!is.na(primary_impression_category))
 
+map_incidents(impressions, group_var = "primary_impression_category", thin_n = 10000, overlay = FALSE)
 
 #
 #
@@ -155,10 +195,21 @@ map_incidents(map_data, scale_var = "patient_age", group_var = "agency_name", pa
 #
 #
 
+## Discret-ize the time of day scale for toggling
+tmp <- incident_points %>%
+  filter(!is.na(psap_time_of_day)) %>%
+  mutate(psap_time_of_day_discrete = case_when(psap_time_of_day < "2020-01-01 06:00:00 UTC" ~ "Early Morning",
+                                               psap_time_of_day < "2020-01-01 12:00:00 UTC" ~ "Morning",
+                                               psap_time_of_day < "2020-01-01 18:00:00 UTC" ~ "Afternoon",
+                                               psap_time_of_day < "2020-01-01 24:00:00 UTC" ~ "Evening"),
+         psap_time_of_day_discrete = as.factor(psap_time_of_day_discrete)) %>%
+  filter(total_unit_response_time < 50)
 
+## Map by time of day
+map <- map_incidents(tmp, "total_unit_response_time", "psap_time_of_day_discrete", resp_time_pal, 5000, overlay = FALSE)
 
-
-
-
-
+## Change basemap for nighttime layers for fun (maybe should change later if we actually use something like this)
+map %>%
+  addProviderTiles("CartoDB.DarkMatter", group = as.factor("Early Morning")) %>%
+  addProviderTiles("CartoDB.DarkMatter", group = as.factor("Evening"))
 
