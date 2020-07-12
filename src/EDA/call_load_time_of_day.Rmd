@@ -123,22 +123,6 @@ ggplot(plot_data) +
         strip.text = element_blank())
 ```
 
-```{r}
-
-incident_points <- new_ems_data %>%
-  group_by(incident_date, response_incident_number) %>%
-  select(incident_date, response_incident_number, scene_gps_latitude, scene_gps_longitude, scene_incident_street_address) %>%
-  distinct() %>%
-  filter(!is.na(response_incident_number)) %>%
-  mutate(across(.cols = c("scene_gps_longitude", "scene_gps_latitude"), .fns = as.numeric))
-
-# leaflet(incident_points) %>%
-#   addTiles() %>%
-#   addCircleMarkers(lng = ~scene_gps_longitude,
-#                    lat = ~scene_gps_latitude)
-
-```
-
 
 
 
