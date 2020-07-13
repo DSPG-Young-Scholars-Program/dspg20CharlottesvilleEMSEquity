@@ -2,6 +2,7 @@ library(dplyr)
 library(here)
 library(purrr)
 library(stringr)
+library(lubridate)
 
 ## Columns mutually selected to be removed based on irrelevance or data quality issues
 drop_cols <- c("cad_crew_member_full_name_and_level_list",
@@ -60,8 +61,6 @@ ems_full <- bind_rows(mutate(albemarle, source = "albemarle"),
 
 # set column types
 col_spec <- rep("c", 84)
-col_spec[5] <- "D" # Incident Date
-col_spec[77] <- "T" # Incident PSAP Call Date Time
 col_spec <- paste0(col_spec, collapse = "")
 
 # change variables that changed names
@@ -74,5 +73,9 @@ new_ems_data <- vroom::vroom(here("data", "original", "2020 UVA Project County B
                         col_types = col_spec) %>%
   rename_with(~tolower(gsub(r"( +\(.*)", "", .x))) %>% # remove code after variable names
   rename_with(~gsub(r"( )", "_", .x)) %>%  # change periods to underscores
-  select(-all_of(drop_cols))
+  select(-all_of(drop_cols))  %>%
+  mutate(incident_date = as_date(mdy_hms(incident_date)),
+         incident_psap_call_date_time = mdy_hms(incident_psap_call_date_time))
+
+
 
