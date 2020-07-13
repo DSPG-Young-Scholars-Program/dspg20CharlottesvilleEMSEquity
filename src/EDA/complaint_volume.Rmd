@@ -341,8 +341,8 @@ plot_data <- full_join(monthly_counts, age_baselines) %>%
 
 ## Plot temporal trends in volume
 ggplot(plot_data) + 
-  geom_line(aes(x = mo_yr, y = pct_of_baseline, color = age_breaks, group = age_breaks), alpha = 1) + 
-  geom_point(aes(x = mo_yr, y = pct_of_baseline, color = age_breaks), alpha = 0.7) +
+  geom_line(aes(x = mo_yr, y = pct_of_baseline, color = age_breaks, group = age_breaks), alpha = 0.7) + 
+  geom_point(aes(x = mo_yr, y = pct_of_baseline, color = age_breaks), alpha = 1) +
   geom_vline(xintercept = dmy("02-01-2020"), linetype = "dashed", alpha = 0.8) +
   scale_color_brewer(palette = "YlGnBu") +
   #facet_wrap(~age_breaks, ncol = 1) +
