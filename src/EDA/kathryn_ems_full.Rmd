@@ -113,7 +113,8 @@ ggplot(data=yr_mo) +
   geom_line(mapping = aes(x = as.numeric(mo), y = n, colour = yr)) +
   labs(title = "Number of Incidents by Month and Year ", 
        x = "Month", y = "Number of Incidents") +
-  scale_colour_manual(values=cbPalette)
+  scale_colour_manual(values=cbPalette) + 
+  theme_minimal()
   
 ```
 
