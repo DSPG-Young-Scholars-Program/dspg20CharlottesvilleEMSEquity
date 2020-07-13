@@ -1,7 +1,10 @@
 
 library(dplyr)
+library(lubridate)
 
-cur_dedup <- readr::read_csv(here::here("data", "working", "current_deduplicated_data.csv")) %>% select(-X1)
+cur_dedup <- readr::read_csv(here::here("data", "working", "current_deduplicated_data.csv"))
+
+# source(here::here("src", "Profiling", "joining_albemarle_charlottesville.R"))
 
 ## Subset to duplicate incident numbers
 ems_duplicates <- cur_dedup %>% 
@@ -24,7 +27,6 @@ report_num_summary %>% filter(n_rep_nums > 1, n_rep_types > 1)
 
 # ---- Multiple numbers, single report type ---- #
 
-## Some are cases where one report type is NA (can be rolled up)
 ## Others are cases where we have one MRN and two numbers - should just call two people I think.
 report_num_summary %>% filter(n_rep_nums > 1, n_rep_types == 1)
 
