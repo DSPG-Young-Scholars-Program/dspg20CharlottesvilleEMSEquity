@@ -156,13 +156,15 @@ ems_filled_grouping_columns <- ems_prepared %>%
                   scene_incident_street_address,
                   patient_age,
                   patient_gender,
-                  patient_race_list),
+                  patient_race_list,
+                  disposition_destination_name_delivered_transferred_to),
                 function(column) {
                   if(length(unique(patient_age[!is.na(patient_age)])) <= 1 &
                      length(unique(patient_gender[!is.na(patient_gender)])) <= 1 &
                      length(unique(patient_race_list[!is.na(patient_race_list)])) <= 1 &
                      length(unique(scene_incident_street_address[!is.na(scene_incident_street_address)])) <= 1 &
-                     length(unique(outcome_external_report_number[!is.na(outcome_external_report_number)])) <= 1) {
+                     length(unique(outcome_external_report_number[!is.na(outcome_external_report_number)])) <= 1 &
+                     length(unique(disposition_destination_name_delivered_transferred_to[!is.na(disposition_destination_name_delivered_transferred_to)])) <= 1) {
 
                     column = ifelse(length(unique(column[!is.na(column)])) == 0, NA, unique(column[!is.na(column)])) # catch where all NA
                   } else {
@@ -295,4 +297,4 @@ ems_primary_combined <- ems_fully_collapsed %>%
   ungroup() %>%
   distinct()
 
-write.csv(ems_primary_combined, here::here("data", "working", "current_deduplicated_data.csv"))
+# write.csv(ems_primary_combined, here::here("data", "working", "current_deduplicated_data.csv"))
