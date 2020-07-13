@@ -2,6 +2,7 @@ library(dplyr)
 library(here)
 library(purrr)
 library(stringr)
+library(lubridate)
 
 ## Columns mutually selected to be removed based on irrelevance or data quality issues
 drop_cols <- c("cad_crew_member_full_name_and_level_list",
