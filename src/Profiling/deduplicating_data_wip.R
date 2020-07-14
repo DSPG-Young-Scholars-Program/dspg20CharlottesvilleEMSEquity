@@ -1,6 +1,5 @@
 library(stringr)
 library(tidyr)
-library(naniar)
 
 source(here::here("src","Profiling","joining_albemarle_charlottesville.R"))
 
@@ -57,7 +56,18 @@ ems_prepared <- new_ems_data %>%
   filter(across(where(is.character), ~(!grepl("test", .x))))
 
 
-# only fill demographic data and other grouping data if there are no mismatches in any of the grouping variables
+# Attempts to fill missing data in grouping columns without combining unique people
+# Looks across:
+# outcome_external_report_number,
+# scene_incident_street_address,
+# patient_age,
+# patient_gender,
+# patient_race_list,
+# disposition_destination_name_delivered_transferred_to
+#
+# If any of them have more than one non-NA value within a set of unique response_incident_number, incident_date,
+# it leaves them the same, assuming those represent different people. If each has at most one non-NA value, then
+# NA's are populated with existing values to ensure these are counted as a single person.
 
 ems_filled_grouping_columns <- ems_prepared %>%
   group_by(response_incident_number,
@@ -66,15 +76,16 @@ ems_filled_grouping_columns <- ems_prepared %>%
                   scene_incident_street_address,
                   patient_age,
                   patient_gender,
-                  patient_race_list),
+                  patient_race_list,
+                  disposition_destination_name_delivered_transferred_to),
                 function(column) {
                   if(n_distinct(patient_age, na.rm = TRUE) <= 1 &
                      n_distinct(patient_gender, na.rm = TRUE) <= 1 &
                      n_distinct(patient_race_list, na.rm = TRUE) <= 1 &
                      n_distinct(scene_incident_street_address, na.rm = TRUE) <= 1 &
                      n_distinct(outcome_external_report_number, na.rm = TRUE) <= 1 &
-                     n_distinct(disposition_destination_name_delivered_transferred_to, na.rm = TRUE) <= 1) {
-
+                     n_distinct(disposition_destination_name_delivered_transferred_to, na.rm = TRUE) <= 1)
+                  {
                     column = ifelse(n_distinct(column, na.rm = TRUE) == 0, NA, unique(column[!is.na(column)])) # catch where all NA
                   } else {
                     column
@@ -84,8 +95,9 @@ ems_filled_grouping_columns <- ems_prepared %>%
   distinct()
 
 
-# remove pcr numbers when a patient already has an MCR
-tmp <- ems_filled_grouping_columns %>%
+# Sometimes a patient will have both a patient care report and a medical record number.
+# This removes patient care reports when a medical record number exists.
+ems_pcr_removed <- ems_filled_grouping_columns %>%
   group_by(response_incident_number,
            scene_incident_street_address,
            patient_age,
@@ -95,23 +107,28 @@ tmp <- ems_filled_grouping_columns %>%
            incident_date) %>%
   mutate(outcome_external_report_number = ifelse((n() > 1) & sum(outcome_external_report_type == "hospital medical record number (mrn)") > 0,
                                                  outcome_external_report_number[which(outcome_external_report_type == "hospital medical record number (mrn)")][1],
-                                                 outcome_external_report_number))
+                                                 outcome_external_report_number),
+         outcome_external_report_type = ifelse((n() > 1) & sum(outcome_external_report_type == "hospital medical record number (mrn)") > 0,
+                                                 outcome_external_report_type[which(outcome_external_report_type == "hospital medical record number (mrn)")][1],
+                                                 outcome_external_report_type)) %>%
+  ungroup() %>%
+  distinct()
 
 
-ems_filled_grouping_columns %>%
-  filter(response_incident_number == "2017-00002906") %>%
-  group_by(response_incident_number,
-           scene_incident_street_address,
-           patient_age,
-           patient_gender,
-           patient_race_list,
-           disposition_destination_name_delivered_transferred_to,
-           incident_date) %>%
-  filter((n() > 1))
 
-# fill missing values when an existing value exists within the unit of observation
 
-ems_filled <- ems_filled_grouping_columns %>%
+# When some rows within a set of
+# response_incident_number,
+# outcome_external_report_number,
+# scene_incident_street_address,
+# patient_age,
+# patient_gender,
+# patient_race_list,
+# disposition_destination_name_delivered_transferred_to,
+# incident_date
+# have missing data when other rows within the observation have data, this fills the missing date with the existing data
+
+ems_filled <- ems_pcr_removed %>%
   group_by(response_incident_number,
            outcome_external_report_number,
            scene_incident_street_address,
@@ -126,7 +143,8 @@ ems_filled <- ems_filled_grouping_columns %>%
 
 
 
-# turn list columns into real lists to help with merging soon
+# Turn columns where an entry might be a vector of things, such as a list of crew names
+# into a list column where each cell is a character vector
 
 enforce_list_quoted_comma <- c("injury_cause_of_injury_description_and_code_list",
                                "situation_provider_secondary_impression_description_and_code_list",
@@ -165,7 +183,7 @@ ems_listed <- ems_filled %>%
 
 
 
-# Collapse departments into one
+# Collapses rows that are near duplicates due to having different units responding to the scene into a single row
 department_vars <- c("response_ems_unit_call_sign",
                      "incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes",
                      "total_unit_response_time",
@@ -194,7 +212,9 @@ ems_collapsed <- ems_listed %>%
 
 
 
-# Collapse all list columns into a single cell
+# Combines a list columns back into character columns by combining all different sets of values within an observation
+# and removing duplicates. Thus if a list started out out of order from another list within the same observation, they will
+# become identical after this operation
 
 ems_fully_collapsed <- ems_collapsed %>%
   group_by(response_incident_number,
@@ -213,6 +233,7 @@ ems_fully_collapsed <- ems_collapsed %>%
   ungroup() %>%
   distinct()
 
+# combines cases where primary_impression had two different values
 ems_primary_combined <- ems_fully_collapsed %>%
   group_by(response_incident_number,
            outcome_external_report_number,
@@ -231,7 +252,7 @@ ems_primary_combined <- ems_fully_collapsed %>%
   ungroup() %>%
   distinct()
 
-# remove pipes that were accidentaly placed at the beginning or end of a string
+# remove pipes | that were accidentaly placed at the beginning or end of a string
 ems_pipes_trimmed <- ems_primary_combined %>%
   mutate(across(.cols = all_of(c(enforce_list,
                          department_vars,
@@ -240,4 +261,85 @@ ems_pipes_trimmed <- ems_primary_combined %>%
                 .fns = ~str_replace_all(.x, r"(^\||\|$)", "")))
 
 
-# write.csv(ems_primary_combined, here::here("data", "working", "current_deduplicated_data.csv"))
+# remove complaint_duration info when they disagree, as well as the remaining couple duplicates, such as pulse ox mismatches,
+# slight differences in cardiac arrest datetime, etc.
+
+duplicates <- ems_pipes_trimmed %>%
+  group_by(response_incident_number,
+           outcome_external_report_number,
+           scene_incident_street_address,
+           patient_age,
+           patient_gender,
+           patient_race_list,
+           disposition_destination_name_delivered_transferred_to,
+           incident_date) %>%
+  filter(n() > 1)
+
+deduped_duplicates <- duplicates %>%
+  mutate(across(c(situation_complaint_duration,
+                  situation_complaint_duration_time_units),
+                ~ifelse(n_distinct(situation_complaint_duration) > 1 | n_distinct(situation_complaint_duration) > 1 ,
+                        NA,
+                        .x))) %>%
+  mutate(across(everything(),
+                ~ifelse(n_distinct(.x) > 1,
+                        NA,
+                        .x))) %>% # get rid of the last couple random differences that I can't explain
+  ungroup() %>%
+  distinct()
+
+
+ems_fully_deduped <- ems_pipes_trimmed %>%
+  group_by(response_incident_number,
+           outcome_external_report_number,
+           scene_incident_street_address,
+           patient_age,
+           patient_gender,
+           patient_race_list,
+           disposition_destination_name_delivered_transferred_to,
+           incident_date) %>%
+  filter(!(n() > 1)) %>%
+  bind_rows(deduped_duplicates) %>%
+  ungroup() %>%
+  distinct()
+
+
+# clean up column types
+
+enforce_numeric <- c("scene_gps_latitude",
+                     "scene_gps_longitude",
+                     "patient_initial_blood_glucose_level",
+                     "patient_initial_carbon_dioxide_co2_level",
+                     "situation_complaint_duration",
+                     "patient_initial_pulse_oximetry",
+                     "patient_last_pulse_oximetry",
+                     "patient_last_blood_glucose_level",
+                     "patient_initial_pain_scale_score",
+                     "patient_last_pain_scale_score",
+                     "patient_initial_body_temperature_in_fahrenheit",
+                     "patient_last_body_temperature_in_fahrenheit")
+
+enforce_date_time <- c("cardiac_arrest_date_time",
+                       "incident_psap_call_date_time")
+
+
+# function to turn all complaint durations into minutes
+standardize_time <- function(time, time_units) {
+  time_table <- tibble(number_of_minutes = c(1/60, 1, 60, 60 * 24, 60 * 24 * 7, 60 * 24 * 30, 60 * 24 * 365),
+                       time_units = c("seconds", "minutes", "hours", "days", "weeks", "months", "years"))
+
+  joined_times <- tibble(time_units = time_units) %>%
+    left_join(time_table, by = "time_units")
+
+  time * joined_times$number_of_minutes
+}
+
+# the final cleaned data set
+ems_clean_data <- ems_fully_deduped %>%
+  mutate(across(all_of(enforce_numeric), as.numeric),
+         across(all_of(enforce_date_time), as_datetime),
+         incident_date = as_date(incident_date),
+         situation_complaint_duration = standardize_time(situation_complaint_duration, situation_complaint_duration_time_units),
+         situation_complaint_duration_time_units = ifelse(is.na(situation_complaint_duration_time_units), NA, "minutes"))
+
+readr::write_csv(ems_clean_data, here::here("data", "working", "ems_clean_data.csv"))
