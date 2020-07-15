@@ -210,6 +210,7 @@ nas_by_case = ems_full %>% arrange(desc(incident_date)) %>%
   gg_miss_case()
 nas_by_case
 
+### part below is not working as desired
 ems_full%>%
 gg_miss_span(patient_last_pulse_oximetry, span_every = 3000, facet = patient_race_list)
 
