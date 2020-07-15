@@ -10,7 +10,8 @@ output:
 ```{r, warning = FALSE}
 library(naniar)
 library(ggplot2)
-
+library(visdat)
+library(dplyr)
 ems_full = read.csv(here::here("data", "working", "ems_clean_data.csv"))
 ```
 
@@ -188,4 +189,47 @@ ems_full %>%
   geom_hline(yintercept = 50, color = "green") +
   scale_fill_continuous(high = "#132B43", low = "#56B1F7")+
   theme_minimal()
+```
+
+
+```{r}
+
+samp_dat = ems_full %>%
+  sample_frac(size=.1)%>%
+  vis_dat()
+samp_dat
+
+samp_missing = ems_full %>%
+  sample_frac(size=.2)%>%
+  vis_miss()
+samp_missing
+
+ems_full$incident_date = as.POSIXct(ems_full$incident_date)
+
+nas_by_case = ems_full %>% arrange(desc(incident_date)) %>%
+  gg_miss_case()
+nas_by_case
+
+ems_full%>%
+gg_miss_span(patient_last_pulse_oximetry, span_every = 3000, facet = patient_race_list)
+
+covid_vars = c("patient_suspected_influenza_type_illness",
+              "patient_initial_body_temperature_in_fahrenheit",
+              "patient_last_body_temperature_in_fahrenheit",
+              "situation_primary_complaint_statement_list",
+              "patient_last_pulse_oximetry",
+              "patient_initial_pulse_oximetry",
+              "patient_initial_body_temperature_in_fahrenheit",
+              "patient_last_body_temperature_in_fahrenheit")
+
+for (i in covid_vars){
+  plot = 
+  gg_miss_span(ems_full, as.name(i), span_every = 3000, facet = patient_race_list)+labs(title = as.name(covid_vars[i]))
+  print(plot)
+}
+
+n=5
+ems_full%>%
+  gg_miss_span(as.name(covid_vars[n]), span_every = 3000, facet = patient_race_list) + labs(title = as.name(covid_vars[n]))
+
 ```
