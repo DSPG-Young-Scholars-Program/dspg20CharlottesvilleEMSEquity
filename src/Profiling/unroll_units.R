@@ -31,4 +31,5 @@ units_unrolled <- new_ems_data %>%
 ## then can distinguish drive time from loadout time.
 
 
+# readr::write_csv(units_unrolled, here("data", "working", "unit_level_clean_data.csv"))
 
