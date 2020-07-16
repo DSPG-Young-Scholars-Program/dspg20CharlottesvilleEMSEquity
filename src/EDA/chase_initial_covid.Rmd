@@ -1,0 +1,270 @@
+---
+title: "Examining COVID-like Symptoms"
+author: "Chase Dawson"
+date: "7/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(naniar)
+ems <- read.csv('../../data/working/ems_clean_data.csv')
+```
+
+```{r, echo=FALSE }
+ems <- ems %>%
+  mutate(incident_date = ymd(incident_date),
+         yr = as.factor(year(incident_date)),
+         mo = as.factor(month(incident_date)),
+         dy = as.character(day(incident_date)),
+         mo_yr = dmy(paste0("01-", mo, "-", yr)));
+
+ems$patient_first_race_listed <- gsub("^(.*?)\\|.*", "\\1", ems$patient_race_list);
+
+ems <- ems %>% 
+  replace_with_na(replace = list(patient_race_list = c("Not Recorded", "Not Applicable")));
+```
+
+## Some Functions Used Later
+```{r}
+# returns number of patients who list complaint x in their primary complaints
+in_primary_complaints <- function(x) {
+  return(sum(str_detect(ems$situation_primary_complaint_statement_list, x), na.rm = TRUE))
+};
+
+# returns number of patients who list complaint x in their secondary complaints
+in_secondary_complaints <- function(x) {
+  return(sum(str_detect(ems$situation_secondary_complaint_statement_list, x), na.rm = TRUE))
+};
+
+# plots proportional occurences of complaint in primary complaints over time
+plot_complaint <- function(complaint) {
+  incident_counts <- ems %>% group_by(mo_yr) %>% count() %>% rename(tot_n = n);
+  ems$has_symptom <- str_detect(ems$situation_primary_complaint_statement_list, complaint);
+  symptom_counts <- ems %>% 
+    group_by(mo_yr, has_symptom) %>% 
+    count() %>% 
+    inner_join(incident_counts) %>% 
+    mutate(prop_n = n / tot_n);
+  
+  symptom_counts %>%
+    filter(has_symptom) %>%
+    ggplot(., aes(x = mo_yr, y = prop_n)) + 
+    geom_line(color = "red") + 
+    geom_point(stat = "identity") + 
+    labs(title = paste("Proportion of Patients with", complaint, "Listed in Primary Complaints"), x = "Month - Year", y = "Proportion");
+};
+
+# plots proportional occurences of provider impression in primary complaints over time
+plot_provider_primary_impression <- function(impression) {
+  incident_counts <- ems %>% group_by(mo_yr) %>% count() %>% rename(tot_n = n);
+  ems$has_primary_impression <- ems$situation_provider_primary_impression_code_and_description == impression;
+  
+  impression_counts <- ems %>% 
+    group_by(mo_yr, has_primary_impression) %>% 
+    count() %>% 
+    inner_join(incident_counts) %>% 
+    mutate(prop_n = n / tot_n);
+  
+  impression_counts %>%
+    filter(has_primary_impression) %>%
+    ggplot(., aes(x = mo_yr, y = prop_n)) + 
+    geom_line(color = "red") + 
+    geom_point(stat = "identity") + 
+    labs(title = paste(title = "Occurence of", impression, "in Provider Primary Impression"), x = "Month - Year", y = "Proportion");
+};
+```
+
+```{r }
+incident_counts <- ems %>% group_by(mo_yr) %>% count() %>% rename(tot_n = n);
+ems$has_symptom <- str_detect(ems$situation_primary_complaint_statement_list, "fever");
+symptom_counts <- ems %>% 
+  group_by(mo_yr, has_symptom) %>% 
+  count() %>% 
+  inner_join(incident_counts) %>% 
+  mutate(prop_n = n / tot_n);
+```
+
+## Fever
+
+```{r }
+plot_complaint("fever");
+```
+
+```{r fever} 
+fever_threshold <- 100.4
+ems$has_fever_temp <- ems$patient_initial_body_temperature_in_fahrenheit >= fever_threshold;
+ems %>% 
+  group_by(mo_yr, has_fever_temp) %>%
+  count() %>%
+  filter(has_fever_temp) %>%
+  ggplot(., aes(x = mo_yr, y = n)) + 
+  geom_line(color = "red") + 
+  geom_point(stat = "identity") + 
+  labs(title = "Number of Patients with Fever >= 100.4", x = "Month - Year", y = "Patient Count")
+```
+
+## Chills
+
+```{r }
+plot_complaint("chills");
+```
+
+## Shortness of Breath or Diffulty Breathing
+
+```{r }
+related_to_breath <- ems %>% 
+  filter(str_detect(situation_primary_complaint_statement_list, "breath"));
+levels(as.factor(related_to_breath$situation_primary_complaint_statement_list))
+```
+Complaints related to breathing are entered in various ways in the data, making it hard to determine what to look for when extracting potential symptoms related to shortness of breath. For now, we look for complaints that contain "breath".
+```{r }
+plot_complaint("breath");
+```
+
+## Chest Pain
+
+```{r }
+plot_complaint("chest pain");
+```
+
+## Confusion
+
+```{r }
+plot_complaint("confusion");
+```
+
+## Fatigue
+
+```{r }
+plot_complaint("fatigue");
+```
+
+## Aches
+
+```{r }
+plot_complaint("ache")
+```
+
+## Headache
+```{r }
+plot_complaint("headache")
+```
+
+## Hypoxemia
+
+```{r hypoxemia}
+ems$pulse_ox_less_than_94 <- ifelse(ems$patient_initial_pulse_oximetry <= 94, TRUE, FALSE) 
+ems %>% 
+  group_by(mo_yr, pulse_ox_less_than_94) %>%
+  count() %>%
+  filter(pulse_ox_less_than_94) %>%
+  ggplot(., aes(x = mo_yr, y = n)) + 
+  geom_line(aes(color = "red")) + 
+  geom_point(stat = "identity") + 
+  labs(title = "Patients with Initial Pulse Oximetry <= 94 " , x = "Month-Year", y = "Number of Patients");
+```
+
+## New Cough
+
+Look at the occurences of cough complaints first.
+``` {r }
+plot_complaint("cough");
+```
+
+Look at the occurences of new coughs. New cough is defined as occuring within the last week.
+```{r pressure }
+
+in_primary_complaints("cough") # 293
+in_secondary_complaints("cough") # 2
+
+# considered a new cough if it occured within the last week
+new_cough <- ems %>%
+  filter(str_detect(situation_primary_complaint_statement_list, "cough") | str_detect(situation_secondary_complaint_statement_list, "cough")) %>%
+  filter(situation_complaint_duration < 10080);
+
+new_cough %>%
+  group_by(mo_yr) %>%
+  count() %>%
+  ggplot(., aes(x = mo_yr, y = n)) + 
+  geom_line(color = "red") + 
+  geom_point(stat = "identity") + 
+  labs(title = paste("New Cough Occurences"), x = "Month - Year", y = "Patient Count");
+```
+
+## Loss of Taste / Smell
+
+```{r }
+has_smell <- ems %>% 
+  filter(str_detect(situation_primary_complaint_statement_list, "smell"));
+
+levels(as.factor(has_smell$situation_primary_complaint_statement_list))
+# not related to loss of smell
+
+has_taste <- ems %>% 
+  filter(str_detect(situation_primary_complaint_statement_list, "taste"));
+
+levels(as.factor(has_taste$situation_primary_complaint_statement_list))
+# not related to loss of taste
+
+```
+
+## Loss of Appetite
+
+## Sore Throat 
+```{r}
+plot_complaint("sore throat");
+```
+
+## Congestion
+```{r}
+plot_complaint("congestion");
+```
+
+## Nausea or Vomiting
+```{r}
+plot_complaint("nausea|vomiting");
+```
+
+## Diarrhea
+
+```{r }
+plot_complaint("diarrhea");
+# "gi/gu - diarrhea (k59.1)"
+```
+
+## Bluish Lips or Face
+
+## Inability to Wake or Stay Awake
+
+## Stroke
+```{r }
+plot_provider_primary_impression("neuro - stroke/cva (i63.9)");
+```
+
+## Cardiac Arrest
+```{r }
+plot_provider_primary_impression("cv - cardiac arrest (i46.9)");
+```
+There are a bunch of other provider impressions related to cardiac arrest such as "cv - chest pain - myocardial infarction (non-stemi)  (i21.4)" or "cv - cardiac arrest/obvious death (r99)". Should examine these at some point.
+
+How many complaints are related to cardiac arrest?
+```{r }
+in_primary_complaints("cardiac");
+```
+
+Apparently, a patient's complaints may contain cardiac information too.
+```{r}
+has_cardiac <- ems %>% filter(str_detect(situation_primary_complaint_statement_list, "cardiac"));
+levels(as.factor(has_cardiac$situation_primary_complaint_statement_list));
+```
+
+## Cyanosis
+
+## Coma/Comatose
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
