@@ -6,9 +6,14 @@ library(sf)
 library(leaflet)
 library(leaflet.extras)
 library(tigris)
+library(leaflet.mapboxgl)
 
+## Mapbox API token
+token <- Sys.getenv("MAPBOX_TOKEN")
+options(mapbox.accessToken = token)
 
-source(here::here("src", "Profiling", "joining_albemarle_charlottesville.R"))
+#source(here::here("src", "Profiling", "joining_albemarle_charlottesville.R"))
+new_ems_data <- readr::read_csv(here("data", "working", "ems_clean_data.csv"))
 
 #
 #
@@ -16,7 +21,10 @@ source(here::here("src", "Profiling", "joining_albemarle_charlottesville.R"))
 #
 #
 
-# ...
+rescue_day_polys <- st_read(here("data", "final", "response_regions", "rescue_day_regions.geojson"))
+rescue_night_polys <- st_read(here("data", "final", "response_regions", "rescue_night_regions.geojson"))
+fire_polys <- st_read(here("data", "final", "response_regions", "fire_regions.geojson"))
+
 
 #
 #
@@ -41,18 +49,6 @@ new_ems_data <- new_ems_data %>%
                                                  !str_detect(situation_provider_primary_impression_code_and_description, " - ") ~ str_extract(situation_provider_primary_impression_code_and_description, "[^\\(]+")),
          primary_impression_category = trimws(primary_impression_category))
 
-## Filter out as many double-counted incident addresses as possible:
-incident_points <- new_ems_data %>%
-  group_by(incident_date, response_incident_number) %>%
-  distinct() %>%
-  filter(!is.na(response_incident_number)) %>%
-  #mutate(across(.cols = c("scene_gps_longitude", "scene_gps_latitude"), .fns = as.numeric)) ## This is slower
-  mutate(scene_gps_longitude = as.numeric(scene_gps_longitude),
-         scene_gps_latitude = as.numeric(scene_gps_latitude),
-         total_unit_response_time = as.numeric(total_unit_response_time),
-         patient_age = as.numeric(patient_age)) %>%
-  ungroup()
-
 #
 #
 # Generic Incident Point Mapping Function -------------------------------------------------------------------------------------------
@@ -75,7 +71,26 @@ map_incidents <- function(data,
   ## Base map
   map <- map_data %>%
     leaflet() %>%
-    addProviderTiles("CartoDB.Positron")
+    #addProviderTiles("CartoDB.Positron") %>%
+    addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
+    addPolygons(data = rescue_day_polys,
+                fillOpacity = 0,
+                weight = 1,
+                opacity = 0.5,
+                color = "black",
+                group = "Rescue Day") %>%
+    addPolygons(data = rescue_night_polys,
+                fillOpacity = 0,
+                weight = 1,
+                opacity = 0.5,
+                color = "black",
+                group = "Rescue Night") %>%
+    addPolygons(data = fire_polys,
+                fillOpacity = 0,
+                weight = 1,
+                opacity = 0.5,
+                color = "black",
+                group = "Fire")
   
   ## If no scale variable provided, just plot points
   if (length(scale_var) == 0) {
@@ -124,6 +139,7 @@ map_incidents <- function(data,
     map <- map %>% 
       addLayersControl(
         overlayGroups = unique(map_data[[group_var]]),
+        baseGroups = c("Rescue Day", "Rescue Night", "Fire"),
         options = layersControlOptions(collapsed = TRUE)
       )
   } else {
@@ -131,6 +147,7 @@ map_incidents <- function(data,
     map <- map %>% 
       addLayersControl(
         baseGroups = unique(map_data[[group_var]]),
+        baseGroups = c("Rescue Day", "Rescue Night", "Fire"),
         options = layersControlOptions(collapsed = TRUE)
       )
   }
@@ -163,6 +180,7 @@ resp_time_pal <- colorBin("Reds", domain = range(pal_data$total_unit_response_ti
 
 ## Map response times by agency
 map_incidents(pal_data, scale_var = "total_unit_response_time", group_var = "agency_name", palette = resp_time_pal, thin_n = 1000)
+
 
 #
 #
