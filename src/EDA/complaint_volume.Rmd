@@ -17,24 +17,33 @@ library(plotly)
 library(here)
 
 ## Read in data
-#source(here("src", "Profiling", "joining_albemarle_charlottesville.R"))
+source(here("src", "Profiling", "joining_albemarle_charlottesville.R"))
 cville_data <- readr::read_csv(here("data", "working", "deduplicated_data_wip.csv"))
 
-cville_data <- cville_data %>% 
+# cville_data <- cville_data %>% 
+#   mutate(incident_date = ymd(incident_date), 
+#          yr = as.factor(year(incident_date)), 
+#          mo = as.factor(month(incident_date)), 
+#          dy = as.character(day(incident_date)),
+#          mo_yr = dmy(paste0("01-", mo, "-", yr)),
+#          incident_psap_call_date_time = as.POSIXct(cville_data$incident_psap_call_date_time * (60 * 60 * 24), origin = "1899-12-30"))
+
+new_ems_data <- new_ems_data %>% 
   mutate(incident_date = ymd(incident_date), 
          yr = as.factor(year(incident_date)), 
          mo = as.factor(month(incident_date)), 
          dy = as.character(day(incident_date)),
-         mo_yr = dmy(paste0("01-", mo, "-", yr)),
-         incident_psap_call_date_time = as.POSIXct(cville_data$incident_psap_call_date_time * (60 * 60 * 24), origin = "1899-12-30"))
+         mo_yr = dmy(paste0("01-", mo, "-", yr)))
+#incident_psap_call_date_time = as.POSIXct(new_ems_data$incident_psap_call_date_time * (60 * 60 * 24), origin = "1899-12-30"))
 
-plot_theme <- theme(plot.title = element_text(hjust = 0.5, size = 22),
-                    axis.text = element_text(size = 16),
-                    axis.title = element_text(size = 20),
-                    strip.text = element_text(size = 18),
+plot_theme <- theme(plot.title = element_text(hjust = 0.5, size = 24),
+                    axis.text = element_text(size = 18),
+                    axis.title = element_text(size = 22),
+                    strip.text = element_text(size = 20),
                     legend.key = element_blank(),
-                    legend.text = element_text(size = 16),
-                    legend.title = element_text(size = 18))
+                    legend.text = element_text(size = 20),
+                    legend.title = element_text(size = 22),
+                    legend.key.size = unit(3,"line"))
 ```
 
 ```{r, include = FALSE}
@@ -130,17 +139,17 @@ plot_data <- cville_data %>%
 
 ## Plot temporal trends in volume
 ggplot(plot_data) + 
-  geom_line(aes(x = mo_yr, y = n, color = situation_provider_primary_impression_code_and_description), alpha = 1) + 
-  geom_point(aes(x = mo_yr, y = n, color = situation_provider_primary_impression_code_and_description), alpha = 0.7) +
+  geom_line(aes(x = mo_yr, y = n), alpha = 1, color = "steelblue") + 
+  geom_point(aes(x = mo_yr, y = n ), alpha = 0.7, color = "steelblue") +
   geom_vline(xintercept = dmy("02-01-2020"), linetype = "dashed", alpha = 0.8) +
-  scale_color_manual(values = cbPalette) +
+  #scale_color_manual(values = cbPalette) +
   facet_wrap(~situation_provider_primary_impression_code_and_description, ncol = 1) +
   labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions: Charlottesville\n") +
   theme_minimal() +
   plot_theme +
   theme(legend.position = "none")
 
-# ggsave(here("output", "top_impression_volume.png"), height = 10, width = 10)
+# ggsave(here("output", "top_impression_volume.png"), width = 10, height = 6)
 ```
 
 Plotting without faceting quickly gets too busy, but converting to an interactive layout with plotly can help with this by allowing for highlighting. Here are the top 8 complaints plotted together for better comparison.
@@ -304,9 +313,46 @@ cville_data %>%
   theme_minimal() +
   plot_theme
 
-# ggsave(here("output", "response_times_by_month_top_complaints.png"), height = 8, width = 13)
+# ggsave(here("output", "response_times_by_month_top_complaints.png"), height = 10, width = 15)
 ```
 
+
+```{r}
+
+## Pool incidents by month
+monthly_counts <- new_ems_data %>%
+  #filter(!is.na(patient_race_list), !str_detect(patient_race_list, ","), patient_race_list != "Not Applicable", patient_race_list != "Not Recorded") %>%
+  mutate(age_breaks = cut(as.numeric(patient_age), breaks = c(0, 20, 40, 60, 80, 100))) %>%
+  filter(!is.na(age_breaks), yr != "2016") %>%
+  group_by(mo_yr, age_breaks) %>%
+  count() 
+
+age_baselines <- new_ems_data %>%
+  mutate(age_breaks = cut(as.numeric(patient_age), breaks = c(0, 20, 40, 60, 80, 100))) %>%
+  group_by(age_breaks, mo_yr) %>%
+  filter(incident_date < "2020-03-01", yr != "2016") %>%
+  count() %>%
+  ungroup() %>%
+  group_by(age_breaks) %>%
+  summarize(mean = mean(n))
+
+plot_data <- full_join(monthly_counts, age_baselines) %>% 
+  mutate(pct_of_baseline = (n / mean) * 100)
+
+## Plot temporal trends in volume
+ggplot(plot_data) + 
+  geom_line(aes(x = mo_yr, y = pct_of_baseline, color = age_breaks, group = age_breaks), alpha = 0.7) + 
+  geom_point(aes(x = mo_yr, y = pct_of_baseline, color = age_breaks), alpha = 1) +
+  geom_vline(xintercept = dmy("02-01-2020"), linetype = "dashed", alpha = 0.8) +
+  scale_color_brewer(palette = "YlGnBu") +
+  #facet_wrap(~age_breaks, ncol = 1) +
+  #labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions: Charlottesville\n") +
+  theme_minimal() +
+  plot_theme
+
+
+
+```
 
 
 
