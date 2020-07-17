@@ -68,8 +68,19 @@ ems_prepared <- new_ems_data %>%
 # If any of them have more than one non-NA value within a set of unique response_incident_number, incident_date,
 # it leaves them the same, assuming those represent different people. If each has at most one non-NA value, then
 # NA's are populated with existing values to ensure these are counted as a single person.
+ems_prepared_dups <- ems_prepared %>%
+  group_by(response_incident_number,
+           incident_date) %>%
+  filter(n() > 1) %>%
+  ungroup()
 
-ems_filled_grouping_columns <- ems_prepared %>%
+ems_prepared_not_dups <- ems_prepared %>%
+  group_by(response_incident_number,
+           incident_date) %>%
+  filter(n() == 1) %>%
+  ungroup()
+
+ems_filled_grouping_columns <- ems_prepared_dups %>%
   group_by(response_incident_number,
            incident_date) %>%
   mutate(across(c(outcome_external_report_number,
@@ -92,7 +103,8 @@ ems_filled_grouping_columns <- ems_prepared %>%
                   }
                 })) %>%
   ungroup() %>%
-  distinct()
+  distinct() %>%
+  bind_rows(ems_prepared_not_dups)
 
 
 # Sometimes a patient will have both a patient care report and a medical record number.
