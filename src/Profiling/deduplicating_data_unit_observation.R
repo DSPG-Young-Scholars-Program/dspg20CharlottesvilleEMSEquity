@@ -1,10 +1,11 @@
 library(stringr)
 library(tidyr)
+library(lubridate)
 
 source(here::here("src","Profiling","joining_albemarle_charlottesville.R"))
 
 ##############################################################################
-# Working with new combined data
+# Working with new combined data, this time considering a unit responding as the unit of analysis
 ##############################################################################
 
 # considering one observation to be a unique combination of the following:
@@ -17,6 +18,7 @@ source(here::here("src","Profiling","joining_albemarle_charlottesville.R"))
 # patient_race_list,
 # disposition_destination_name_delivered_transferred_to,
 # incident_date
+# response_ems_unit_call_sign
 
 # change column types, clean up address names, force all text to lowercase, and remove invalid data
 
@@ -68,21 +70,11 @@ ems_prepared <- new_ems_data %>%
 # If any of them have more than one non-NA value within a set of unique response_incident_number, incident_date,
 # it leaves them the same, assuming those represent different people. If each has at most one non-NA value, then
 # NA's are populated with existing values to ensure these are counted as a single person.
-ems_prepared_dups <- ems_prepared %>%
-  group_by(response_incident_number,
-           incident_date) %>%
-  filter(n() > 1) %>%
-  ungroup()
 
-ems_prepared_not_dups <- ems_prepared %>%
+ems_filled_grouping_columns <- ems_prepared %>%
   group_by(response_incident_number,
-           incident_date) %>%
-  filter(n() == 1) %>%
-  ungroup()
-
-ems_filled_grouping_columns <- ems_prepared_dups %>%
-  group_by(response_incident_number,
-           incident_date) %>%
+           incident_date,
+           response_ems_unit_call_sign) %>%
   mutate(across(c(outcome_external_report_number,
                   scene_incident_street_address,
                   patient_age,
@@ -103,8 +95,7 @@ ems_filled_grouping_columns <- ems_prepared_dups %>%
                   }
                 })) %>%
   ungroup() %>%
-  distinct() %>%
-  bind_rows(ems_prepared_not_dups)
+  distinct()
 
 
 # Sometimes a patient will have both a patient care report and a medical record number.
@@ -116,13 +107,14 @@ ems_pcr_removed <- ems_filled_grouping_columns %>%
            patient_gender,
            patient_race_list,
            disposition_destination_name_delivered_transferred_to,
-           incident_date) %>%
+           incident_date,
+           response_ems_unit_call_sign) %>%
   mutate(outcome_external_report_number = ifelse((n() > 1) & sum(outcome_external_report_type == "hospital medical record number (mrn)") > 0,
                                                  outcome_external_report_number[which(outcome_external_report_type == "hospital medical record number (mrn)")][1],
                                                  outcome_external_report_number),
          outcome_external_report_type = ifelse((n() > 1) & sum(outcome_external_report_type == "hospital medical record number (mrn)") > 0,
-                                                 outcome_external_report_type[which(outcome_external_report_type == "hospital medical record number (mrn)")][1],
-                                                 outcome_external_report_type)) %>%
+                                               outcome_external_report_type[which(outcome_external_report_type == "hospital medical record number (mrn)")][1],
+                                               outcome_external_report_type)) %>%
   ungroup() %>%
   distinct()
 
@@ -138,6 +130,7 @@ ems_pcr_removed <- ems_filled_grouping_columns %>%
 # patient_race_list,
 # disposition_destination_name_delivered_transferred_to,
 # incident_date
+# response_ems_unit_call_sign
 # have missing data when other rows within the observation have data, this fills the missing date with the existing data
 
 ems_filled <- ems_pcr_removed %>%
@@ -148,7 +141,8 @@ ems_filled <- ems_pcr_removed %>%
            patient_gender,
            patient_race_list,
            disposition_destination_name_delivered_transferred_to,
-           incident_date) %>%
+           incident_date,
+           response_ems_unit_call_sign) %>%
   fill(3:ncol(.), .direction = "updown") %>%
   ungroup() %>%
   distinct()
@@ -195,40 +189,11 @@ ems_listed <- ems_filled %>%
 
 
 
-# Collapses rows that are near duplicates due to having different units responding to the scene into a single row
-department_vars <- c("response_ems_unit_call_sign",
-                     "incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes",
-                     "total_unit_response_time",
-                     "scene_incident_location_type",
-                     "agency_name",
-                     "incident_complaint_reported_by_dispatch",
-                     "response_vehicle_full_address",
-                     "response_vehicle_type")
-
-ems_collapsed <- ems_listed %>%
-  group_by(response_incident_number,
-           outcome_external_report_number,
-           scene_incident_street_address,
-           patient_age,
-           patient_gender,
-           patient_race_list,
-           disposition_destination_name_delivered_transferred_to,
-           incident_date) %>%
-  mutate(across(.cols = all_of(department_vars),
-         .fns = function(column) {
-           comb_col = paste0(unique(column[!is.na(column)]), collapse = "|")
-           ifelse(comb_col == "", NA, comb_col)
-         })) %>%
-  ungroup() %>%
-  distinct()
-
-
-
 # Combines a list columns back into character columns by combining all different sets of values within an observation
 # and removing duplicates. Thus if a list started out out of order from another list within the same observation, they will
 # become identical after this operation
 
-ems_fully_collapsed <- ems_collapsed %>%
+ems_fully_collapsed <- ems_listed %>%
   group_by(response_incident_number,
            outcome_external_report_number,
            scene_incident_street_address,
@@ -236,12 +201,13 @@ ems_fully_collapsed <- ems_collapsed %>%
            patient_gender,
            patient_race_list,
            disposition_destination_name_delivered_transferred_to,
-           incident_date) %>%
+           incident_date,
+           response_ems_unit_call_sign) %>%
   mutate_at(enforce_list, function(x) {
-      combined <- unique(flatten(x))
-      pasted <- paste0(combined[!is.na(combined)], collapse = "|")
-      ifelse(pasted == "", NA, pasted)
-    }) %>%
+    combined <- unique(flatten(x))
+    pasted <- paste0(combined[!is.na(combined)], collapse = "|")
+    ifelse(pasted == "", NA, pasted)
+  }) %>%
   ungroup() %>%
   distinct()
 
@@ -254,7 +220,8 @@ ems_primary_combined <- ems_fully_collapsed %>%
            patient_gender,
            patient_race_list,
            disposition_destination_name_delivered_transferred_to,
-           incident_date) %>%
+           incident_date,
+           response_ems_unit_call_sign) %>%
   mutate(across(c(situation_provider_primary_impression_code_and_description,
                   situation_chief_complaint_anatomic_location),
                 function(column) {
@@ -267,9 +234,8 @@ ems_primary_combined <- ems_fully_collapsed %>%
 # remove pipes | that were accidentaly placed at the beginning or end of a string
 ems_pipes_trimmed <- ems_primary_combined %>%
   mutate(across(.cols = all_of(c(enforce_list,
-                         department_vars,
-                         "situation_provider_primary_impression_code_and_description",
-                         "situation_chief_complaint_anatomic_location")),
+                                 "situation_provider_primary_impression_code_and_description",
+                                 "situation_chief_complaint_anatomic_location")),
                 .fns = ~str_replace_all(.x, r"(^\||\|$)", "")))
 
 
@@ -284,7 +250,8 @@ duplicates <- ems_pipes_trimmed %>%
            patient_gender,
            patient_race_list,
            disposition_destination_name_delivered_transferred_to,
-           incident_date) %>%
+           incident_date,
+           response_ems_unit_call_sign) %>%
   filter(n() > 1)
 
 deduped_duplicates <- duplicates %>%
@@ -309,7 +276,8 @@ ems_fully_deduped <- ems_pipes_trimmed %>%
            patient_gender,
            patient_race_list,
            disposition_destination_name_delivered_transferred_to,
-           incident_date) %>%
+           incident_date,
+           response_ems_unit_call_sign) %>%
   filter(!(n() > 1)) %>%
   bind_rows(deduped_duplicates) %>%
   ungroup() %>%
@@ -354,4 +322,4 @@ ems_clean_data <- ems_fully_deduped %>%
          situation_complaint_duration = standardize_time(situation_complaint_duration, situation_complaint_duration_time_units),
          situation_complaint_duration_time_units = ifelse(is.na(situation_complaint_duration_time_units), NA, "minutes"))
 
-readr::write_csv(ems_clean_data, here::here("data", "working", "ems_clean_data.csv"))
+readr::write_csv(ems_clean_data, here::here("data", "working", "ems_clean_data_unit_observation.csv"))
