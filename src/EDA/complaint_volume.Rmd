@@ -15,6 +15,7 @@ library(tidyr)
 library(lubridate)
 library(plotly)
 library(here)
+library(gghighlight)
 
 ## Read in data
 #source(here("src", "Profiling", "joining_albemarle_charlottesville.R"))
@@ -126,7 +127,7 @@ top_impressions <- new_ems_data %>%
   group_by(situation_provider_primary_impression_code_and_description) %>% 
   count() %>% 
   ungroup() %>%
-  top_n(5) %>%
+  top_n(10) %>%
   arrange(desc(n))
 
 top_impressions <- top_impressions$situation_provider_primary_impression_code_and_description
@@ -142,15 +143,27 @@ plot_data <- new_ems_data %>%
 ggplot(plot_data) + 
   geom_line(aes(x = mo_yr, y = n, color = situation_provider_primary_impression_code_and_description), alpha = 1) + 
   geom_point(aes(x = mo_yr, y = n, color = situation_provider_primary_impression_code_and_description), alpha = 0.7) +
-  geom_vline(xintercept = dmy("02-01-2020"), linetype = "dashed", alpha = 0.8) +
-  scale_color_manual(values = cbPalette) +
-  facet_wrap(~situation_provider_primary_impression_code_and_description, ncol = 1) +
+  geom_vline(xintercept = dmy("01-02-2020"), linetype = "dashed", alpha = 0.8) +
+  #scale_color_manual(values = cbPalette) +
+  #facet_wrap(~situation_provider_primary_impression_code_and_description, ncol = 1) +
   labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions\n") +
   theme_minimal() +
-  plot_theme +
-  theme(legend.position = "none")
+  plot_theme #+
+  #theme(legend.position = "none")
 
-# ggsave(here("output", "top_impression_volume.png"), width = 10, height = 6)
+## Plot temporal trends in volume
+ggplot(plot_data) + 
+  geom_area(aes(x = mo_yr, y = n, fill = situation_provider_primary_impression_code_and_description), color = "black", alpha = 1, position = "fill") + 
+  #geom_point(aes(x = mo_yr, y = n, color = situation_provider_primary_impression_code_and_description), alpha = 0.7) +
+  geom_vline(xintercept = dmy("01-02-2020"), linetype = "dashed", alpha = 0.8) +
+  #scale_color_manual(values = cbPalette) +
+  #facet_wrap(~situation_provider_primary_impression_code_and_description, ncol = 1) +
+  labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions\n") +
+  theme_minimal() +
+  plot_theme #+
+  #theme(legend.position = "none")
+
+# ggsave(here("output", "top_impression_volume_prop.png"), width = 15, height = 12)
 ```
 
 ```{r}
@@ -187,7 +200,7 @@ ggplot(plot_data) +
   theme_minimal() +
   plot_theme
 
-# ggsave(here("output", "impression_category_volume.png"), width = 10, height = 6)
+#ggsave(here("output", "impression_category_volume.png"), width = 10, height = 6)
 
 ```
 
