@@ -17,7 +17,6 @@ charlottesville_sp <- charlottesville %>%
 
 joined <- st_join(neighborhoods, charlottesville_sp, join = st_contains)
 
-
 joined %>%
   group_by(NAME) %>%
   summarize(n = n()) %>%
