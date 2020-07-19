@@ -4,6 +4,8 @@ library(leaflet)
 library(dplyr)
 library(tidyr)
 
+source(here::here("src", "IPF", "04_run_ipf.R"))
+
 ## Cville neighborhoods
 planning_area <- st_read(here::here("data", "original", "neighborhoods", "planning_area_06_04_2020.shp")) %>% st_transform(crs = 4326)
 
