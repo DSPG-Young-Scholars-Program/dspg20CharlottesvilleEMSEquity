@@ -10,7 +10,8 @@ joined_unit_level_obs <- unit_level_obs %>%
   select(response_incident_number,
          incident_date,
          incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes,
-         response_ems_unit_call_sign) %>%
+         response_ems_unit_call_sign,
+         response_vehicle_type) %>%
   full_join(patient_level_obs, by = c("response_incident_number",
                                       "incident_date")) %>%
   as_tibble()
@@ -19,9 +20,11 @@ joined_unit_level_obs <- unit_level_obs %>%
 joined_distinct <- joined_unit_level_obs %>%
   as_tibble() %>%
   select(-incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes.y,
-         -response_ems_unit_call_sign.y) %>%
+         -response_ems_unit_call_sign.y,
+         -response_vehicle_type.y) %>%
   rename(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes = incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes.x,
-         response_ems_unit_call_sign = response_ems_unit_call_sign.x) %>%
+         response_ems_unit_call_sign = response_ems_unit_call_sign.x,
+         response_vehicle_type = response_vehicle_type.x) %>%
   distinct()
 
 
