@@ -3,6 +3,7 @@ library(sf)
 library(leaflet)
 library(dplyr)
 library(tidyr)
+library(tidycensus)
 
 source(here::here("src", "IPF", "04_run_ipf.R"))
 
@@ -105,7 +106,7 @@ leaflet() %>%
               label = ~black,
               group = "Synthetic") %>%
   addLayersControl(baseGroups = c("ACS", "Synthetic")) %>%
-  addLegend("bottomright", pal = pal, values = seq(0,1))
+  addLegend("bottomright", pal = pal, values = seq(0,1), title = "Proportion Black")
 
 ## ----- Synthetic Population Results ----- ## 
 
