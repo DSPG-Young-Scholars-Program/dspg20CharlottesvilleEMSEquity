@@ -38,7 +38,8 @@ lowest_response_vehicles <- joined_distinct %>%
            disposition_destination_name_delivered_transferred_to,
            incident_date) %>%
   slice_min(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes,
-            n = 1)
+            n = 1) %>%
+  ungroup()
 
 readr::write_csv(lowest_response_vehicles,
                  here::here("data", "working", "first_unit_at_scene_data.csv"))
