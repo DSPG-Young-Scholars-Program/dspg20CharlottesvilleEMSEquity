@@ -18,7 +18,6 @@ source(here::here("src", "IPF", "03_ipf_functions.R"))
 ## Each variable needs information about the table it comes from in the ACS, its possible values, the columns in the ACS table where these values are obtained,
 ## how the variable is coded, etc.
 
-
 ## ------ Sex ------ ##
 
 ## Specify inputs for a categorical variable in the ACS (Sex)
@@ -94,9 +93,7 @@ input_race$micro_ids[[4]] <- c(3,4,5,7,8,9) ## other
 ## Combine into one input list
 inputs <- list(input_sex,input_age,input_race)
 
-
-
-## ----- Run IPF Once (To confirm things are working) ----- ##
+## ----- Run IPF with actual ACS estimates ----- ##
 
 ## Read in the marginal data (calculated using ACS tables in 02_construct_marginals.R) and microdata (obtained from census in 01_read_microdata.R)
 all_marginals <- read.csv(here::here("data", "working", "marginals_for_ipf.csv"))
@@ -112,30 +109,100 @@ microdata_category <- create_micro_categories(microdata, inputs=inputs, micro_co
 synth_pop <- resample_ipf(ipf_counts, inputs, microdata, microdata_category, micro_cols = c("PUMA", "PWGTP"))
 
 ## Attach latitude and longitude to the synthetic population
-synth_pop_latlong <- attach_latlong(synth_pop, method="uniform", state_names = "VA", county_names = c("Charlottesville", "Albemarle"), year = 2018)
+cville_block_groups <- block_groups(state = "VA", county = "Charlottesville city", year = 2018)
+synth_pop_latlong <- attach_latlong(synth_pop, method="uniform", geographies = cville_block_groups)
 
 
 ## ----- Run IPF iteratively ----- ##
 
-# K <- 10
-# 
-# results <- list()
-# 
-# for (i in 1:K) {
-#   
-#   ## Sample microdata based on the marginal counts for each unique set of variable combinations
-#   synth_pop <- resample_ipf(ipf_counts, inputs, microdata, microdata_category, micro_cols = c("PUMA", "PWGTP"))
-#   
-#   ## Attach latitude and longitude to the synthetic population
-#   synth_pop_latlong <- attach_latlong(synth_pop, method="uniform", state_names = "VA", county_names = c("Charlottesville", "Albemarle"), year = 2018)
-#   
-#   results[[i]] <- synth_pop_latlong
-#   
-# }
+## This is clunkiest, stupidest function I may have ever written, but for now it works.
+## It takes in ACS marginal data, samples based on reported estimates and moes, and outputs a dataframe of sampled values
+## Each dataframe in the list has an entry for each block group with estimated values for all variables
+sample_marginals <- function(marginal_data) { ## Marginal data should have a GEOID and estimates for total population and moe. Should be ordered such that moe columns immediately follow the estimate column 
+  
+  ## list to store various values
+  vars_split <- list()
+  samps <- list()
+  results <- list()
+  
+  ## Convert marginal data to list separating each variable/GEOID combo into its own item with estimate and moe
+  ## For each pair of columns (estimate and moe), place into storage list
+  rownames(marginal_data) <- marginal_data$GEOID
+  i <- 1
+  
+  for (row in 1:nrow(marginal_data)) {
+    for (col in seq(2,ceiling(ncol(marginal_data)), 2)) {
+      vars_split[[i]] <- unclass(marginal_data[row, c(col,col+1)])
+      i <- i + 1
+    }
+  }
+  
+  ## Iterate through list, use moe and estimate to sample new value from normal distribution
+  for (i in 1:length(vars_split)) {
+    var <- attributes(vars_split[[i]])$names[1]
+    geoid <- attributes(vars_split[[i]])$row.names
+    
+    mean <- vars_split[[i]][[1]]
+    se <- vars_split[[i]][[2]] / 1.645
+    
+    samps[[i]] <- rnorm(1, mean, se)
+    attributes(samps[[i]])$row.names <- geoid
+    attributes(samps[[i]])$var <- var
+  }
+  
+  ## Convert to list of dataframes
+  var_names <- unlist(lapply(samps, function(x) attributes(x)$var))
+  geo_names <- unlist(lapply(samps, function(x) attributes(x)$row.names))
+  
+  dfs <- lapply(samps, function(x) as.data.frame(x))
+  
+  ## Attach variable names and GEOIDs
+  for (i in seq_along(dfs)){
+    colnames(dfs[[i]]) <- var_names[i]
+    dfs[[i]]$GEOID <- geo_names[i]
+  }
+  
+  ## Combine dataframes into single source
+  for (geo_idx in seq(1, length(vars_split), by = 11)) {
+    test <- purrr::reduce(dfs[seq(geo_idx, geo_idx+10)], cbind)
+    test <- test[,!duplicated(colnames(test))]
+    results[[geo_idx]] <- test
+  }
+  
+  sampled_marginals <- bind_rows(results)
+  
+  ## Convert negative counts to 0
+  sampled_marginals <- replace(sampled_marginals, sampled_marginals < 0, 0) %>% select(GEOID, everything())
+  
+  return(sampled_marginals)
+}
 
-## How to get different ACS marginal values for each run, though?
+all_marginals_moe <- read.csv(here::here("data", "working", "marginals_for_ipf_moe.csv"))
+
+## Categorize each entry in the microdata based on the categories of the variables we are using for IPF
+microdata_category <- create_micro_categories(microdata, inputs = inputs, micro_cols = c("PUMA", "PWGTP"))
 
 
+## Get multiple marginal samples (each will include estimates for all variables for each block group)
+set.seed(5256)
 
+n_iter <- 100
+sample_results <- list()
 
+for (i in 1:n_iter) {
+  print(i)
+  sampled_marginals <- sample_marginals(all_marginals_moe)
+  sample_results[[i]] <- sampled_marginals
+}
 
+## Run IPF on each set of sampled data
+ipf_results <- lapply(sample_results, function(x) run_ipf(x, inputs, prob = TRUE))
+
+## Sample microdata based on the counts for each unique set of variable combinations, do this for each set of sampled data
+synth_pops <- lapply(ipf_results, function(x) resample_ipf(x, inputs, microdata, microdata_category, micro_cols = c("PUMA", "PWGTP")))
+
+## Attach latitude and longitude to the synthetic population for each set of sampled data
+cville_block_groups <- block_groups(state = "VA", county = "Charlottesville city", year = 2018)
+synth_pops_latlong <- lapply(synth_pops, function(x) attach_latlong(x, method = "uniform", geographies = cville_block_groups))
+
+# saveRDS(synth_pops_latlong, file = here::here("data", "working", "synthetic_population_samples.rds"))
