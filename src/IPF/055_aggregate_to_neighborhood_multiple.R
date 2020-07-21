@@ -7,59 +7,84 @@ library(tidycensus)
 
 source(here::here("src", "IPF", "04_run_ipf.R"))
 
-synth_pops_latlong[[1]]
-
 ## Cville neighborhoods
 planning_area <- st_read(here::here("data", "original", "neighborhoods", "planning_area_06_04_2020.shp")) %>% st_transform(crs = 4326)
 
 ## Synthetic pop (from 04_run_ipf.R)
-synth_pop_sf <- st_as_sf(synth_pop_latlong, coords = c("long", "lat"), crs = 4326)
+synth_pop_sfs <- lapply(synth_pops_latlong, function(x) st_as_sf(x, coords = c("long", "lat"), crs = 4326))
 
 ## Join neighborhoods on synthetic point data. Recode categorical variables
-joined <- st_join(planning_area, synth_pop_sf, left = FALSE, join = st_covers) %>%
-  mutate(SEX = recode(SEX, "1" = "male", "2" = "female"),
-         RACE = recode(RAC1P, "1" = "white", "2" = "black", "3" = "am_ind",
-                       "4" = "alaska.native", "5" = "am_ind_alaska_native_tribes_spec", 
-                       "6" = "asian", "7" = "hawaiian_pac_isl", "8" = "other", "9" = "multiple"))
+joined_sfs <- lapply(synth_pop_sfs, function(x) st_join(planning_area, x, left = FALSE, join = st_covers) %>% 
+                       mutate(SEX = recode(SEX, "1" = "male", "2" = "female"),
+                              RACE = recode(RAC1P, "1" = "white", "2" = "black", "3" = "am_ind",
+                                            "4" = "alaska.native", "5" = "am_ind_alaska_native_tribes_spec", 
+                                            "6" = "asian", "7" = "hawaiian_pac_isl", "8" = "other", "9" = "multiple")))
+
+age_by_neighborhood <- lapply(joined_sfs, function(x) x %>% 
+                                group_by(NAME) %>% 
+                                summarize(n = n(), mean_age = mean(AGEP)))
+
+sex_by_neighborhood <- lapply(joined_sfs, function(x) x %>%
+                                group_by(NAME, SEX) %>% 
+                                count() %>% 
+                                ungroup() %>% 
+                                group_by(NAME) %>% 
+                                mutate(prop = n / sum(n)) %>%
+                                select(-n) %>%
+                                pivot_wider(names_from = SEX, values_from = prop))
+
+race_by_neighborhood <- lapply(joined_sfs, function(x) x %>%
+                                 group_by(NAME, RACE) %>%
+                                 count() %>%
+                                 ungroup() %>% 
+                                 group_by(NAME) %>% 
+                                 mutate(prop = n / sum(n)) %>%
+                                 select(-n) %>%
+                                 pivot_wider(names_from = RACE, values_from = prop))
+
+## Combine into single source?
+# aggregate_data <- full_join(full_join(age_by_neighborhood, sex_by_neighborhood), race_by_neighborhood)
+
+
+
+
+
+
+
+# joined <- st_join(planning_area, synth_pop_sf, left = FALSE, join = st_covers) %>%
+#   mutate(SEX = recode(SEX, "1" = "male", "2" = "female"),
+#          RACE = recode(RAC1P, "1" = "white", "2" = "black", "3" = "am_ind",
+#                        "4" = "alaska.native", "5" = "am_ind_alaska_native_tribes_spec", 
+#                        "6" = "asian", "7" = "hawaiian_pac_isl", "8" = "other", "9" = "multiple"))
 
 ## Calculate mean/SE by neighborhood for age
-age_by_neighborhood <- joined %>% 
-  group_by(NAME) %>% 
-  summarize(n = n(), mean_age = mean(AGEP))
-#se_age = sd(AGEP) / sqrt(n))
-
-## Calculate gender proportions by neighborhood
-sex_by_neighborhood <- joined %>% 
-  group_by(NAME, SEX) %>% 
-  count() %>% 
-  ungroup() %>% 
-  group_by(NAME) %>% 
-  mutate(prop = n / sum(n)) %>%
-  select(-n) %>%
-  pivot_wider(names_from = SEX, values_from = prop)
-
-## Calculate race proportions by neighborhood
-race_by_neighborhood <- joined %>%
-  group_by(NAME, RACE) %>%
-  count() %>%
-  ungroup() %>% 
-  group_by(NAME) %>% 
-  mutate(prop = n / sum(n)) %>%
-  select(-n) %>%
-  pivot_wider(names_from = RACE, values_from = prop)
+# age_by_neighborhood <- joined %>% 
+#   group_by(NAME) %>% 
+#   summarize(n = n(), mean_age = mean(AGEP))
+# #se_age = sd(AGEP) / sqrt(n))
+# 
+# ## Calculate gender proportions by neighborhood
+# sex_by_neighborhood <- joined %>% 
+#   group_by(NAME, SEX) %>% 
+#   count() %>% 
+#   ungroup() %>% 
+#   group_by(NAME) %>% 
+#   mutate(prop = n / sum(n)) %>%
+#   select(-n) %>%
+#   pivot_wider(names_from = SEX, values_from = prop)
+# 
+# ## Calculate race proportions by neighborhood
+# race_by_neighborhood <- joined %>%
+#   group_by(NAME, RACE) %>%
+#   count() %>%
+#   ungroup() %>% 
+#   group_by(NAME) %>% 
+#   mutate(prop = n / sum(n)) %>%
+#   select(-n) %>%
+#   pivot_wider(names_from = RACE, values_from = prop)
 
 ## Combine into single source
-aggregate_data <- full_join(full_join(age_by_neighborhood, sex_by_neighborhood), race_by_neighborhood)
-
-
-
-
-
-## Will want to incorporate empirical margins of error in these estimates once we figure out how to sample from ACS marginals
-
-
-
-
+# aggregate_data <- full_join(full_join(age_by_neighborhood, sex_by_neighborhood), race_by_neighborhood)
 
 
 
