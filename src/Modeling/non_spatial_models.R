@@ -1,11 +1,18 @@
+####################################################################################
+# Script to do all of our non spatial modeling work
+####################################################################################
+
+
+
+####################################################################################
+# Load Data, Libraries, and Set Options
+####################################################################################
+
 library(lubridate)
 library(rstanarm)
 library(bayesplot)
 library(dplyr)
-library(sf)
-library(splines)
 library(stringr)
-
 
 
 options(mc.cores = 10)
@@ -13,16 +20,14 @@ options(mc.cores = 10)
 response_time_data <- vroom::vroom(here::here("data", "working", "first_unit_at_scene_impressions_categorized.csv")) %>%   # replace with reading in first_unit_at_scene.csv once rivanna fixed
   ungroup() # just in case its still grouped
 
-neighborhoods <- read_sf(here::here("data", "original", "neighborhoods", "planning_area_06_04_2020.shp")) %>%
-  st_transform(crs = 4326)
+
+####################################################################################
+# Prepare Data for Modeling
+####################################################################################
 
 
+covid_start_date <- ymd("2020-03-01")
 
-
-covid_start_date <- ymd("2020-03-17")
-degree <- 5
-knots <- 5
-df <- knots + degree
 
 race_lookup_table <- tibble(patient_first_race = c("american indian or alaska native",
                                                    "asian",
@@ -82,26 +87,7 @@ prepared_data <- response_time_data %>%
                                  NA,
                                  patient_gender)) %>%
   left_join(vehicle_type_lookup_table, by = "response_vehicle_type") %>%
-  left_join(possible_impression_lookup_table, by = "possible_impression_category")
-
-
-
-
-
-prepared_data_sp <- prepared_data %>%
-  filter(!is.na(scene_gps_longitude), !is.na(scene_gps_latitude)) %>%
-  st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude"),
-           remove = FALSE,
-           crs = 4326)
-
-prepared_data_neighborhoods <- neighborhoods %>%
-  st_join(prepared_data_sp, join = st_contains)
-
-set.seed(451)
-
-
-
-basic_model_bayes_no_interact <- prepared_data %>%
+  left_join(possible_impression_lookup_table, by = "possible_impression_category") %>%
   select(response_time_hundreths_of_minutes,
          patient_age,
          patient_gender,
@@ -111,70 +97,70 @@ basic_model_bayes_no_interact <- prepared_data %>%
          possible_impression_category_collapsed,
          patient_first_race_collapsed,
          time_of_day) %>%
+  mutate(across(everything(), ~ifelse(is.na(.x) & !is.numeric(.x),
+                                      "missing",
+                                      .x))) %>% # for categorical variables simply add missing as a category
+  na.omit() # removing because these will be implicitly thrown out by models
+
+
+####################################################################################
+# Begin Modeling
+####################################################################################
+
+set.seed(451)
+
+basic_model_bayes_no_interact <- prepared_data %>%
   stan_glm(response_time_hundreths_of_minutes ~ after_covid + (patient_age +
                                                                  patient_first_race_collapsed +
                                                                  patient_gender +
                                                                  possible_impression_category_collapsed +
                                                                  response_vehicle_type_collapsed +
-                                                                 time_of_day),# + response_vehicle_type_collapsed + possible_impression_category + time_of_day),
+                                                                 time_of_day),
            data = .,
            family = "poisson",
            chains = 10, iter = 2000,
            sparse = FALSE,
            open_progress = TRUE,
            verbose = TRUE,
-           QR = TRUE)
+           QR = TRUE) # speeds up evaluation
 
 basic_model_bayes_yes_interact <- prepared_data %>%
-  select(response_time_hundreths_of_minutes,
-         patient_age,
-         patient_gender,
-         response_vehicle_type_collapsed,
-         after_covid,
-         impression_category,
-         possible_impression_category_collapsed,
-         patient_first_race_collapsed,
-         time_of_day) %>%
   stan_glm(response_time_hundreths_of_minutes ~ after_covid * (patient_age +
-                                                            patient_first_race_collapsed +
-                                                            patient_gender +
-                                                            possible_impression_category_collapsed +
-                                                            response_vehicle_type_collapsed +
-                                                            time_of_day),# + response_vehicle_type_collapsed + possible_impression_category + time_of_day),
+                                                               patient_first_race_collapsed +
+                                                               patient_gender +
+                                                               possible_impression_category_collapsed +
+                                                               response_vehicle_type_collapsed +
+                                                               time_of_day),
       data = .,
       family = "poisson",
-      chains = 10, iter = 2000,
+      chains = 10, iter = 5000,
       sparse = FALSE,
       open_progress = TRUE,
       verbose = TRUE,
       QR = TRUE)
 
+basic_model_freq_no_interact <- prepared_data %>%
+  glm(response_time_hundreths_of_minutes ~ after_covid + (patient_age +
+                                                            patient_first_race_collapsed +
+                                                            patient_gender +
+                                                            possible_impression_category_collapsed +
+                                                            response_vehicle_type_collapsed +
+                                                            time_of_day),
+      data = .,
+      family = "poisson")
 
 basic_model_freq_yes_interact <- prepared_data %>%
-  select(response_time_hundreths_of_minutes,
-         patient_age,
-         patient_gender,
-         response_vehicle_type_collapsed,
-         after_covid,
-         impression_category,
-         possible_impression_category_collapsed,
-         patient_first_race_collapsed,
-         time_of_day) %>%
   glm(response_time_hundreths_of_minutes ~ after_covid * (patient_age +
                                                           patient_first_race_collapsed +
                                                           patient_gender +
                                                           possible_impression_category_collapsed +
                                                           response_vehicle_type_collapsed +
-                                                          time_of_day),# + response_vehicle_type_collapsed + possible_impression_category + time_of_day),
+                                                          time_of_day),
       data = .,
       family = "poisson")
 
-save(basic_model_bayes_no_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_bayes_no_interact.RData"))
-load(here::here("src", "Modeling", "model_objects", "glm_full_no_interaction.RData"))
-
-
-basic_model_bayes_no_interact <- basic_linear_model
-
+#save(basic_model_bayes_no_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_bayes_no_interact.RData"))
+#load(here::here("src", "Modeling", "model_objects", "glm_full_no_interaction.RData"))
 
 
 #############################################################
