@@ -99,7 +99,9 @@ prepared_data_neighborhoods <- neighborhoods %>%
 
 set.seed(451)
 
-basic_linear_model <- prepared_data %>%
+
+
+basic_model_bayes_no_interact <- prepared_data %>%
   select(response_time_hundreths_of_minutes,
          patient_age,
          patient_gender,
@@ -110,11 +112,11 @@ basic_linear_model <- prepared_data %>%
          patient_first_race_collapsed,
          time_of_day) %>%
   stan_glm(response_time_hundreths_of_minutes ~ after_covid + (patient_age +
-                                                               patient_first_race_collapsed +
-                                                               patient_gender +
-                                                               possible_impression_category_collapsed +
-                                                               response_vehicle_type_collapsed +
-                                                               time_of_day),# + response_vehicle_type_collapsed + possible_impression_category + time_of_day),
+                                                                 patient_first_race_collapsed +
+                                                                 patient_gender +
+                                                                 possible_impression_category_collapsed +
+                                                                 response_vehicle_type_collapsed +
+                                                                 time_of_day),# + response_vehicle_type_collapsed + possible_impression_category + time_of_day),
            data = .,
            family = "poisson",
            chains = 10, iter = 2000,
@@ -123,8 +125,7 @@ basic_linear_model <- prepared_data %>%
            verbose = TRUE,
            QR = TRUE)
 
-
-basic_model_freq <- prepared_data %>%
+basic_model_bayes_yes_interact <- prepared_data %>%
   select(response_time_hundreths_of_minutes,
          patient_age,
          patient_gender,
@@ -134,7 +135,32 @@ basic_model_freq <- prepared_data %>%
          possible_impression_category_collapsed,
          patient_first_race_collapsed,
          time_of_day) %>%
-  glm(response_time_hundreths_of_minutes ~ after_covid + (patient_age +
+  stan_glm(response_time_hundreths_of_minutes ~ after_covid * (patient_age +
+                                                            patient_first_race_collapsed +
+                                                            patient_gender +
+                                                            possible_impression_category_collapsed +
+                                                            response_vehicle_type_collapsed +
+                                                            time_of_day),# + response_vehicle_type_collapsed + possible_impression_category + time_of_day),
+      data = .,
+      family = "poisson",
+      chains = 10, iter = 2000,
+      sparse = FALSE,
+      open_progress = TRUE,
+      verbose = TRUE,
+      QR = TRUE)
+
+
+basic_model_freq_yes_interact <- prepared_data %>%
+  select(response_time_hundreths_of_minutes,
+         patient_age,
+         patient_gender,
+         response_vehicle_type_collapsed,
+         after_covid,
+         impression_category,
+         possible_impression_category_collapsed,
+         patient_first_race_collapsed,
+         time_of_day) %>%
+  glm(response_time_hundreths_of_minutes ~ after_covid * (patient_age +
                                                           patient_first_race_collapsed +
                                                           patient_gender +
                                                           possible_impression_category_collapsed +
@@ -143,29 +169,43 @@ basic_model_freq <- prepared_data %>%
       data = .,
       family = "poisson")
 
-save(basic_linear_model, file = here::here("src", "Modeling", "model_objects", "glm_full_no_interaction.RData"))
-
+save(basic_model_bayes_no_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_bayes_no_interact.RData"))
 load(here::here("src", "Modeling", "model_objects", "glm_full_no_interaction.RData"))
 
 
-mcmc_trace(basic_linear_model)
-
-transform_to_minutes <- function(coeff) {
-  exp(coeff) / 100
-}
+basic_model_bayes_no_interact <- basic_linear_model
 
 
-mcmc_areas(
-  basic_linear_model,
-  prob = 0.95,
-  point_est = "mean",
-  transformations = transform_to_minutes
-)
-
-summary(basic_linear_model)
 
 #############################################################
 # Check for spatial autocorrelation in residuals
 #############################################################
 
+model_res <- residuals(basic_linear_model)
 
+modeled_data <- prepared_data %>%
+  filter(across(c(response_time_hundreths_of_minutes,
+                patient_age,
+                patient_gender,
+                response_vehicle_type_collapsed,
+                after_covid,
+                impression_category,
+                possible_impression_category_collapsed,
+                patient_first_race_collapsed,
+                time_of_day), ~!is.na(.x))) %>%
+  mutate(residuals = model_res) %>%
+  filter(!is.na(scene_gps_latitude)) %>%
+  sample_frac(0.20)
+
+
+incident_distances <- as.matrix(dist(cbind(modeled_data$scene_gps_latitude, modeled_data$scene_gps_longitude)))
+incident_distances <- 1/incident_distances
+diag(incident_distances) <- 0
+incident_distances[is.infinite(incident_distances)] <- 0
+
+
+
+ape::Moran.I(modeled_data$residuals, incident_distances)
+
+
+## There is no global spatial autocorrelation.
