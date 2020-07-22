@@ -1,0 +1,208 @@
+---
+title: "complaint_duration"
+author: "Saimun"
+date: "7/16/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(naniar)
+library(dplyr)
+library(lubridate)
+library(stringr)
+ems_full = read.csv(here::here("data", "working", "ems_clean_data.csv"))
+```
+
+```{r functions}
+#https://stackoverflow.com/questions/35717353/split-violin-plot-with-ggplot2
+GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin, 
+                           draw_group = function(self, data, ..., draw_quantiles = NULL) {
+  data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+  grp <- data[1, "group"]
+  newdata <- plyr::arrange(transform(data, x = if (grp %% 2 == 1) xminv else xmaxv), if (grp %% 2 == 1) y else -y)
+  newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
+  newdata[c(1, nrow(newdata) - 1, nrow(newdata)), "x"] <- round(newdata[1, "x"])
+  if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+    stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
+      1))
+    quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
+    aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
+    aesthetics$alpha <- rep(1, nrow(quantiles))
+    both <- cbind(quantiles, aesthetics)
+    quantile_grob <- GeomPath$draw_panel(both, ...)
+    ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
+  }
+  else {
+    ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
+  }
+})
+geom_split_violin <- function(mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., 
+                              draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, 
+                              show.legend = NA, inherit.aes = TRUE) {
+  layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, 
+        position = position, show.legend = show.legend, inherit.aes = inherit.aes, 
+        params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
+}
+
+```
+
+
+```{r}
+#simplifying the race groups
+ems_full$patient_race_list = gsub("(.*?)\\|.*", "\\1", ems_full$patient_race_list)
+
+ems_full %>%
+  replace_with_na(replace = list(patient_race_list = c("Not Recorded", "Not Applicable")))
+#converting the dates to POSIXCT
+ems_full$incident_date = as.POSIXct(ems_full$incident_date, tz = "EDT")
+
+# creating logical columns indicating if complaint duration is an outlier for that race(age) group
+ems_full = ems_full %>%
+  group_by(patient_race_list) %>%
+  mutate(race_outlier = situation_complaint_duration > median(situation_complaint_duration, na.rm =T) + IQR(situation_complaint_duration, na.rm = T) * 1.5) %>%
+  ungroup()%>%
+ group_by(patient_age_range_in_years) %>%
+  mutate(age_outlier = situation_complaint_duration > median(situation_complaint_duration, na.rm =T) + IQR(situation_complaint_duration, na.rm = T) * 1.5) %>%
+  ungroup()
+# creating logical if case is before or after March 1st, 2020
+ems_full = ems_full %>%
+  mutate(covid = incident_date > "2020-03-01")
+```
+
+## Dist of Complaint Durations
+
+```{r}
+#about 178 incidents where complaint time unit is given but time is na
+inds = which(!is.na(ems_full$situation_complaint_duration_time_units)==is.na(ems_full$situation_complaint_duration))
+ems_full[inds, c('situation_complaint_duration_time_units','situation_complaint_duration')]
+
+#summarize the dist of complaint times by covid era, more or less the same
+tapply(ems_full$situation_complaint_duration,  ems_full$covid, summary)
+#sumamrize dist of complaint times by race, black and white are more or less the same median = 60,
+#all other race groups have medians of about 30
+tapply(ems_full$situation_complaint_duration,  ems_full$patient_race_list, summary)
+
+# diamonds2 <-
+#   diamonds %>%
+#   group_by(cut) %>%
+#   mutate(outlier = price > median(price) + IQR(price) * 1.5) %>%
+#   ungroup
+
+#boxplots of complaint durations by race, cut off at more than 500 minutes
+ems_full %>%
+  ggplot(aes(x = patient_race_list, y = situation_complaint_duration, fill =covid))+
+  geom_boxplot(outlier.shape = NA) +  # NO OUTLIERS
+  geom_point(data = function(x) dplyr::filter_(x, ~ race_outlier), position = 'jitter')+ # Outliers  
+  scale_y_continuous(limits=c(0,200))+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+#boxplots of complaint durations by age range, cut off at more than 500 minutes
+ems_full %>%
+  ggplot(aes(x = patient_age_range_in_years, y = situation_complaint_duration))+
+  geom_boxplot(outlier.shape = NA) +  # NO OUTLIERS
+  geom_point(data = function(x) dplyr::filter_(x, ~ age_outlier), position = 'jitter')+ 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+ 
+  scale_y_continuous(limits=c(0,200))
+
+
+#tried to asses times by agency_name, not the best lookin plot
+agencies = c("charlottesville-albemarle rescue squad", "charlottesville fire department", "stony point volunteer fire company",
+             "seminole trail volunteer fire department", "albemarle county department of fire rescue", "north garden volunteer fire company",
+             "western albemarle rescue squad", "scottsville volunteer fire department" , "scottsville volunteer rescue squad")
+
+ems_full %>% filter(agency_name %in% agencies)%>%
+  ggplot(aes(agency_name, situation_complaint_duration, fill = covid))+
+  geom_boxplot(outlier.shape = NA) + 
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 8))+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))+ 
+  scale_y_continuous(limits=c(0,100))# Outliers  
+
+```
+
+```{r}
+# gives proportion of outlier labelled true by race when race is observed
+prop_outliers_race = ems_full %>%
+  filter(race_outlier== T, !is.na(patient_race_list))%>%
+  count(patient_race_list) %>%
+  mutate(prop = n/sum(n))
+# proportion of each race in the data when race is observed
+prop_of_races = ems_full %>%
+  filter(!is.na(patient_race_list))%>%
+  count(patient_race_list)%>%
+  mutate(prop = n/sum(n))
+
+ems_full %>%
+  ggplot(aes(race_outlier, fill = patient_race_list))+
+  geom_bar(position="fill")
+
+ems_full %>%
+  ggplot(aes(age_outlier, fill = patient_age_range_in_years))+
+  geom_bar(position="fill")
+```
+
+
+
+```{r}
+class(ems_full$incident_date)
+
+post_covid = ems_full %>%
+  filter(incident_date > "2020-03-01")
+pre_covid = ems_full %>%
+  filter(incident_date < "2020-03-01")
+#more or less the same, change in median for native hawaiians and pasific
+tapply(post_covid$situation_complaint_duration,  post_covid$patient_race_list, summary)
+tapply(pre_covid$situation_complaint_duration,  pre_covid$patient_race_list, summary)
+
+
+ems_full %>%
+  ggplot(aes(x = patient_race_list, y = situation_complaint_duration))+
+  geom_boxplot(outlier.shape = NA) +  # NO OUTLIERS
+  geom_point(data = function(x) dplyr::filter_(x, ~ race_outlier), position = 'jitter')+ # Outliers  
+  scale_y_continuous(limits=c(0,500))
+
+
+ems_full %>%
+  ggplot(aes(x = patient_race_list, y = situation_complaint_duration, fill = covid))+
+  geom_split_violin()+
+  geom_point(data = function(x) dplyr::filter_(x, ~ race_outlier), position = 'jitter')+ # Outliers  
+  scale_y_continuous(limits=c(0,100))+
+  labs(x= "Race", y= "Complaint Duration (min)", title = "Complaint Duration before Calling EMS")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+
+ems_full %>%
+  ggplot(aes(x = patient_age_range_in_years, y = situation_complaint_duration))+
+  geom_violin()+
+  geom_boxplot(width=.2)+
+  geom_point(data = function(x) dplyr::filter_(x, ~ age_outlier), position = 'jitter')+ # Outliers  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_y_continuous(limits=c(0,100))+
+  labs(x= "Race", y= "Complaint Duration (min)", title = "Complaint Duration before Calling EMS")
+```
+
+
+
+```{r}
+select_complaints <- function(n) {
+  ## View top 3 complaints
+  top_complaints <- ems_full %>% 
+    group_by(incident_complaint_reported_by_dispatch) %>% 
+    summarize(count = n()) %>% 
+    top_n(n, count)
+  
+  return(top_complaints$incident_complaint_reported_by_dispatch)
+}
+
+top_comp = select_complaints(10)
+
+ems_full %>% filter( incident_complaint_reported_by_dispatch %in% top_comp) %>%
+  ggplot(aes(x = incident_complaint_reported_by_dispatch, y = situation_complaint_duration, fill = covid)) +
+  geom_boxplot()+
+  scale_y_continuous(limits=c(0,100))+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+```
