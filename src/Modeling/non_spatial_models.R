@@ -98,12 +98,14 @@ prepared_data <- response_time_data %>%
          patient_first_race_collapsed,
          time_of_day,
          scene_gps_latitude,
-         scene_gps_longitude) %>% # include lat and long for comparison with neighborhood data
+         scene_gps_longitude,
+         incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes) %>% # include lat and long for comparison with neighborhood data
   mutate(across(everything(), ~ifelse(is.na(.x) & !is.numeric(.x),
                                       "missing",
                                       .x))) %>% # for categorical variables simply add missing as a category
-  na.omit() # removing because these will be implicitly thrown out by models
-
+  na.omit() %>%  # removing because these will be implicitly thrown out by models
+  filter(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes != 0) %>%
+  mutate(log_trans_dispatch_time = log(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes))
 
 ####################################################################################
 # Begin Modeling
@@ -112,58 +114,62 @@ prepared_data <- response_time_data %>%
 set.seed(451)
 
 basic_model_bayes_no_interact <- prepared_data %>%
-  stan_glm(response_time_hundreths_of_minutes ~ after_covid + (patient_age +
+  stan_glm(log_trans_dispatch_time ~ after_covid + (patient_age +
                                                                  patient_first_race_collapsed +
                                                                  patient_gender +
                                                                  possible_impression_category_collapsed +
                                                                  response_vehicle_type_collapsed +
                                                                  time_of_day),
            data = .,
-           family = "poisson",
+           family = "gaussian",
            chains = 10, iter = 2000,
            sparse = FALSE,
            open_progress = TRUE,
            verbose = TRUE,
            QR = TRUE) # speeds up evaluation
 
+save(basic_model_bayes_no_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_bayes_no_interact.RData"))
+
 basic_model_bayes_yes_interact <- prepared_data %>%
-  stan_glm(response_time_hundreths_of_minutes ~ after_covid * (patient_age +
+  stan_glm(log_trans_dispatch_time ~ after_covid * (patient_age +
                                                                patient_first_race_collapsed +
                                                                patient_gender +
                                                                possible_impression_category_collapsed +
                                                                response_vehicle_type_collapsed +
                                                                time_of_day),
       data = .,
-      family = "poisson",
+      family = "gaussian",
       chains = 10, iter = 5000,
       sparse = FALSE,
       open_progress = TRUE,
       verbose = TRUE,
       QR = TRUE)
 
+save(basic_model_bayes_yes_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_bayes_yes_interact.RData"))
+
+
 basic_model_freq_no_interact <- prepared_data %>%
-  glm(response_time_hundreths_of_minutes ~ after_covid + (patient_age +
+  glm(log_trans_dispatch_time ~ after_covid + (patient_age +
                                                             patient_first_race_collapsed +
                                                             patient_gender +
                                                             possible_impression_category_collapsed +
                                                             response_vehicle_type_collapsed +
                                                             time_of_day),
       data = .,
-      family = "poisson")
+      family = "gaussian")
+
+save(basic_model_freq_no_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_freq_no_interact.RData"))
 
 basic_model_freq_yes_interact <- prepared_data %>%
-  glm(response_time_hundreths_of_minutes ~ after_covid * (patient_age +
+  glm(log_trans_dispatch_time ~ after_covid * (patient_age +
                                                           patient_first_race_collapsed +
                                                           patient_gender +
                                                           possible_impression_category_collapsed +
                                                           response_vehicle_type_collapsed +
                                                           time_of_day),
       data = .,
-      family = "poisson")
+      family = "gaussian")
 
-save(basic_model_bayes_no_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_bayes_no_interact.RData"))
-save(basic_model_bayes_yes_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_bayes_yes_interact.RData"))
-save(basic_model_freq_no_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_freq_no_interact.RData"))
 save(basic_model_freq_yes_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_freq_yes_interact.RData"))
 
 
@@ -174,32 +180,30 @@ save(basic_model_freq_yes_interact, file = here::here("src", "Modeling", "model_
 # #############################################################
 # # Check for spatial autocorrelation in residuals
 # #############################################################
-#
-# model_res <- residuals(basic_linear_model)
-#
-# modeled_data <- prepared_data %>%
-#   filter(across(c(response_time_hundreths_of_minutes,
-#                 patient_age,
-#                 patient_gender,
-#                 response_vehicle_type_collapsed,
-#                 after_covid,
-#                 impression_category,
-#                 possible_impression_category_collapsed,
-#                 patient_first_race_collapsed,
-#                 time_of_day), ~!is.na(.x))) %>%
-#   mutate(residuals = model_res) %>%
-#   filter(!is.na(scene_gps_latitude)) %>%
-#   sample_frac(0.20)
-#
-#
-# incident_distances <- as.matrix(dist(cbind(modeled_data$scene_gps_latitude, modeled_data$scene_gps_longitude)))
-# incident_distances <- 1/incident_distances
-# diag(incident_distances) <- 0
-# incident_distances[is.infinite(incident_distances)] <- 0
-#
-#
-#
-# ape::Moran.I(modeled_data$residuals, incident_distances)
-#
-#
-# ## There is no global spatial autocorrelation.
+
+resid_bayes_no <- residuals(basic_model_bayes_no_interact)
+resid_bayes_yes <- residuals(basic_model_bayes_yes_interact)
+resid_freq_no <- residuals(basic_model_bayes_no_interact)
+resid_freq_yes <- residuals(basic_model_bayes_yes_interact)
+
+
+augemented_data <- prepared_data %>%
+  mutate(resid_bayes_no = resid_bayes_no,
+         resid_bayes_yes = resid_bayes_yes,
+         resid_freq_no = resid_freq_no,
+         resid_freq_yes = resid_freq_yes) %>%
+  sample_frac(0.2)
+
+
+
+incident_distances <- as.matrix(dist(cbind(augemented_data$scene_gps_latitude, augemented_data$scene_gps_longitude)))
+incident_distances <- 1/incident_distances
+diag(incident_distances) <- 0
+incident_distances[is.infinite(incident_distances)] <- 0
+
+
+
+ape::Moran.I(augemented_data$resid_bayes_no,(incident_distances))
+
+
+## There is no global spatial autocorrelation

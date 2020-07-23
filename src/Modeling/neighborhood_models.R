@@ -109,12 +109,14 @@ prepared_data <- response_time_data %>%
          patient_first_race_collapsed,
          time_of_day,
          scene_gps_latitude,
-         scene_gps_longitude) %>%
+         scene_gps_longitude,
+         incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes) %>%
   mutate(across(everything(), ~ifelse(is.na(.x) & !is.numeric(.x),
                                       "missing",
                                       .x))) %>% # for categorical variables simply add missing as a category
-  na.omit() # removing because these will be implicitly thrown out by models %>%
-
+  na.omit() %>%  # removing because these will be implicitly thrown out by models %>%
+  filter(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes != 0) %>%
+  mutate(log_trans_dispatch_time = log(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes))
 
 neighborhoods_small <- neighborhoods %>%
   select(NAME) %>%
@@ -141,7 +143,7 @@ prepared_data_regions <- st_join(spatial_regions,
 set.seed(451)
 
 neighbor_model_bayes_no_interact <- prepared_data_regions %>%
-  stan_glmer(response_time_hundreths_of_minutes ~ after_covid + (patient_age +
+  stan_glmer(log_trans_dispatch_time ~ after_covid + (patient_age +
                                                                patient_first_race_collapsed +
                                                                patient_gender +
                                                                possible_impression_category_collapsed +
@@ -149,15 +151,17 @@ neighbor_model_bayes_no_interact <- prepared_data_regions %>%
                                                                time_of_day) +
                                                 (1|NAME),
            data = .,
-           family = "poisson",
-           chains = 10, iter = 2000,
+           family = "gaussian",
+           chains = 10, iter = 4000,
            sparse = FALSE,
            open_progress = TRUE,
            verbose = TRUE,
            QR = TRUE) # speeds up evaluation
 
+save(neighbor_model_bayes_no_interact, file = here::here("src", "Modeling", "model_objects", "neighbor_model_bayes_no_interact.RData"))
+
 neighbor_model_bayes_yes_interact <- prepared_data_regions %>%
-  stan_glmer(response_time_hundreths_of_minutes ~ after_covid * (patient_age +
+  stan_glmer(log_trans_dispatch_time ~ after_covid * (patient_age +
                                                                patient_first_race_collapsed +
                                                                patient_gender +
                                                                possible_impression_category_collapsed +
@@ -165,14 +169,13 @@ neighbor_model_bayes_yes_interact <- prepared_data_regions %>%
                                                                time_of_day) +
                                                 (1|NAME),
            data = .,
-           family = "poisson",
+           family = "gaussian",
            chains = 10, iter = 5000,
            sparse = FALSE,
            open_progress = TRUE,
            verbose = TRUE,
            QR = TRUE)
 
-save(neighbor_model_bayes_no_interact, file = here::here("src", "Modeling", "model_objects", "neighbor_model_bayes_no_interact.RData"))
 save(neighbor_model_bayes_yes_interact, file = here::here("src", "Modeling", "model_objects", "neighbor_model_bayes_yes_interact.RData"))
 
 # load(here::here("src", "Modeling", "model_objects", "glm_full_no_interaction.RData"))
