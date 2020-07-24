@@ -9,7 +9,11 @@ library(rstanarm)
 library(bayesplot)
 library(dplyr)
 library(ggplot2)
+library(sf)
 library(broom)
+
+prepared_data <- readr::read_csv(here::here("data", "final", "response_time_model_data_prepared.csv"))
+prepared_data_neighborhoods <- sf::st_read(here::here("data", "final", "response_time_model_data_prepared_sp.geojson"))
 
 
 ######################################################################################
