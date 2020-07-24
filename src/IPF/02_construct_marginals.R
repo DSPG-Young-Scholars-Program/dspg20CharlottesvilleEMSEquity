@@ -63,6 +63,6 @@ race_marginals <- race_data %>%
 colnames(race_marginals) <- c("GEOID", "total", "white", "black", "asian", "other")
 
 ## Now combine into single full marginal column for PUMAs
-all_marginals <- full_join(age_sex_marginals, race_marginals) %>% ungroup() %>% select(GEOID, male, female, everything(), -total)
+all_marginals <- full_join(age_sex_marginals, race_marginals) %>% select(GEOID, total, everything())
 
-## readr::write_csv(all_marginals, here::here("data", "working", "marginals_for_ipf.csv"))
+# readr::write_csv(all_marginals, here::here("data", "working", "marginals_for_ipf.csv"))

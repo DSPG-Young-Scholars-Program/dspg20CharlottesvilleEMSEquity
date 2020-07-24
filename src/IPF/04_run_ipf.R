@@ -115,7 +115,7 @@ synth_pop <- resample_ipf(ipf_counts, inputs, microdata, microdata_category, mic
 synth_pop_latlong <- attach_latlong(synth_pop, method="uniform", state_names = "VA", county_names = c("Charlottesville", "Albemarle"), year = 2018)
 
 
-## ----- Run IPF iteratively ----- ##
+## ----- Run IPF Many times ----- ##
 
 # K <- 10
 # 
