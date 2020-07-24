@@ -116,7 +116,8 @@ prepared_data <- response_time_data %>%
                                       .x))) %>% # for categorical variables simply add missing as a category
   na.omit() %>%  # removing because these will be implicitly thrown out by models %>%
   filter(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes != 0) %>%
-  mutate(log_trans_dispatch_time = log(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes))
+  mutate(log_trans_dispatch_time = log(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes)) %>%
+  filter(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes < 25)
 
 neighborhoods_small <- neighborhoods %>%
   select(NAME) %>%

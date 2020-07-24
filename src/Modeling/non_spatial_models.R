@@ -13,6 +13,8 @@ library(rstanarm)
 library(bayesplot)
 library(dplyr)
 library(stringr)
+library(spdep)
+
 
 
 options(mc.cores = 10)
@@ -105,7 +107,8 @@ prepared_data <- response_time_data %>%
                                       .x))) %>% # for categorical variables simply add missing as a category
   na.omit() %>%  # removing because these will be implicitly thrown out by models
   filter(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes != 0) %>%
-  mutate(log_trans_dispatch_time = log(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes))
+  mutate(log_trans_dispatch_time = log(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes)) %>%
+  filter(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes < 25)
 
 ####################################################################################
 # Begin Modeling
@@ -192,7 +195,7 @@ augemented_data <- prepared_data %>%
          resid_bayes_yes = resid_bayes_yes,
          resid_freq_no = resid_freq_no,
          resid_freq_yes = resid_freq_yes) %>%
-  sample_frac(0.2)
+  sample_frac(0.01)
 
 
 
@@ -205,5 +208,31 @@ incident_distances[is.infinite(incident_distances)] <- 0
 
 ape::Moran.I(augemented_data$resid_bayes_no,(incident_distances))
 
+local_moran <- localmoran(augemented_data$resid_bayes_no,
+                          mat2listw(incident_distances),
+                          alternative = "two.sided")
 
-## There is no global spatial autocorrelation
+
+tmp <- augemented_data %>%
+  mutate(local_moran = local_moran[,1])
+
+tmp %>%
+  filter(local_moran < -100000) %>%
+  st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude")) %>%
+  ggplot() +
+  geom_sf(aes(color = log(local_moran))) +
+  scale_color_gradient2()
+
+
+augemented_data %>%
+  st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude")) %>%
+  filter(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes < 20) %>%
+  ggplot() +
+  geom_sf(aes(color = incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes))
+
+tmp %>%
+  filter(local_moran > 100000)
+
+ggplot(tibble(local_moran = local_moran[,1])) +
+  geom_histogram(aes(x = local_moran), binwidth = 0.05, boundary = 0) +
+  lims(x = c(-20, 20))

@@ -2,7 +2,8 @@ load(here::here("src", "Modeling", "model_objects", "basic_model_bayes_no_intera
 load(here::here("src", "Modeling", "model_objects", "basic_model_bayes_yes_interact.RData"))
 load(here::here("src", "Modeling", "model_objects", "basic_model_freq_no_interact.RData"))
 load(here::here("src", "Modeling", "model_objects", "basic_model_freq_yes_interact.RData"))
-
+load(here::here("src", "Modeling", "model_objects", "neighbor_model_bayes_no_interact.RData"))
+load(here::here("src", "Modeling", "model_objects", "neighbor_model_bayes_yes_interact.RData"))
 
 library(rstanarm)
 library(bayesplot)
