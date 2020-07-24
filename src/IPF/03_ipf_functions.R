@@ -1,6 +1,11 @@
 
 ## IPF functions written by Josh Goldstein.
 
+## These functions are designed to be run on a single ACS sample.
+
+## I made an attempt to iteratively run IPF and had to make some finicky changes to these functions, and ultimately could
+## not get accurate results. I may give it another go some other time.
+
 library(tigris)
 library(dplyr)
 library(sp)
