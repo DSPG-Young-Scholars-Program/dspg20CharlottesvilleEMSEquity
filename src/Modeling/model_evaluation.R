@@ -1,9 +1,9 @@
-load(here::here("src", "Modeling", "model_objects", "basic_model_bayes_no_interact.RData"))
-load(here::here("src", "Modeling", "model_objects", "basic_model_bayes_yes_interact.RData"))
-load(here::here("src", "Modeling", "model_objects", "basic_model_freq_no_interact.RData"))
-load(here::here("src", "Modeling", "model_objects", "basic_model_freq_yes_interact.RData"))
-load(here::here("src", "Modeling", "model_objects", "neighbor_model_bayes_no_interact.RData"))
-load(here::here("src", "Modeling", "model_objects", "neighbor_model_bayes_yes_interact.RData"))
+load(here::here("data", "working", "model_objects", "basic_model_bayes_no_interact.RData"))
+load(here::here("data", "working", "model_objects", "basic_model_bayes_yes_interact.RData"))
+load(here::here("data", "working", "model_objects", "basic_model_freq_no_interact.RData"))
+load(here::here("data", "working", "model_objects", "basic_model_freq_yes_interact.RData"))
+load(here::here("data", "working", "model_objects", "neighbor_model_bayes_no_interact.RData"))
+load(here::here("data", "working", "model_objects", "neighbor_model_bayes_yes_interact.RData"))
 
 library(rstanarm)
 library(bayesplot)
@@ -151,4 +151,6 @@ ggplot(scaled_estimates_yes) +
 # Examine Residuals
 ######################################################################################
 
+
 pp_check(basic_model_bayes_no_interact)
+pp_check(neighbor_model_bayes_no_interact)

@@ -17,98 +17,9 @@ library(spdep)
 
 
 
-options(mc.cores = 10)
+options(mc.cores = 1)
 
-response_time_data <- vroom::vroom(here::here("data", "working", "first_unit_at_scene_impressions_categorized.csv")) %>%   # replace with reading in first_unit_at_scene.csv once rivanna fixed
-  ungroup() # just in case its still grouped
-
-
-####################################################################################
-# Prepare Data for Modeling
-####################################################################################
-
-
-covid_start_date <- ymd("2020-02-15")
-
-
-race_lookup_table <- tibble(patient_first_race = c("american indian or alaska native",
-                                                   "asian",
-                                                   "black or african american",
-                                                   "hispanic or latino",
-                                                   "native hawaiian or other pacific islander",
-                                                   "white",
-                                                   NA),
-                            patient_first_race_collapsed = c("other",
-                                                             "other",
-                                                             "black or african american",
-                                                             "other",
-                                                             "other",
-                                                             "white",
-                                                             NA))
-
-vehicle_type_lookup_table <- tibble(response_vehicle_type = c("ambulance",
-                                                              "fire apparatus",
-                                                              "quick response vehicle (non-transport vehicle other than fire apparatus)",
-                                                              "other",
-                                                              "personal vehicle",
-                                                              "crash truck or other specialty vehicle",
-                                                              NA),
-                                    response_vehicle_type_collapsed = c("ambulance",
-                                                                        "fire apparatus",
-                                                                        "other",
-                                                                        "other",
-                                                                        "other",
-                                                                        "other",
-                                                                        NA))
-
-
-possible_impression_lookup_table <- tribble(~possible_impression_category, ~possible_impression_category_collapsed,
-                                            "abuse of substance", "abuse of substance",
-                                            "behavioral", "behavioral",
-                                            "cv", "cv",
-                                            "endocrine", "endocrine",
-                                            "environment", "other",
-                                            "gi/gu", "gi/gu",
-                                            "infectious", "infectious",
-                                            "injury", "injury",
-                                            "missing", "missing",
-                                            "neuro", "neuro",
-                                            "ob", "other",
-                                            "other", "other",
-                                            "pain", "pain",
-                                            "respiratory", "respiratory")
-
-# this is taking a really long time and I don't know why. Something to do with dates.
-prepared_data <- response_time_data %>%
-  mutate(response_time_hundreths_of_minutes = as.integer(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes * 100)) %>%  # make times integers for ease of modeling
-  mutate(after_covid = incident_date >= ymd("2020-03-01")) %>%  # calling after covid anytime after March 1st
-  mutate(time_of_day = hour(incident_psap_call_date_time) + minute(incident_psap_call_date_time) / 60 + second(incident_psap_call_date_time) / 3600) %>%
-  mutate(patient_first_race = gsub("(.*?)\\|.*", "\\1", patient_race_list)) %>%
-  left_join(race_lookup_table, by = "patient_first_race") %>%
-  mutate(patient_gender = ifelse(str_detect(patient_gender,"unknown\\.*"),
-                                 NA,
-                                 patient_gender)) %>%
-  left_join(vehicle_type_lookup_table, by = "response_vehicle_type") %>%
-  left_join(possible_impression_lookup_table, by = "possible_impression_category") %>%
-  select(response_time_hundreths_of_minutes,
-         patient_age,
-         patient_gender,
-         response_vehicle_type_collapsed,
-         after_covid,
-         impression_category,
-         possible_impression_category_collapsed,
-         patient_first_race_collapsed,
-         time_of_day,
-         scene_gps_latitude,
-         scene_gps_longitude,
-         incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes) %>% # include lat and long for comparison with neighborhood data
-  mutate(across(everything(), ~ifelse(is.na(.x) & !is.numeric(.x),
-                                      "missing",
-                                      .x))) %>% # for categorical variables simply add missing as a category
-  na.omit() %>%  # removing because these will be implicitly thrown out by models
-  filter(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes != 0) %>%
-  mutate(log_trans_dispatch_time = log(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes)) %>%
-  filter(incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes < 25)
+prepared_data <- readr::read_csv(here::here("data", "final", "response_time_model_data_prepared.csv"))
 
 ####################################################################################
 # Begin Modeling
@@ -131,7 +42,7 @@ basic_model_bayes_no_interact <- prepared_data %>%
            verbose = TRUE,
            QR = TRUE) # speeds up evaluation
 
-save(basic_model_bayes_no_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_bayes_no_interact.RData"))
+save(basic_model_bayes_no_interact, file = here::here("data", "working", "model_objects", "basic_model_bayes_no_interact.RData"))
 
 basic_model_bayes_yes_interact <- prepared_data %>%
   stan_glm(log_trans_dispatch_time ~ after_covid * (patient_age +
@@ -148,7 +59,7 @@ basic_model_bayes_yes_interact <- prepared_data %>%
       verbose = TRUE,
       QR = TRUE)
 
-save(basic_model_bayes_yes_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_bayes_yes_interact.RData"))
+save(basic_model_bayes_yes_interact, file = here::here("data", "working", "model_objects", "basic_model_bayes_yes_interact.RData"))
 
 
 basic_model_freq_no_interact <- prepared_data %>%
@@ -161,7 +72,7 @@ basic_model_freq_no_interact <- prepared_data %>%
       data = .,
       family = "gaussian")
 
-save(basic_model_freq_no_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_freq_no_interact.RData"))
+save(basic_model_freq_no_interact, file = here::here("data", "working", "model_objects", "basic_model_freq_no_interact.RData"))
 
 basic_model_freq_yes_interact <- prepared_data %>%
   glm(log_trans_dispatch_time ~ after_covid * (patient_age +
@@ -173,7 +84,7 @@ basic_model_freq_yes_interact <- prepared_data %>%
       data = .,
       family = "gaussian")
 
-save(basic_model_freq_yes_interact, file = here::here("src", "Modeling", "model_objects", "basic_model_freq_yes_interact.RData"))
+save(basic_model_freq_yes_interact, file = here::here("data", "working", "model_objects", "basic_model_freq_yes_interact.RData"))
 
 
 

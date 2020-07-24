@@ -6,9 +6,6 @@
 #SBATCH -A bii_sdad_dspg
 #SBATCH -o neighborhood_models_output.txt
 
-
-
-module load spider R/4.0.0
-module load ml intel intelmpi R/4.0.0
+ml gcc openmpi R/4.0.0
 
 Rscript neighborhood_models.R
