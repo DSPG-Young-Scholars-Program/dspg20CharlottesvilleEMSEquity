@@ -52,6 +52,8 @@ race_by_neighborhood <- joined %>%
 ## Combine into single source
 aggregate_data <- full_join(full_join(age_by_neighborhood, sex_by_neighborhood), race_by_neighborhood)
 
+#st_write(aggregate_data, here::here("data", "working", "neighborhood_demographics.geojson"), driver = "GeoJSON")
+
 #
 #
 # Some basic maps to see how sensical results are ---------------------------------------------------------------------------
