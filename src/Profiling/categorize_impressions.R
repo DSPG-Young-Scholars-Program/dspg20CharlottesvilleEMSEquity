@@ -4,12 +4,8 @@ library(dplyr)
 library(stringr)
 library(tidyr)
 
-<<<<<<< HEAD
 ems_data <- vroom::vroom(here("data", "working", "first_unit_at_scene_data.csv"))
 #ems_data <- vroom::vroom(here("data", "working", "ems_clean_data_unit_observation.csv"))
-=======
-ems_data <- readr::read_csv(here("data", "working", "ems_clean_data.csv"))
->>>>>>> a122b0d6053894cf9599f79ae1f9b0f52d34ea8e
 
 ## Mappings for provider impressions to impression categories
 categorize_impressions <- function(x) {
@@ -23,17 +19,12 @@ categorize_impressions <- function(x) {
                    str_detect(x, "infectio|weakness|malaise|fever") ~ "infectious",
                    str_detect(x, "injury|burn") ~ "injury",
                    str_detect(x, "behav") ~ "behavioral",
-<<<<<<< HEAD
                    str_detect(x, "enviro|dehydration") ~ "environment",
-=======
-                   str_detect(x, "enviro|deydration") ~ "environment",
->>>>>>> a122b0d6053894cf9599f79ae1f9b0f52d34ea8e
                    str_detect(x, "pain") ~ "pain",
                    !is.na(x) ~ "other",
                    TRUE ~ "missing"))
 }
 
-<<<<<<< HEAD
 ## This function uses the values recorded in the complaint reported by dispatch to impute possible values for the primary impression where it is missing
 ## Note that the function is still rough - it may fail for data with low counts, or it may also fail if some complaint strings overlap in terms of the rows they identify. Could be refined
 impute_impressions <- function(full_data, ## data to impute
@@ -179,13 +170,4 @@ impressions_categorized_imputed <- impressions_categorized_full %>%
 #   count() %>%
 #   ungroup() %>%
 #   mutate(freq = n / sum(n))
-=======
-## Categorize impressions based on above mappings
-ems_impressions_categorized <- ems_data %>% 
-  mutate(impression_list = str_split(situation_provider_primary_impression_code_and_description, "\\|"), ## split multiple impression cases
-         impression_category_list = purrr::map(impression_list, categorize_impressions), ## categorize all impressions
-         impression_category_collapsed = purrr::map(impression_category_list, unique), ## check if multiple impression cases have the same category
-         patient_race_trimmed = str_extract(patient_race_list, "[^|]*")) %>% ## pull out first value of race list where there are multiples
-  filter(lengths(impression_category_collapsed) == 1) %>% ## remove remaining cases (~100) where impressions gave conflicting categories
-  mutate(impression_category = as.character(impression_category_collapsed))
->>>>>>> a122b0d6053894cf9599f79ae1f9b0f52d34ea8e
+
