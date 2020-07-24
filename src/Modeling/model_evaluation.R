@@ -11,28 +11,33 @@ library(dplyr)
 library(ggplot2)
 library(sf)
 library(broom)
+library(purrr)
 
 prepared_data <- readr::read_csv(here::here("data", "final", "response_time_model_data_prepared.csv"))
 prepared_data_neighborhoods <- sf::st_read(here::here("data", "final", "response_time_model_data_prepared_sp.geojson"))
 
 
+freq_models <- list("basic_model_freq_no_interact" = basic_model_freq_no_interact,
+                    "basic_model_freq_yes_interact" = basic_model_freq_yes_interact)
+
+bayes_models <- stanreg_list("basic_model_bayes_no_interact" = basic_model_bayes_no_interact,
+                     "basic_model_bayes_yes_interact" = basic_model_bayes_yes_interact,
+                     "neighbor_model_bayes_no_interact" = neighbor_model_bayes_no_interact,
+                     "neighbor_model_bayes_yes_interact" = neighbor_model_bayes_yes_interact)
+
 ######################################################################################
 # Examine Coefficients
 ######################################################################################
 
-bayes_coefs_no <- basic_model_bayes_no_interact$coefficients
-bayes_coefs_yes <- basic_model_bayes_yes_interact$coefficients
+freq_model_coefs <- map(freq_models, tidy,
+                        conf.int = TRUE,
+                        conf.level = 0.95,
+                        exponentiate = FALSE)
 
-
-freq_coefs_no <- basic_model_freq_no_interact$coefficients
-freq_coefs_yes <- basic_model_freq_yes_interact$coefficients
-
-bayes_credint_no <- posterior_interval(basic_model_bayes_no_interact, prob = 0.95)
-bayes_credint_yes <- posterior_interval(basic_model_bayes_yes_interact, prob = 0.95)
-
-
-freq_confint_no <- confint(basic_model_freq_no_interact)
-freq_confint_yes <- confint(basic_model_freq_yes_interact)
+bayes_model_coefs <- map(bayes_models, ~tidy(.x$stanfit,
+                                             estimate.method = "median",
+                                             conf.int = TRUE,
+                                             conf.level = 0.95))
 
 #################### no interaction
 
