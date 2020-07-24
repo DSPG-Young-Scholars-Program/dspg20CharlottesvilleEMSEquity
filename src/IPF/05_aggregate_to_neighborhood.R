@@ -7,8 +7,6 @@ library(tidycensus)
 
 source(here::here("src", "IPF", "04_run_ipf.R"))
 
-synth_pops_latlong[[1]]
-
 ## Cville neighborhoods
 planning_area <- st_read(here::here("data", "original", "neighborhoods", "planning_area_06_04_2020.shp")) %>% st_transform(crs = 4326)
 
@@ -26,7 +24,6 @@ joined <- st_join(planning_area, synth_pop_sf, left = FALSE, join = st_covers) %
 age_by_neighborhood <- joined %>% 
   group_by(NAME) %>% 
   summarize(n = n(), mean_age = mean(AGEP))
-#se_age = sd(AGEP) / sqrt(n))
 
 ## Calculate gender proportions by neighborhood
 sex_by_neighborhood <- joined %>% 
@@ -36,6 +33,7 @@ sex_by_neighborhood <- joined %>%
   group_by(NAME) %>% 
   mutate(prop = n / sum(n)) %>%
   select(-n) %>%
+  as.data.frame() %>%
   pivot_wider(names_from = SEX, values_from = prop)
 
 ## Calculate race proportions by neighborhood
@@ -46,22 +44,11 @@ race_by_neighborhood <- joined %>%
   group_by(NAME) %>% 
   mutate(prop = n / sum(n)) %>%
   select(-n) %>%
+  as.data.frame() %>%
   pivot_wider(names_from = RACE, values_from = prop)
 
 ## Combine into single source
 aggregate_data <- full_join(full_join(age_by_neighborhood, sex_by_neighborhood), race_by_neighborhood)
-
-
-
-
-
-## Will want to incorporate empirical margins of error in these estimates once we figure out how to sample from ACS marginals
-
-
-
-
-
-
 
 #
 #
@@ -87,7 +74,7 @@ acs_data_sp <- acs_data %>%
   st_transform(4326) %>%
   mutate(black_percent = black_alone / total_pop)
 
-pal <- colorBin("Reds", domain = c(0,1))
+pal <- colorBin("Reds", domain = c(0,8000))
 
 ## Comparing actual and synthetic for pct_black:
 
@@ -95,20 +82,24 @@ leaflet() %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = acs_data_sp,
               fillOpacity = 0.7,
-              fillColor = ~pal(black_percent),
+              fillColor = ~pal(total_pop),
               weight = 3,
               color = "gray",
-              label = ~black_percent,
+              label = ~total_pop,
               group = "ACS") %>%
   addPolygons(data = aggregate_data,
               fillOpacity = 0.7,
-              fillColor = ~pal(black),
+              fillColor = ~pal(n),
               weight = 3,
               color = "gray",
-              label = ~black,
+              label = ~n,
               group = "Synthetic") %>%
   addLayersControl(baseGroups = c("ACS", "Synthetic")) %>%
   addLegend("bottomright", pal = pal, values = seq(0,1), title = "Proportion Black")
+
+
+
+
 
 ## ----- Synthetic Population Results ----- ## 
 

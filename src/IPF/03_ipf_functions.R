@@ -1,6 +1,10 @@
 
-## Original IPF functions written by Josh Goldstein.
-## Slight modifications to help when sampling from ACS added.
+## IPF functions written by Josh Goldstein.
+
+## These functions are designed to be run on a single ACS sample.
+
+## I made an attempt to iteratively run IPF and had to make some finicky changes to these functions, and ultimately could
+## not get accurate results. I may give it another go some other time.
 
 library(tigris)
 library(dplyr)
@@ -11,9 +15,7 @@ library(mipfp)
 # run iterative proportional fitting using specified marginal constaints
 # return a data frame of person counts for the joint distirbution of each block group
 run_ipf <- function(acs_margins,
-                    inputs,
-                    prob = FALSE ## set to true if using sampled values from ACS, as IPF will produce probabilities when marginal totals do not add up to same total
-                    ){
+                    inputs){
   ipf_counts <- list() # for each blockgrup, store an array of counts from IPF
   for(i in 1:nrow(acs_margins)){
     # create a list of marginal constraints
@@ -27,15 +29,7 @@ run_ipf <- function(acs_margins,
     seed <- array(1,dim)
     # call the Ipfp function
     ipf_out <- Ipfp(seed=seed, target.list=ind_margins, target.data=margin_constraints)
-    
-    # If the marginal totals do not add to the same grand total, IPF will produce probabilities that need to be multiplied by a total population
-    # value to get an estimate for actual counts. This is relevant if sampling from the ACS based on reported estimates and MOEs
-    if (prob == TRUE) {
-      total_pop <- acs_margins[i,]$total
-      ipf_counts[[i]] <- ipf_out$x.hat*total_pop
-    } else {
-      ipf_counts[[i]] <- round(ipf_out$x.hat,0) # save the array of counts
-    }
+    ipf_counts[[i]] <- round(ipf_out$x.hat,0) # save the array of counts
   }
   names(ipf_counts) <- acs_margins$GEOID
   return(ipf_counts)
@@ -87,20 +81,19 @@ resample_ipf <- function(ipf_counts,
 #   c) draw using weights according to housing properties (e.g. CoreLogic)
 attach_latlong <- function(synth_pop,
                            method="uniform",
-                           geographies ## sp object of census geographies to use for the sampling
-                           #state_names,
-                           #county_names,
-                           #year
-                           ){
+                           state_names,
+                           county_names,
+                           year){
   if(method=="uniform"){
+    bgs_shape <- block_groups(state = state_names, county = county_names, year = year)
     # number of people in each block group
     bgdat <- synth_pop %>% group_by(GEOID) %>%
       dplyr::summarize(n=n()) %>% group_by()
     # for each block group, uniformly draw latitudes and longitudes over the region
     latlong <- list()
     for(i in 1:nrow(bgdat)){
-      ids <- which( geographies@data$GEOID == geographies$GEOID[i] )
-      bg_sub <- geographies[ids,]
+      ids <- which( bgs_shape@data$GEOID == bgdat$GEOID[i] )
+      bg_sub <- bgs_shape[ids,]
       samp <- spsample(x=bg_sub,n=bgdat$n[i],type="random")
       latlong[[i]] <- samp@coords
     }
