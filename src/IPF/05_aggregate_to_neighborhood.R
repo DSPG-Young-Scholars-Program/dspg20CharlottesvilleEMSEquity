@@ -99,10 +99,6 @@ leaflet() %>%
   addLayersControl(baseGroups = c("ACS", "Synthetic")) %>%
   addLegend("bottomright", pal = pal, values = seq(0,1), title = "Proportion Black")
 
-
-
-
-
 ## ----- Synthetic Population Results ----- ## 
 
 ## Mapping to check results
