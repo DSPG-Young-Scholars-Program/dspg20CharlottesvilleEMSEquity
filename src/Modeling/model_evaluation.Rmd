@@ -20,10 +20,10 @@ library(broom)
 library(purrr)
 library(glue)
 library(stringr)
-library(ggthemes)
+library(viridis)
 
 prepared_data <- readr::read_csv(here::here("data", "final", "response_time_model_data_prepared.csv"))
-prepared_data_neighborhoods <- sf::st_read(here::here("data", "final", "response_time_model_data_prepared_sp.geojson"))
+prepared_data_sp <- sf::st_read(here::here("data", "final", "response_time_model_data_prepared_sp.geojson"))
 
 
 freq_models <- list("basic_model_freq_no_interact" = basic_model_freq_no_interact,
@@ -157,6 +157,26 @@ bayes_model_coefs_trans[[4]] %>%
 ```
 
 
+### Neighborhood Coefficients
+
+```{r}
+neighborhood_coefs <- map(bayes_model_coefs_trans, ~.x %>% 
+    filter(str_detect(term, r"(b\[)")) %>% 
+    mutate(NAME = str_extract(term, r"((?<=NAME:).*(?=\]))")) %>% 
+    mutate(NAME = str_replace_all(NAME, "_", " ")))[3:4]
+
+neighborhood_coefs_sp <- map(neighborhood_coefs, ~left_join(prepared_data_sp %>% 
+  group_by(NAME) %>% 
+  slice_head(1) %>% 
+  ungroup(), .x, by = "NAME"))
+
+neighborhood_coefs_sp$neighbor_model_bayes_no_interact %>% 
+  ggplot() +
+  geom_sf(aes(fill = estimate_scale_factor))
+```
+
+
+
 ## Technical Examination
 
 I will only be examining bayesian fits because they are almost identical to the frequentist fits. 
@@ -181,16 +201,91 @@ Lets now check the residuals on a map:
 ```{r}
 bayes_residuals <- map(bayes_models, residuals)
 
-augmented_data <- prepared_data_neighborhoods %>% 
+augmented_data <- prepared_data_sp %>% 
   mutate(resid_basic_no = bayes_residuals$basic_model_bayes_no_interact,
          resid_basic_yes = bayes_residuals$basic_model_bayes_yes_interact,
          resid_neighbor_no = bayes_residuals$neighbor_model_bayes_no_interact,
          resid_neighbor_yes = bayes_residuals$neighbor_model_bayes_yes_interact)
+```
 
+Basic Linear Model with No Interaction Term
+
+```{r}
 augmented_data %>% 
-  ggplot() %>% 
-  stat_summary_hex(aes(x = 
+  ggplot() +
+  stat_summary_hex(aes(x = scene_gps_longitude, 
+                       y = scene_gps_latitude,
+                       z = resid_basic_no)) +
+  geom_sf(fill = NA,
+          color = "#444444",
+          alpha = 0.3,
+          size = 0.1) +
+  scale_fill_viridis() +
+  theme_minimal() +
+  labs(x = "Longitude", 
+       y = "Latitude",
+       fill = "Mean Residuals",
+       title = "Basic Linear Model, No Interactions") 
 ```
 
 
+Basic Linear Model with Interaction Term
+
+```{r}
+augmented_data %>% 
+  ggplot() +
+  stat_summary_hex(aes(x = scene_gps_longitude, 
+                       y = scene_gps_latitude,
+                       z = resid_basic_yes)) +
+  geom_sf(fill = NA,
+          color = "#444444",
+          alpha = 0.3,
+          size = 0.1) +
+  scale_fill_viridis() +
+  theme_minimal() +
+  labs(x = "Longitude", 
+       y = "Latitude",
+       fill = "Mean Residuals",
+       title = "Basic Linear Model, Interactions") 
+```
+
+Neighborhood Model with No Interaction Term
+
+```{r}
+augmented_data %>% 
+  ggplot() +
+  stat_summary_hex(aes(x = scene_gps_longitude, 
+                       y = scene_gps_latitude,
+                       z = resid_neighbor_no)) +
+  geom_sf(fill = NA,
+          color = "#444444",
+          alpha = 0.3,
+          size = 0.1) +
+  scale_fill_viridis() +
+  theme_minimal() +
+  labs(x = "Longitude", 
+       y = "Latitude",
+       fill = "Mean Residuals",
+       title = "Neighborhood Model, No Interactions") 
+```
+
+Neighborhood Model with Interaction Term
+
+```{r}
+augmented_data %>% 
+  ggplot() +
+  stat_summary_hex(aes(x = scene_gps_longitude, 
+                       y = scene_gps_latitude,
+                       z = resid_neighbor_yes)) +
+  geom_sf(fill = NA,
+          color = "#444444",
+          alpha = 0.3,
+          size = 0.1) +
+  scale_fill_viridis() +
+  theme_minimal() +
+  labs(x = "Longitude", 
+       y = "Latitude",
+       fill = "Mean Residuals",
+       title = "Neighborhood Model, Interactions") 
+```
 
