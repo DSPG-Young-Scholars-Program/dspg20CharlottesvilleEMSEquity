@@ -1,0 +1,108 @@
+---
+title: "vital_data_death_notes"
+author: "Saimun"
+date: "7/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+```
+
+
+```{r data}
+vital = read.csv(here('data','original','vital_stats','Death_dataset_from_2016_to_YTD.csv'))
+```
+
+
+```{r}
+prop.table(table(vital$RACE))
+vital %>%
+  ggplot(aes(as.factor(RACE)))+
+  geom_bar()
+
+vital %>%
+  ggplot(aes(AGE))+
+  geom_histogram()+
+  facet_grid(~GENDER)
+tapply(vital$AGE,vital$GENDER, summary)
+
+vital %>%
+  filter(RACE == 1 | RACE == 2)%>%
+  ggplot(aes(AGE))+
+  geom_histogram()+
+  facet_grid(~as.factor(RACE))
+```
+
+
+```{r}
+firt = str_sub(vital$CAUSE_OF_DEATH, 1,3) 
+
+
+category = vector(length = length(firt))
+#ICD 10 CODEBOOK
+category = case_when(
+  grepl("^A|^B", firt) ~ "Certain Infectious Diseases",
+  grepl("^C|^D0|^D1|^D2|^D3|^D4", firt) ~ "Neoplasms",
+  grepl("^D5|^D6|^D7|^D8", firt) ~ "Diseases of the Blood",
+  grepl("^E", firt) ~ "Endocrine, Nutritional, Metabolic Disease",
+  grepl("^F", firt) ~ "Mental, Behavioural, Neurodevelopmental Disease",
+  grepl("^G", firt) ~ "Nervous System",
+  grepl("^H0|^H1|^H2|^H3|^H4|^H5", firt) ~ "Eye/Adnexa Disease",
+  grepl("^H6|^H7|^H8|^H9", firt) ~ "Ear/Mastoid Disease",
+  grepl("^I", firt) ~ "Circulatory System",
+  grepl("^J", firt) ~ "Respiratory System",
+  grepl("^K", firt) ~ "Digestive System",
+  grepl("^L", firt) ~ "Skin/Subcutaneous Tissue Disease",
+  grepl("^M", firt) ~ "Muscoskeletal System/Connective Tissue",
+  grepl("^N", firt) ~ "Genitourinary System",
+  grepl("^O", firt) ~ "Pregnancy/Childbirth/Puerperium",
+  grepl("^P", firt) ~ "Perinatal Period Complications",
+  grepl("^Q", firt) ~ "Congenital Malformations/Deformation/Chromsomal Abnormalities",
+  grepl("^R", firt) ~ "Unclassified Abnormalities",
+  grepl("^S|^T", firt) ~ "Injury/Poisoning/Consequences of Extenral Causes",
+  grepl("^V|^W|^X|^Y", firt) ~ "External Causes of Morbidity",
+  grepl("^Z", firt) ~ "Factors Influencing Healthcare Access"
+)
+
+vital$category = category
+```
+
+
+```{r}
+library(viridis)
+top_category <- vital %>%
+  group_by(category) %>%
+  summarize(count = n()) %>%
+  top_n(10, count)
+
+vital %>%
+  ggplot(aes(category, fill = as.factor(RACE)))+
+  geom_bar(position = "fill")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  labs(x= "ICD 10- Code", y= "Proportion", title = " Proportion of Mortalities by Race")
+
+vital %>% 
+    count(category = factor(category), RACE = as.factor(RACE)) %>% 
+    mutate(pct = prop.table(n)) %>% 
+    ggplot(aes(x = category, y = pct, fill = RACE, label = scales::percent(pct))) + 
+    facet_wrap(vars(category))+
+    geom_col(position = 'dodge') + 
+    geom_text(position = position_dodge(width = .9),    # move to center of bars
+              vjust = -0.5,    # nudge above top of bar
+              size = 3) + 
+    scale_y_continuous(labels = scales::percent)
+
+tapply(vital$RACE, vital$category, summary)
+
+vital %>%
+  filter(category ==  "Perinatal Period Complications") %>%
+  ggplot(aes(category, fill = as.factor(RACE))) +
+  geom_bar(position = "fill")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  labs(x= "Provider Primary Impression", y= "Proportion", title = " Proportion of Mortalities by Race")
+```
