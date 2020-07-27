@@ -1,3 +1,9 @@
+---
+title: "Model Evaluation"
+output: html_document
+---
+
+```{r}
 load(here::here("data", "working", "model_objects", "basic_model_bayes_no_interact.RData"))
 load(here::here("data", "working", "model_objects", "basic_model_bayes_yes_interact.RData"))
 load(here::here("data", "working", "model_objects", "basic_model_freq_no_interact.RData"))
@@ -27,12 +33,13 @@ bayes_models <- stanreg_list("basic_model_bayes_no_interact" = basic_model_bayes
                              "basic_model_bayes_yes_interact" = basic_model_bayes_yes_interact,
                              "neighbor_model_bayes_no_interact" = neighbor_model_bayes_no_interact,
                              "neighbor_model_bayes_yes_interact" = neighbor_model_bayes_yes_interact)
+```
 
 
+## Examine Coefficients
 
-######################################################################################
-# Examine Coefficients
-######################################################################################
+Setup everything
+```{r}
 
 freq_model_coefs <- map(freq_models, tidy,
                         conf.int = TRUE,
@@ -81,23 +88,39 @@ plot_time_to_incident <- function(data) {
     labs(x = NULL, y = glue("Travel Time in Minutes"))
 }
 
+```
 
+Actually make the plots:
+```{r}
 map(bayes_model_coefs_trans,
     plot_scale_factor)
+```
 
+```{r}
 map(bayes_model_coefs_trans,
     plot_time_to_incident)
 
+```
+
+Looks like the after covid interaction term doesn't do a lot in the non neighborhood models. In the neighborhood models however, it looks like times consistently increase. 
+
+Now for frequentist models:
+
+```{r}
 map(freq_model_coefs_trans,
     plot_scale_factor)
+```
 
+```{r}
 map(freq_model_coefs_trans,
     plot_time_to_incident)
+```
 
+Basically identical to the bayesian models
 
-######################################################################################
-# Lets look at how estimates change when an interaction term is added
-######################################################################################
+### After Covid Interaction Term
+
+```{r}
 
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
@@ -131,19 +154,43 @@ bayes_model_coefs_trans[[4]] %>%
                                                       digits = 1)} Minutes"),
        color = "During Covid")
 
-######################################################################################
-# Examine More Techinal Aspects.
-# The rest of the analysis will look only at the models fit using Bayesian estimation
-# Because the estimates are almost identical to the frequentist estimates
-######################################################################################
+```
 
 
-loo_list <- map(bayes_models, loo)
+## Technical Examination
+
+I will only be examining bayesian fits because they are almost identical to the frequentist fits. 
+
+First we'll look at the loo statistics
+
+```{r}
+(loo_list <- map(bayes_models, loo))
 loo_compare(loo_list)
+```
 
-# Looks like the neighborhood models are far better predictors of out of sample data, but there is no significant differnece between including covid or not.
+Looks like the neighborhood level models do a lot! better, and they all have reasonable specifications
 
-
+```{r}
 map(bayes_models, pp_check)
+```
+
+The capture the majority of model variation, the remaining portion is likely due to it not being truly normal. Maybe a proper spatial mixed effects model could solve that?
+
+Lets now check the residuals on a map:
+
+```{r}
+bayes_residuals <- map(bayes_models, residuals)
+
+augmented_data <- prepared_data_neighborhoods %>% 
+  mutate(resid_basic_no = bayes_residuals$basic_model_bayes_no_interact,
+         resid_basic_yes = bayes_residuals$basic_model_bayes_yes_interact,
+         resid_neighbor_no = bayes_residuals$neighbor_model_bayes_no_interact,
+         resid_neighbor_yes = bayes_residuals$neighbor_model_bayes_yes_interact)
+
+augmented_data %>% 
+  ggplot() %>% 
+  stat_summary_hex(aes(x = 
+```
+
 
 

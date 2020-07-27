@@ -116,7 +116,8 @@ spatial_regions <- bind_rows(neighborhoods_small,
 
 prepared_data_sp <- prepared_data %>%
   st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude"),
-           crs = 4326)
+           crs = 4326,
+           remove = FALSE)
 
 prepared_data_regions <- st_join(spatial_regions,
                                  prepared_data_sp,

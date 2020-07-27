@@ -6,6 +6,7 @@
 #SBATCH -A bii_sdad_dspg
 #SBATCH -o neighborhood_models_output.txt
 
-ml gcc openmpi R/4.0.0
+module load lubridate
+module load gcc/7.1.0 openmpi/3.1.4 R/4.0.0
 
 Rscript neighborhood_models.R
