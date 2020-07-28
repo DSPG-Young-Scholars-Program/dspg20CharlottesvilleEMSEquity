@@ -1,22 +1,71 @@
+<style>
+    {
+        box-sizing: border-box;
+    }
+
+    .column {
+    float: left;
+    width: 25%;
+    }
+
+    .row:after {
+    content: "";
+    display: table;
+    clear: both;
+    }
+</style>
+
 ### UVA Data Science for the Public Good Program {style=text-align:center}
 
 [The Data Science for the Public Good (DSPG) Young Scholars program](https://biocomplexity.virginia.edu/social-decision-analytics/dspg-program) is a summer immersive program held at the [Biocomplexity Institute’s Social and Decision Analytics division (SDAD)](https://biocomplexity.virginia.edu/social-decision-analytics). In its seventh year, the program engages students from across the country to work together on projects that address state, federal, and local government challenges around critical social issues relevant in the world today. DSPG young scholars conduct research at the intersection of statistics, computation, and the social sciences to determine how information generated within every community can be leveraged to improve quality of life and inform public policy. For more information on program highlights, how to apply, and our annual symposium, please visit the official [Biocomplexity DSPG website]((https://biocomplexity.virginia.edu/social-decision-analytics/dspg-program)).
 
-### 2020 Fairfax County Summer Project {style=text-align:center}
+### The Impact of COVID-19 on the Equitable Delivery of Emergency Medical Services {style=text-align:center}
 
-##### [Optional: General description of your project, team members, and how they complement each other.] {style=text-align:center}
+##### Project Summary {style=text-align:center}
+
+The Charlottesville Fire Department, the Albemarle County Department of Fire and Rescue and the University of Virginia are working together to understand how the Covid-19 pandemic is impacting their combined communities, with particular emphasis on the delivery of Emergency Medical Services (EMS). In addition to describing how EMS operations have changed when compared to operations prior to the epidemic (e.g. call volume, distribution of dispatch types, EMS provider impressions, EMS patient dispositions), particular attention will be given to changes in EM service delivery and needs in "at-risk" populations in the response areas. 
+
 
 ### DSPG Team Members {style=text-align:center}
 
-##### [Photos go about here.] {style=text-align:center}
+<div class="row">
+<div class="column">
+![Finn Roberts](./head_shots/UVA.fellow.Finn_Roberts.jpg "Finn Roberts"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}  
+[Finn Roberts](https://github.com/robe2037), Fellow  
+MS Student  
+University of Minnesota  
+Biostatistics and Geographic Information Systems
+</div>
+<div class="column">
+![Chase Dawson](./head_shots/UVA.intern.Chase.Dawson.jpg "Chase Dawson"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}  
+[Chase Dawson](https://github.com/chasedawson), Intern   
+University of Virginia   
+Computer Science
+</div>
+<div class="column">
+![Ellen Graham](./head_shots/UVA.intern.Ellen_Graham.jpg "Ellen Graham"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
+[Ellen Graham](https://github.com/grahamammal), Intern  
+Macalester College  
+Applied Mathematics and Statistics, Computer Science 
+</div>
+<div class="column">
+![Saimun Habib](./head_shots/UVA.intern.Saimun.Habib.jpg "Saimun Habib"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
+[Saimun Habib](https://github.com/saibib), Intern  
+Harvard College  
+Statistics/Mathematics
+</div>
+</div>
 
-[Susweta Ray, Fellow (PhD Student at University of Nebraska-Lincoln, Agricultural Economics)](https://github.com/SuswetaRay), [Sarah McDonald, Intern (Marymount University, Mathematics)](https://github.com/sm9dv), [Owen Hart, Intern (University of California, Berkeley, Economics/Data Science)](https://github.com/hartowen), and [Sean Pietrowicz, Intern (Notre Dame, Mathematics)](https://github.com/sp3sd)
 
 ### UVA SDAD Team Members {style=text-align:center}
 
-##### [Photos go about here.] {style=text-align:center} 
+#####  {style=text-align:center} 
 
-[Teja Pristavec (Research Assistant Professor, DSPG Project Lead)](https://biocomplexity.virginia.edu/teja-pristavec), [Brandon Kramer (Postdocotral Research Associate)](https://biocomplexity.virginia.edu/brandon-kramer), [Josh Goldstein (Research Assistant Professor)](https://biocomplexity.virginia.edu/joshua-goldstein), [Joy Tobin (Principal Scientist)](https://biocomplexity.virginia.edu/joy-tobin), [Stephanie Shipp (Deputy Division Director, Research Professor)](https://biocomplexity.virginia.edu/stephanie-shipp), and [Sallie Keller (Division Director, Distinguished Professor)](https://biocomplexity.virginia.edu/sallie-keller)
+[Aaron Schroeder, Research Associate Professor](https://biocomplexity.virginia.edu/aaron-schroeder)  
+[Joy Tobin, Principal Scientist](https://biocomplexity.virginia.edu/joy-tobin)  
+[Gizem Korkmaz, Research Associate Professor](https://biocomplexity.virginia.edu/gizem-korkmaz)   
+Kathryn Linehan, Research Scientist (insert link)  
+
 
 ### Project Sponsors/Stakeholders {style=text-align:center}
 
@@ -24,4 +73,10 @@
 
 ### Acknowledgements {style=text-align:center}
 
-##### [Optional: You can also include external collaborators in this section or a separate section.] {style=text-align:center}
+Lucas Lyons, Systems Performance Analyst, Charlottesville Fire Department  
+Damon Pettitt, GISP, Senior Systems Analyst for Fire Rescue, Albemarle County, VA  
+[Josh Goldstein, Research Assistant Professor](https://biocomplexity.virginia.edu/joshua-goldstein)   
+
+We would like to thank Lucas and Damon for their help and guidance with the EMS data. We appreciate the email exchanges, phone calls, and all of the time that they put in to gather, adjust, and send the data to us.   
+
+We would like to thank Josh for sharing his expertise in statistical modeling techniques with us.
