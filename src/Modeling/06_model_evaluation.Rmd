@@ -415,6 +415,7 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
   mutate(term = str_replace(term, "after_covidTRUE:", "")) %>%
   filter(!str_detect(term, r"(Sigma|b\[)")) %>% 
   left_join(term_dictionary, by = "term") %>% 
+  filter(term_pretty != "Intercept") %>% 
   ggplot(aes(y = term_pretty, color = after_covid)) +
   geom_point(aes(x = estimate_scale_factor)) +
   geom_errorbar(aes(xmin = conf.low_scale_factor, xmax = conf.high_scale_factor)) +

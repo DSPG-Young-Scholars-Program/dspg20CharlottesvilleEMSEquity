@@ -34,6 +34,7 @@ library(spdep)
 library(ape)
 library(leaflet)
 library(leaflet.mapboxgl)
+library(ggthemes)
 
 prepared_data <- readr::read_csv(here::here("data", "final", "response_time_model_data_prepared.csv"))
 prepared_data_sp <- sf::st_read(here::here("data", "final", "response_time_model_data_prepared_sp.geojson"), quiet = TRUE)
@@ -101,6 +102,19 @@ term_dictionary <- tribble(~term, ~term_pretty,
 
 
 sf_map_colors <- c('#7b3294','#c2a5cf','#d7d7d7','#a6dba0','#008837') 
+
+theme_set(theme_minimal()) #+
+            # theme(plot.title = element_text(hjust = 0.5, color = "gray10", size = 22),
+            #       plot.subtitle = element_text(hjust = 0.5, color = "gray30", face = "italic", size = 18),
+            #       axis.title = element_text(size = 18, color = "gray10"),
+            #       axis.text = element_text(size = 16, color = "gray30"),
+            #       strip.text = element_text(size = 20, color = "gray30"),
+            #       panel.spacing = unit(4, "lines"),
+            #       legend.key.size = unit(3, "line"),
+            #       legend.text = element_text(size = 14, color = "gray30"),
+            #       legend.title = element_text(size = 20, color = "gray10")))
+
+
 ```
 
 ## Response Time Modeling
@@ -141,6 +155,8 @@ Both of these models were fit using Bayesian estimation with the R package `rsta
 
 ### Model Results
 
+#### Measures of Model Fit
+
 When fitting a Bayesian model, a common test to see if the model is well specified is to look at the predicted response times for each MCMC draw and see how they compare to the actual response times. This is called a posterior predictive check. Below we have the posterior predictive check for the model including neighborhood effects. 
 
 ```{r}
@@ -148,3 +164,158 @@ pp_check(neighbor_model_bayes_yes_interact)
 ```
 
 The light blue lines are the models guesses for response times, and the dark blue is the real response times. The predictions follow the model closely, giving strong support to the strength of this model.
+
+
+However, the posterior predictive check for the basic linear model visually looks similar. One quick way to measure model efficacy is to check against information criterion. These summaries of a model give a quick idea of how well the model will be at predicting data that weren't in the sample it was trained on. If a model performs well in this task, it likely represents the process that generated the data well. Because we are using Bayesian inference we can use the leave-one-out information criterion, which measures how well the model predicts each data point if that data point were removed from the data the model was trained on. In the following table, the model with a 0 indicates the best fit. Large negative numbers indicate that model performed much worse than the best model. 
+
+```{r}
+# not included due to computational complexity, will save as an RData to include
+```
+
+Here, the neighborhood level model does much better than the basic linear model, indicating it likely captures the data generating process better. 
+
+
+Due to the spatial nature of our data, something called spatial autocorrelation must be accounted for. Put plainly, spatial autocorrelation means that things that are near each other tend to be similar. Typical models assume this is not the case, so when there are large amounts of spatial autocorrelation, models often give misleading results. One way to check for this is to look at the difference in how well the model predicted data points spatially. If we see that nearby areas have similar error in prediction, that is a signal we have spatial autocorrelation. 
+
+Below we have a residual plot for the neighborhood level model:
+```{r}
+col_breaks <- c(-2, -0.5, -0.2, 0.2, 0.5, 2)
+
+augmented_data %>% 
+  ggplot() +
+  stat_summary_hex(aes(x = scene_gps_longitude, 
+                       y = scene_gps_latitude,
+                       z = resid_neighbor_yes),
+                   fun = ~as.character(cut(mean(.x), 
+                                           col_breaks, 
+                                           ordered_result = TRUE,
+                                           labels = c("a", "b", "c", "d", "e")))) +
+  geom_sf(fill = NA,
+          color = "#444444",
+          alpha = 0.3,
+          size = 0.1) +
+  scale_fill_manual(values = sf_map_colors,
+                    labels = c("-2.0 to -0.5",
+                               "-0.5 to -0.2",
+                               "-0.2 to 0.2", 
+                               "0.2 to 0.5", 
+                               "0.5 to 2.0")) +
+  labs(x = "Longitude", 
+       y = "Latitude",
+       fill = "Mean Residuals",
+       title = "Model Residuals") 
+```
+
+While there is some of this clustering, the effect size is small. A more empirial measure is to use a test called the local Moran's I statistic. In the following plot, there is trouble if z-scores, a statistical measure, are greater than around 2 or 3.
+
+```{r}
+set.seed(451)
+
+augmented_data_sampled <- augmented_data %>% 
+  sample_n(3000)
+
+distances <- as.matrix(dist(cbind(augmented_data_sampled$scene_gps_longitude, augmented_data_sampled$scene_gps_latitude)))
+
+distances_inv <- 1 / distances
+
+diag(distances) <- 0
+distances_inv[is.infinite(distances_inv)] <- 0
+
+morans_stat <- localmoran(augmented_data_sampled$resid_neighbor_yes, mat2listw(distances_inv))
+
+
+
+col_breaks <- c(-10, -3, -1, 1, 3, 10)
+
+augmented_data_sampled %>% 
+  ggplot() +
+  stat_summary_hex(aes(x = scene_gps_longitude, 
+                       y = scene_gps_latitude,
+                       z = morans_stat[,4]),
+                   fun = ~as.character(cut(mean(.x), 
+                                           col_breaks, 
+                                           ordered_result = TRUE,
+                                           labels = c("a", "b", "c", "d", "e")))) +
+  geom_sf(fill = NA,
+          color = "#444444",
+          alpha = 0.3,
+          size = 0.1) +
+  scale_fill_manual(values = sf_map_colors,
+                    labels = c("-10 to -3",
+                               "-3 to -1",
+                               "-1 to 1", 
+                               "1 to 3", 
+                               "3 to 10")) +
+  labs(x = "Longitude", 
+       y = "Latitude",
+       fill = "Local Moran's I Statistic\nZ-Scores",
+       title = "Spatial Autocorrelation")
+```
+
+Because very few areas have large positive or negative z-scores, we are safe to assume that the effects of spatial autocorrelation are small and don't need to be accounted for in our model. However the basic linear model suffered from spatial autocorrelation, which was the primary reason the neighborhood level model was chosen over it. 
+
+
+#### Model Coefficients
+
+Having selected the neighborhood level model as the appropriate model, we can now look at its estimates for how different features impact response time. 
+
+```{r}
+bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
+  mutate(after_covid = str_detect(term, "(after_covidTRUE.*)")) %>%
+  mutate(term = str_replace(term, "after_covidTRUE:", "")) %>%
+  filter(!str_detect(term, r"(Sigma|b\[)")) %>% 
+  left_join(term_dictionary, by = "term") %>% 
+  filter(term_pretty != "Intercept") %>% 
+  ggplot(aes(y = term_pretty, color = after_covid)) +
+  geom_point(aes(x = estimate_scale_factor)) +
+  geom_errorbar(aes(xmin = conf.low_scale_factor, xmax = conf.high_scale_factor)) +
+  scale_color_manual(values = cbbPalette, labels = c("Before Covid-19", "During Covid-19")) +
+  coord_cartesian(xlim = c(0.7, 1.3)) +
+  geom_vline(xintercept = 1, alpha = 0.5) +
+  labs(y = NULL, 
+       x = glue("Scale Factor Compared to Reference Incident"),
+       color = NULL,
+       title = "Neighborhood Level Model Coeffecients",
+       caption = "Before Covid-19 is considered to be before Febuary 15th. Point estimates are median estimates.\nIntervals are 95% credible intervals.") +
+  theme(legend.position = "bottom")
+```
+
+The units on this plot are by what factor the estimated time is scaled when each variable is true, or in the case of numeric variables, when its value increases by one unit. For this model, the reference patient is a black woman being transported by an ambulance with abuse of substance symptoms before Covid-19. This is expected to take 9.9 minutes. So if for example she was transported by a fire apparatus instead of an ambulance, but all other variables remained the same, she would be expected to arrive about 2 minutes sooner. 
+
+The primary takeaway from this graph is the across all types of incidents, response times took longer after Covid-19. There does not appear to be any groups that's response times are expected to be impacted by Covid-19 significantly worse than any other. 
+
+Because this is a neighborhood level model, the expected change in response time due to being in a particular neighborhood is also analyzable. 
+
+```{r}
+map_colors <- colorBin(sf_map_colors, c(0.5, 2), c(0.65, 0.8, .95, 1.05, 1.30, 1.8))
+
+bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
+  mutate(term = str_replace(term, "after_covidTRUE:", "")) %>%
+  filter(str_detect(term, r"(b\[)")) %>% 
+  filter(!str_detect(term, "NEW_NAME")) %>% 
+  mutate(term_pretty = str_replace(term, r"(b\[\(Intercept\) NAME:)", "")) %>%
+  mutate(term_pretty = str_replace(term_pretty, r"(\])", "")) %>% 
+  mutate(term_pretty = str_replace_all(term_pretty, r"(_)", " ")) %>% 
+  mutate(NAME = term_pretty) %>% 
+  mutate(term_pretty = str_replace(term_pretty, r"((\d\d\d))", r"(Census Tract \1)")) %>% 
+  select(term_pretty, everything()) %>% 
+  inner_join(prepared_data_sp, ., by = "NAME") %>% 
+  group_by(NAME) %>% 
+  slice_head(1) %>% 
+  ungroup() %>% 
+  leaflet() %>% 
+  addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
+  addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
+    opacity = 1.0, fillOpacity = 0.5,
+    fillColor = ~map_colors(estimate_scale_factor),
+    label = ~map(glue("{term_pretty}<br/>
+                      Scale Factor Estimate: {round(estimate_scale_factor, 2)}<br/>
+                      95% Credible Interval: ({round(conf.low_scale_factor, 2)}, {round(conf.high_scale_factor, 2)})"), htmltools::HTML)) %>% 
+  addLegend("bottomright", pal = map_colors, values = ~estimate_scale_factor,
+            title = htmltools::HTML("Response Time Scale Factor<br/>From Reference Case"),
+            opacity = .8) 
+```
+
+The interpretation of units is the same as before. Here we see that rural areas are expected to wait longer for emergency medical services than their urban counterparts. 
+
+
