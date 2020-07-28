@@ -159,6 +159,8 @@ top_complaints %>%
 
 
 seasonality <- ems %>%
+  filter(grepl(simp ,situation_primary_complaint_statement_list)) %>%
+  filter(situation_provider_primary_impression_code_and_description %in% top_comp) %>%
   group_by(mo_yr) %>%
   summarize(count = n())
 seasonality = ts(seasonality$count, frequency = 12, start = c(2016,12))

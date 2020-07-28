@@ -16,13 +16,17 @@ library(stringr)
 
 ```{r data}
 vital = read.csv(here('data','original','vital_stats','Death_dataset_from_2016_to_YTD.csv'))
+vital$RACE = factor(vital$RACE,
+                    levels = c(1:11,15,21,22,24,99),
+                    labels = c('White', "Black", 'Amer. Indian', rep("Asian",7),
+                               "Native Hawaiian", "Other", rep("Other", 4)))
 ```
 
 
 ```{r}
 prop.table(table(vital$RACE))
 vital %>%
-  ggplot(aes(as.factor(RACE)))+
+  ggplot(aes(RACE))+
   geom_bar()
 
 vital %>%
@@ -32,7 +36,7 @@ vital %>%
 tapply(vital$AGE,vital$GENDER, summary)
 
 vital %>%
-  filter(RACE == 1 | RACE == 2)%>%
+  filter(RACE %in% c("White","Black"))%>%
   ggplot(aes(AGE))+
   geom_histogram()+
   facet_grid(~as.factor(RACE))
@@ -81,6 +85,17 @@ top_category <- vital %>%
   top_n(10, count)
 
 vital %>%
+  group_by(RACE) %>%
+  count(category, sort = T) %>%
+  # filter(RACE %in% c('White', 'Black'))%>%
+  ggplot()+
+  geom_bar(aes(reorder(category,-n),n), stat='identity', position='dodge')+
+  facet_grid(rows = vars(RACE))+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  labs(x= "ICD 10- Code", y= "Proportion", title = " Proportion of Mortalities by Race")
+
+
+vital %>%
   ggplot(aes(category, fill = as.factor(RACE)))+
   geom_bar(position = "fill")+
   scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
@@ -106,3 +121,48 @@ vital %>%
   scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
   labs(x= "Provider Primary Impression", y= "Proportion", title = " Proportion of Mortalities by Race")
 ```
+
+```{r}
+#calc relative risk for each condition for black patients vs white patients
+tots = vital %>% 
+  filter(RACE %in% c('White','Black')) %>%
+  count(RACE)
+
+all_cat_death_tots = vital %>%
+  filter(RACE %in% c('White','Black')) %>%
+  group_by(RACE)%>%
+  count(category, sort = T)
+
+calc_relative_risk = function(death_cat){
+  cat_death = all_cat_death_tots %>%
+  filter(category == death_cat) %>%
+  select(n) %>%
+  summarise_all(funs(sum))
+
+  risk = cat_death/tots 
+  risk = risk %>%
+    select(n)
+  relative_risk = risk[2,]/risk[1,]
+}
+
+relative_risk = data.frame()
+for( i in unique(na.omit(vital$category))){
+  relative_risk = rbind(relative_risk, c(i,calc_relative_risk(i)))
+}
+colnames(relative_risk) = c('category','relative_risk')
+relative_risk[,2] <- as.numeric(relative_risk[,2])
+
+
+relative_risk %>%
+  arrange(desc(relative_risk)) %>%
+  # filter(RACE %in% c('White', 'Black'))%>%
+  ggplot(aes(reorder(category,relative_risk), relative_risk))+
+  geom_col(fill = "#60999a")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
+  labs(x= "ICD 10- Code", y= "Relative Risk", title = "Relative Risk of Death of Black Patients to White Patients")+
+  geom_hline(yintercept = 1, color = "#E57200")+
+  coord_flip()
+
+```
+
+
