@@ -12,11 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
   text-align: justify
 }
 
-h4 {
-  text-align: center;
-  font-size: 24pt
-}
-
 {
   box-sizing: border-box;
 }
@@ -108,5 +103,5 @@ Damon Pettitt, GISP, Senior Systems Analyst for Fire Rescue, Albemarle County, V
 <div class="justify">
 We would like to thank Lucas and Damon for their help and guidance with the EMS data. We appreciate the email exchanges, phone calls, and all of the time that they put in to gather, adjust, and send the data to us.   
 
-We would like to thank Josh for sharing his expertise in statistical modeling techniques and synthetic populations.
+We would like to thank Josh for sharing his expertise in statistical modeling techniques and synthetic population estimation.
 </div>
