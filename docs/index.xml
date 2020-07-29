@@ -75,7 +75,7 @@ Project Goals Example text: We&amp;rsquo;re devising and assessing methods that 
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>/team/</guid>
-      <description>{ box-sizing: border-box; } .column { float: left; width: 25%; } .row:after { content: &#34;&#34;; display: table; clear: both; }  UVA Data Science for the Public Good Program The Data Science for the Public Good (DSPG) Young Scholars program is a summer immersive program held at the Biocomplexity Institute’s Social and Decision Analytics division (SDAD). In its seventh year, the program engages students from across the country to work together on projects that address state, federal, and local government challenges around critical social issues relevant in the world today.</description>
+      <description>.justify { text-align: justify } h4 { text-align: center; font-size: 24pt } { box-sizing: border-box; } .column { float: left; width: 25%; } .row:after { content: &#34;&#34;; display: table; clear: both; }  UVA Data Science for the Public Good Program The Data Science for the Public Good (DSPG) Young Scholars program is a summer immersive program held at the Biocomplexity Institute’s Social and Decision Analytics division (SDAD). In its seventh year, the program engages students from across the country to work together on projects that address state, federal, and local government challenges around critical social issues relevant in the world today.</description>
     </item>
     
   </channel>
