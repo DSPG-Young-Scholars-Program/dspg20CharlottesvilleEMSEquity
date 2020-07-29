@@ -1,3 +1,12 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 <style>
     {
         box-sizing: border-box;
@@ -30,29 +39,36 @@ The Charlottesville Fire Department, the Albemarle County Department of Fire and
 
 <div class="row">
 <div class="column">
-![Finn Roberts](./head_shots/UVA.fellow.Finn_Roberts.jpg "Finn Roberts"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}  
-[Finn Roberts](https://github.com/robe2037), Fellow  
-MS Student  
+![Finn Roberts](/findings/head_shots/UVA.fellow.Finn_Roberts.jpg "Finn Roberts"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}  
+[Finn Roberts](https://github.com/robe2037), Fellow
+
 University of Minnesota  
-Biostatistics and Geographic Information Systems
+
+Biostatistics, Geographic Information Systems
 </div>
 <div class="column">
-![Chase Dawson](./head_shots/UVA.intern.Chase.Dawson.jpg "Chase Dawson"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}  
-[Chase Dawson](https://github.com/chasedawson), Intern   
+![Chase Dawson](/findings/head_shots/UVA.intern.Chase.Dawson.jpg "Chase Dawson"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}  
+[Chase Dawson](https://github.com/chasedawson), Intern
+
 University of Virginia   
+
 Computer Science
 </div>
 <div class="column">
-![Ellen Graham](./head_shots/UVA.intern.Ellen_Graham.jpg "Ellen Graham"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
-[Ellen Graham](https://github.com/grahamammal), Intern  
+![Ellen Graham](/findings/head_shots/UVA.intern.Ellen_Graham.jpg "Ellen Graham"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
+[Ellen Graham](https://github.com/grahamammal), Intern
+
 Macalester College  
+
 Applied Mathematics and Statistics, Computer Science 
 </div>
 <div class="column">
-![Saimun Habib](./head_shots/UVA.intern.Saimun.Habib.jpg "Saimun Habib"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
+![Saimun Habib](/findings/head_shots/UVA.intern.Saimun.Habib.jpg "Saimun Habib"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
 [Saimun Habib](https://github.com/saibib), Intern  
+
 Harvard College  
-Statistics/Mathematics
+
+Statistics, Mathematics
 </div>
 </div>
 
