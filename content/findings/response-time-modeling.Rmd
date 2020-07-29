@@ -5,11 +5,8 @@ output: html_document
 
 ```{r, echo = FALSE}
 # setup
-knitr::opts_chunk$set(echo = FALSE,  
-                      message = FALSE, 
-                      warning = FALSE,
-                      fig.width = 8, 
-                      fig.height = 6)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.width = 15, fig.height = 10)
+
 ```
 
 ```{r}
@@ -19,6 +16,8 @@ load(here::here("data", "working", "model_objects", "basic_model_freq_no_interac
 load(here::here("data", "working", "model_objects", "basic_model_freq_yes_interact.RData"))
 load(here::here("data", "working", "model_objects", "neighbor_model_bayes_no_interact.RData"))
 load(here::here("data", "working", "model_objects", "neighbor_model_bayes_yes_interact.RData"))
+
+load(here::here("data", "working", "model_objects", "local_morans_statistic.RData"))
 
 library(rstanarm)
 library(bayesplot)
@@ -90,7 +89,7 @@ term_dictionary <- tribble(~term, ~term_pretty,
                            "possible_impression_category_collapsedinfectious", "Symptom Type: Infectious",
                            "possible_impression_category_collapsedgi/gu", "Symptom Type: GI/GU",
                            "possible_impression_category_collapsedendocrine", "Symptom Type: Endocrine",
-                           "possible_impression_category_collapsedcv", "Symptom Type: Cardio Vascular",
+                           "possible_impression_category_collapsedcv", "Symptom Type: Cardiovascular",
                            "patient_gendermissing", "Patient Gender: Missing or Unknown",
                            "patient_gendermale", "Patient Gender: Male",
                            "patient_first_race_collapsedwhite", "Patient Race: White",
@@ -103,18 +102,18 @@ term_dictionary <- tribble(~term, ~term_pretty,
 
 sf_map_colors <- c('#7b3294','#c2a5cf','#d7d7d7','#a6dba0','#008837') 
 
-theme_set(theme_minimal()) #+
-            # theme(plot.title = element_text(hjust = 0.5, color = "gray10", size = 22),
-            #       plot.subtitle = element_text(hjust = 0.5, color = "gray30", face = "italic", size = 18),
-            #       axis.title = element_text(size = 18, color = "gray10"),
-            #       axis.text = element_text(size = 16, color = "gray30"),
-            #       strip.text = element_text(size = 20, color = "gray30"),
-            #       panel.spacing = unit(4, "lines"),
-            #       legend.key.size = unit(3, "line"),
-            #       legend.text = element_text(size = 14, color = "gray30"),
-            #       legend.title = element_text(size = 20, color = "gray10")))
+theme_set(theme_minimal() +
+            theme(plot.title = element_text(hjust = 0.5, color = "gray10", size = 22),
+                  plot.subtitle = element_text(hjust = 0.5, color = "gray30", face = "italic", size = 18),
+                  axis.title = element_text(size = 18, color = "gray10"),
+                  axis.text = element_text(size = 16, color = "gray30"),
+                  strip.text = element_text(size = 20, color = "gray30"),
+                  panel.spacing = unit(4, "lines"),
+                  legend.key.size = unit(3, "line"),
+                  legend.text = element_text(size = 14, color = "gray30"),
+                  legend.title = element_text(size = 20, color = "gray10")))
 
-
+options(mapbox.accessToken = Sys.getenv("MAPBOX_API_KEY"))
 ```
 
 ## Response Time Modeling
@@ -141,15 +140,42 @@ Due to issues with the data, we were unable to control for the travel time to a 
 
 We began by using a simple linear model. Because the distribution of response time was heavily right skewed, we log transformed the data prior to fitting. Our model was as follows:
 
-`log(Response Time) = Covid-19 Present * (Age + Gender + Symptoms Present + Type of Vehicle Responding + Time of Day)`
+\[
+\begin{align*}
+log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{iid}\sim N(\alpha &+ \beta_1 (\mbox{During Covid-19})_i  +
+\boldsymbol{\beta_2}^T\boldsymbol{(\mbox{Demographics})_i} +
+\boldsymbol{\beta_3}^T\boldsymbol{(\mbox{Symptoms})_i} + 
+\boldsymbol{\beta_4}^T\boldsymbol{(\mbox{Vehicle})_i} + 
+\boldsymbol{\beta_5}^T\boldsymbol{(\mbox{Time of Day})_i} \\
+&+(\mbox{During Covid-19})_i* (
+\boldsymbol{\beta_6}^T\boldsymbol{(\mbox{Demographics})_i} +
+\boldsymbol{\beta_7}^T\boldsymbol{(\mbox{Symptoms})_i} + 
+\boldsymbol{\beta_8}^T\boldsymbol{(\mbox{Vehicle})_i} + 
+\boldsymbol{\beta_9}^T\boldsymbol{(\mbox{Time of Day})_i}),\; \sigma^2)
+\end{align*} \\
+\beta_1,\dots,\beta_9 \overset{iid}\sim N(0, 1.1)\\
+\alpha \sim N(0, 4.6) \\
+\sigma \sim Exp(2.2)
+\]
+
+Where Covid-19 is an indicator variable with value 1 when after Febuary 15th, and 0 if before then, and bold values are vectors to avoid writing an indicator variable for all possibilities. 
 
 We included `Covid-19 Present` as an interaction term to better understand if the way these other factors impact response time has changed with the advent of Covid-19. 
 
-This model performed resonably well, but didn't control for either spatial effects or travel time to location. Because of this we tried using instead a multilevel model. Expressed as an R formula, it was:
+This model performed resonably well, but didn't control for either spatial effects or travel time to location. Because of this we tried using instead a multilevel model.
 
-`log(Response Time) = Covid-19 Present * (Age + Gender + Symptoms Present + Type of Vehicle Responding + Time of Day) + (1|Neighborhood or Census Tract)`
+\[
+log(\mbox{Response Time})\vert\alpha,\boldsymbol{\beta},\boldsymbol{b},\sigma \sim N(\alpha + \boldsymbol{X\beta} + \boldsymbol{Zb}, \sigma^2\boldsymbol{I}) \\
+\alpha \sim N(0,4.6)\\
+\boldsymbol{\beta} \sim N(0, 1.15\boldsymbol{I})\\
+\boldsymbol{b}\vert\boldsymbol{\Sigma} \sim N(0, \boldsymbol{\Sigma})\\
+\sigma \sim Exp(0,2.2)\\
+\boldsymbol{\Sigma} \sim \mbox{Decomposition of Covariance}(1, 1, 1, 1)
+\]
 
-By including the Neighborhood an incident occured in, we hoped to both deal with technical issues that arise when working with spatial data as well as the lack of a way to measure vehicle travel time. 
+Here $\boldsymbol{X}$ and $\boldsymbol{\beta}$ are identical to the earlier specification and have been written as such to save space. $\boldsymbol{Z}$ is a matrix encoding deviations in intercepts and covariates across neighborhoods. The prior for $\boldsymbol\Sigma$ is complicated to write out, and is specificed using the `rstanarm` function `decov(1,1,1,1)`. More can be found on this specification [here](http://mc-stan.org/rstanarm/articles/glmer.html).
+
+By including the neighborhood an incident occured in, we hoped to both deal with technical issues that arise when working with spatial data as well as the lack of a way to measure vehicle travel time. 
 
 Both of these models were fit using Bayesian estimation with the R package `rstanarm`. Due to the superior performance of the model including neighborhoods, only the results from it are shown, although the results from the simple linear model are similar.
 
@@ -169,11 +195,21 @@ The light blue lines are the models guesses for response times, and the dark blu
 However, the posterior predictive check for the basic linear model visually looks similar. One quick way to measure model efficacy is to check against information criterion. These summaries of a model give a quick idea of how well the model will be at predicting data that weren't in the sample it was trained on. If a model performs well in this task, it likely represents the process that generated the data well. Because we are using Bayesian inference we can use the leave-one-out information criterion, which measures how well the model predicts each data point if that data point were removed from the data the model was trained on. In the following table, the model with a 0 indicates the best fit. Large negative numbers indicate that model performed much worse than the best model. 
 
 ```{r}
-# not included due to computational complexity, will save as an RData to include
+load(here::here("data", "working", "model_objects", "loo_list.RData"))
+
+loo_table <- loo_compare(loo_list)
+
+loo_tibble <- tibble(Model = c("Neighborhood Level Model", "Simple Linear Model"),
+                     `Expected Log Predictive Density Difference` = c(loo_table[1,1], loo_table[4,1]),
+                     `Standard Error` = c(loo_table[1,2], loo_table[4,2]))
+
+knitr::kable(loo_tibble, format = "html") %>% 
+  kableExtra::kable_styling(bootstrap_options = c("striped", "bordered"), full_width = FALSE)
 ```
 
 Here, the neighborhood level model does much better than the basic linear model, indicating it likely captures the data generating process better. 
 
+#### Spatial Autocorrelation
 
 Due to the spatial nature of our data, something called spatial autocorrelation must be accounted for. Put plainly, spatial autocorrelation means that things that are near each other tend to be similar. Typical models assume this is not the case, so when there are large amounts of spatial autocorrelation, models often give misleading results. One way to check for this is to look at the difference in how well the model predicted data points spatially. If we see that nearby areas have similar error in prediction, that is a signal we have spatial autocorrelation. 
 
@@ -200,10 +236,12 @@ augmented_data %>%
                                "-0.2 to 0.2", 
                                "0.2 to 0.5", 
                                "0.5 to 2.0")) +
-  labs(x = "Longitude", 
-       y = "Latitude",
+  labs(x = NULL, 
+       y = NULL,
        fill = "Mean Residuals",
-       title = "Model Residuals") 
+       title = "Model Residuals") +
+  coord_sf(datum = NA)
+
 ```
 
 While there is some of this clustering, the effect size is small. A more empirial measure is to use a test called the local Moran's I statistic. In the following plot, there is trouble if z-scores, a statistical measure, are greater than around 2 or 3.
@@ -213,17 +251,6 @@ set.seed(451)
 
 augmented_data_sampled <- augmented_data %>% 
   sample_n(3000)
-
-distances <- as.matrix(dist(cbind(augmented_data_sampled$scene_gps_longitude, augmented_data_sampled$scene_gps_latitude)))
-
-distances_inv <- 1 / distances
-
-diag(distances) <- 0
-distances_inv[is.infinite(distances_inv)] <- 0
-
-morans_stat <- localmoran(augmented_data_sampled$resid_neighbor_yes, mat2listw(distances_inv))
-
-
 
 col_breaks <- c(-10, -3, -1, 1, 3, 10)
 
@@ -246,10 +273,11 @@ augmented_data_sampled %>%
                                "-1 to 1", 
                                "1 to 3", 
                                "3 to 10")) +
-  labs(x = "Longitude", 
-       y = "Latitude",
+  labs(x = NULL, 
+       y = NULL,
        fill = "Local Moran's I Statistic\nZ-Scores",
-       title = "Spatial Autocorrelation")
+       title = "Spatial Autocorrelation") +
+  coord_sf(datum = NA)
 ```
 
 Because very few areas have large positive or negative z-scores, we are safe to assume that the effects of spatial autocorrelation are small and don't need to be accounted for in our model. However the basic linear model suffered from spatial autocorrelation, which was the primary reason the neighborhood level model was chosen over it. 
@@ -266,7 +294,13 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
   filter(!str_detect(term, r"(Sigma|b\[)")) %>% 
   left_join(term_dictionary, by = "term") %>% 
   filter(term_pretty != "Intercept") %>% 
-  ggplot(aes(y = term_pretty, color = after_covid)) +
+  mutate(term_group = ifelse(str_detect(term, "patient"), 
+                        " ", ifelse(str_detect(term, "possible"),
+                                                       "  ",
+                                                       ifelse(str_detect(term, "vehicle"),
+                                                              "   ",
+                                                              "    ")))) %>% 
+  ggplot(aes(y = reorder(term_pretty, estimate_scale_factor), color = after_covid)) +
   geom_point(aes(x = estimate_scale_factor)) +
   geom_errorbar(aes(xmin = conf.low_scale_factor, xmax = conf.high_scale_factor)) +
   scale_color_manual(values = cbbPalette, labels = c("Before Covid-19", "During Covid-19")) +
@@ -277,7 +311,10 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
        color = NULL,
        title = "Neighborhood Level Model Coeffecients",
        caption = "Before Covid-19 is considered to be before Febuary 15th. Point estimates are median estimates.\nIntervals are 95% credible intervals.") +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") +
+  facet_grid(term_group ~ ., 
+             scales = "free_y",
+             space = "free_y")
 ```
 
 The units on this plot are by what factor the estimated time is scaled when each variable is true, or in the case of numeric variables, when its value increases by one unit. For this model, the reference patient is a black woman being transported by an ambulance with abuse of substance symptoms before Covid-19. This is expected to take 9.9 minutes. So if for example she was transported by a fire apparatus instead of an ambulance, but all other variables remained the same, she would be expected to arrive about 2 minutes sooner. 
