@@ -138,7 +138,7 @@ In order to arrive at our final model specification, we used an iterative proces
 
 Due to issues with the data, we were unable to control for the travel time to a location, and instead used the neighborhood or census tract when outside of Charlottesville as a proxy for this. 
 
-We began by using a simple linear model. Because the distribution of response time was heavily right skewed, we log transformed the data prior to fitting. Our model was as follows:
+We began by using a linear model. Because the distribution of response time was heavily right skewed, we log transformed the data prior to fitting. Our model was as follows:
 
 \[
 \begin{align*}
@@ -177,7 +177,7 @@ Here $\boldsymbol{X}$ and $\boldsymbol{\beta}$ are identical to the earlier spec
 
 By including the neighborhood an incident occured in, we hoped to both deal with technical issues that arise when working with spatial data as well as the lack of a way to measure vehicle travel time. 
 
-Both of these models were fit using Bayesian estimation with the R package `rstanarm`. Due to the superior performance of the model including neighborhoods, only the results from it are shown, although the results from the simple linear model are similar.
+Both of these models were fit using Bayesian estimation with the R package `rstanarm`. Due to the superior performance of the model including neighborhoods, only the results from it are shown, although the results from the linear model are similar.
 
 ### Model Results
 
@@ -192,14 +192,14 @@ pp_check(neighbor_model_bayes_yes_interact)
 The light blue lines are the models guesses for response times, and the dark blue is the real response times. The predictions follow the model closely, giving strong support to the strength of this model.
 
 
-However, the posterior predictive check for the basic linear model visually looks similar. One quick way to measure model efficacy is to check against information criterion. These summaries of a model give a quick idea of how well the model will be at predicting data that weren't in the sample it was trained on. If a model performs well in this task, it likely represents the process that generated the data well. Because we are using Bayesian inference we can use the leave-one-out information criterion, which measures how well the model predicts each data point if that data point were removed from the data the model was trained on. In the following table, the model with a 0 indicates the best fit. Large negative numbers indicate that model performed much worse than the best model. 
+However, the posterior predictive check for the linear model visually looks similar. One quick way to measure model efficacy is to check against information criterion. These summaries of a model give a quick idea of how well the model will be at predicting data that weren't in the sample it was trained on. If a model performs well in this task, it likely represents the process that generated the data well. Because we are using Bayesian inference we can use the leave-one-out information criterion, which measures how well the model predicts each data point if that data point were removed from the data the model was trained on. In the following table, the model with a 0 indicates the best fit. Large negative numbers indicate that model performed much worse than the best model. 
 
 ```{r}
 load(here::here("data", "working", "model_objects", "loo_list.RData"))
 
 loo_table <- loo_compare(loo_list)
 
-loo_tibble <- tibble(Model = c("Neighborhood Level Model", "Simple Linear Model"),
+loo_tibble <- tibble(Model = c("Neighborhood Level Model", "Linear Model"),
                      `Expected Log Predictive Density Difference` = c(loo_table[1,1], loo_table[4,1]),
                      `Standard Error` = c(loo_table[1,2], loo_table[4,2]))
 
@@ -207,7 +207,7 @@ knitr::kable(loo_tibble, format = "html") %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "bordered"), full_width = FALSE)
 ```
 
-Here, the neighborhood level model does much better than the basic linear model, indicating it likely captures the data generating process better. 
+Here, the neighborhood level model does much better than the linear model, indicating it likely captures the data generating process better. 
 
 #### Spatial Autocorrelation
 
@@ -280,7 +280,7 @@ augmented_data_sampled %>%
   coord_sf(datum = NA)
 ```
 
-Because very few areas have large positive or negative z-scores, we are safe to assume that the effects of spatial autocorrelation are small and don't need to be accounted for in our model. However the basic linear model suffered from spatial autocorrelation, which was the primary reason the neighborhood level model was chosen over it. 
+Because very few areas have large positive or negative z-scores, we are safe to assume that the effects of spatial autocorrelation are small and don't need to be accounted for in our model. However the linear model suffered from spatial autocorrelation, which was the primary reason the neighborhood level model was chosen over it. 
 
 
 #### Model Coefficients
@@ -350,9 +350,69 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
                       95% Credible Interval: ({round(conf.low_scale_factor, 2)}, {round(conf.high_scale_factor, 2)})"), htmltools::HTML)) %>% 
   addLegend("bottomright", pal = map_colors, values = ~estimate_scale_factor,
             title = htmltools::HTML("Response Time Scale Factor<br/>From Reference Case"),
-            opacity = .8) 
+            opacity = .8)
 ```
 
 The interpretation of units is the same as before. Here we see that rural areas are expected to wait longer for emergency medical services than their urban counterparts. 
+
+
+```{r}
+test_cases <- tibble(after_covid = c(TRUE, TRUE),
+                     patient_age = rep(45, 2),
+                     patient_first_race_collapsed = c("black or african american", "black or african american"),
+                     patient_gender = rep("female", 2),
+                     possible_impression_category_collapsed = c("cv", "infectious"),
+                     time_of_day = rep(12, 2),
+                     response_vehicle_type_collapsed = rep("ambulance", 2),
+                     NAME = rep("Belmont", 2))
+
+test_predictions <- posterior_predict(neighbor_model_bayes_yes_interact,
+                                      newdata = test_cases,
+                                      fun = exp)
+
+
+colnames(test_predictions) <- c("test_1", "test_2")
+
+test_predictions <- as_tibble(test_predictions) %>% 
+  mutate(across(everything(), .fns = as.numeric))
+
+test_predictions %>% 
+  tidyr::pivot_longer(starts_with("test"),
+               names_to = "case",
+               values_to = "prediction") %>% 
+  group_by(case) %>% 
+  mutate(median = median(prediction)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = (prediction))) +
+  geom_density(aes(color = case), fill = NA) +
+  geom_vline(aes(xintercept = median, color = case)) +
+  coord_cartesian(xlim = c(0, 20)) +
+  scale_color_manual(values = cbbPalette,
+                     labels = c("Cardiovascular Symptoms", "Infectious Symptoms")) +
+  labs(color = NULL, 
+       x = "Predicted Response Time",
+       y = "Density") +
+  theme(legend.position = "bottom")
+               
+
+```
+
+
+
+### Conclusions
+
+While this analysis suffers from the lack of data to control for travel distance, it still tells us important information about the Charlottesville and Albemarle County emergency medical services. First, at least on a call by call basis, there are no significant equity concerns with respect to race, age, or gender, as these are all expected to contribute very little to differences in response time. 
+
+Second, some types of symptoms are expected to be served much faster than others. For example, holding all other variables constant, we expect a cardiovascular incident to be responded to about 15% more quickly than a drug of alcohol related incident. Given the importance of time in outcomes of cardiovascular incidents, this makes sense. But by having this information, emergency medical services will be able to see how well response times respond to time sensitive incidents compared to less time sensitive incidents, potentially increasing efficiency. 
+
+Third, Covid-19 has made calls take longer on average, altough this increase is very small, on the order of 10 seconds to a minute, and for the most part this change has hit all different demographics and symptom presentations equally. This change may be driven by several factors, such as the increased need for personal protective equipment by EMS responders. But care should be taken to ensure that this change in response times doesn't cause an undue amount of medical harm during a pandemic. 
+
+### Next Steps
+
+The single biggest thing we could do to improve this analysis would be to add a measurement of how long it would take to travel to an incident by road. It is likely that even with the care we have taken, this effect cofounds all of our estimates, and it would not be surprising to see many of the takeaways change when controlling for this. Unfortunatley, it has proven extremly difficult to determine where a vehicle starts from, meaning significantly more work must be done in order to properly measure this. 
+
+If we had travel time information, we would also be able to do a more in depth investigation of how different neighborhoods are served. Right now, we expect neighborhood coefficients to capture a large part of the travel time information, meaning it is difficult to draw more conclusions from it. It would be interesting to see if some neighborhoods are consistently under or over served. Of particular interest is the Pantops region, which has a large number of elderly residents especially at risk of Covid-19. On the previous graphs, this region corresponds to census tract 105, just to the East of Charlottesville. Understanding if response times have changed here with Covid-19 has significant potential to save lives.
+
+Another important step in a different direction would be modeling call volume instead of response time. With Covid-19, we have seen massive drops in the number of calls emergency medical services are receiveing, and understanding if some communities have become more hesitant to call than others is very important during a pandemic. 
 
 
