@@ -41,7 +41,10 @@ neighbor_model_bayes_no_interact <- prepared_data_regions %>%
            sparse = FALSE,
            open_progress = TRUE,
            verbose = TRUE,
-           QR = TRUE) # speeds up evaluation
+           QR = TRUE,
+           prior = normal(0, 2.5),
+           prior_intercept = normal(0, 10),
+           prior_aux = exponential(1)) # speeds up evaluation
 
 save(neighbor_model_bayes_no_interact, file = here::here("data", "working", "model_objects", "neighbor_model_bayes_no_interact.RData"))
 
@@ -59,7 +62,10 @@ neighbor_model_bayes_yes_interact <- prepared_data_regions %>%
            sparse = FALSE,
            open_progress = TRUE,
            verbose = TRUE,
-           QR = TRUE)
+           QR = TRUE,
+           prior = normal(0, 2.5),
+           prior_intercept = normal(0, 10),
+           prior_aux = exponential(1))
 
 save(neighbor_model_bayes_yes_interact, file = here::here("data", "working", "model_objects", "neighbor_model_bayes_yes_interact.RData"))
 

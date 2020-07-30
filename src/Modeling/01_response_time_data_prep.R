@@ -4,7 +4,7 @@ library(stringr)
 library(sf)
 library(tigris)
 
-response_time_data <- vroom::vroom(here::here("data", "working", "first_unit_at_scene_impressions_categorized.csv")) %>%   # replace with reading in first_unit_at_scene.csv once rivanna fixed
+response_time_data <- vroom::vroom(here::here("data", "final", "first_unit_at_scene_impressions_categorized.csv")) %>%   # replace with reading in first_unit_at_scene.csv once rivanna fixed
   ungroup() # just in case its still grouped
 
 neighborhoods <- read_sf(here::here("data", "original", "neighborhoods", "planning_area_06_04_2020.shp")) %>%
@@ -22,7 +22,7 @@ census_tracts <- tracts(state = "VA",
 ####################################################################################
 
 
-covid_start_date <- ymd("2020-02-15")
+covid_start_date <- ymd("2020-03-15")
 
 
 race_lookup_table <- tibble(patient_first_race = c("american indian or alaska native",
