@@ -9,7 +9,7 @@ library(stringr)
 library(purrr)
 
 # load in data
-source(here::here("src", "EDA", "chase_potential_covid_eda.R"));
+source(here::here("src", "Profiling", "create_covid_indicator.R"));
 ems_full <- ems;
 
 # load population estimates
@@ -45,28 +45,64 @@ total_days <- as.numeric(range(ems_full_sp$incident_date)[2] - range(ems_full_sp
 
 # provider suspected covid counts
 # how do I keep 0 counts in?
+# joined %>%
+#   filter(provider_suspected_covid == "yes") %>%
+#   group_by(NAME.y, provider_suspected_covid) %>%
+#   count() %>%
+#   ggplot() +
+#   geom_sf(aes(fill = n)) +
+#   theme_minimal()
+
+cutoff <- ymd("2020-02-15");
+symptom_threshold <- 0
+
+# PRE CUTOFF
 joined %>%
-  filter(provider_suspected_covid == "yes") %>%
-  group_by(NAME.y, provider_suspected_covid) %>%
-  count() %>%
+  filter(incident_date < cutoff) %>%
+  group_by(NAME.y) %>%
+  summarise(count = sum(covid_indicator > symptom_threshold)) %>%
   ggplot() +
-  geom_sf(aes(fill = n)) +
+  geom_sf(aes(fill = count)) +
   theme_minimal()
 
-# prob covid indicator
-cutoff <- ymd("2020-02-01");
+
+# POST CUTOFF
 joined %>%
   filter(incident_date >= cutoff) %>%
   group_by(NAME.y) %>%
-  summarise(mean = mean(prob_covid_indicator)) %>%
+  summarise(count = sum(covid_indicator > symptom_threshold)) %>%
   ggplot() +
-  geom_sf(aes(fill = mean)) +
+  geom_sf(aes(fill = count)) +
   theme_minimal()
 
-# counts of prob covid indicator > 0 controlled for pop
+# diff
+pre_covid <- joined %>%
+  filter(incident_date < cutoff) %>%
+  group_by(NAME.y) %>%
+  summarise(pre_covid_count = sum(covid_indicator > symptom_threshold))
+
+post_covid <- joined %>%
+  filter(incident_date >= cutoff) %>%
+  group_by(NAME.y) %>%
+  summarise(post_covid_count = sum(covid_indicator > symptom_threshold)) %>%
+  as.data.frame(.)
+
+pre_post_covid <- pre_covid %>%
+  full_join(post_covid, by = c("NAME.y", "geometry"))
+
+pre_post_covid$covid_diff <- pre_post_covid$post_covid_count - pre_post_covid$pre_covid_count
+
+pre_post_covid %>%
+  ggplot() +
+  geom_sf(aes(fill = covid_diff)) +
+  theme_minimal()
+
+
+
+# PRE COVID: counts of prob covid indicator > 0 controlled for pop
 summed_data <- joined %>%
   filter(incident_date >= cutoff) %>%
-  filter(prob_covid_indicator > 0) %>%
+  filter(covid_indicator > 0) %>%
   group_by(NAME.y, total_population_estimate) %>%
   count() %>%
   mutate(rate_per_1000 = round(n/total_population_estimate * 1000)) %>%
@@ -88,15 +124,48 @@ summed_data %>%
               opacity = 1.0, fillOpacity = 0.8,
               fillColor = ~color_scale(rate_per_1000),
               label = ~map(glue("{NAME.y}<br/>
-                                Covid Indicators > 0 Per 1000: {rate_per_1000}"), htmltools::HTML)) %>%
+                                Patients with >= 1 COVID symptom per 1000: {rate_per_1000}"), htmltools::HTML)) %>%
   addPolygons(data = city_border,
               color = "#222222", weight = 3, smoothFactor = 0.5,
               fill = NA,
               fillOpacity = 0) %>%
   addLegend("bottomright", pal = color_scale, values = ~rate_per_1000,
-            title = "Number of Covid Indicators > 0 Per 1000",
+            title = "Patients with >= 1 COVID symptom per 1000",
             opacity = .8)
 
+# POST COVID: counts of prob covid indicator > 0 controlled for pop
+summed_data <- joined %>%
+  filter(incident_date < cutoff) %>%
+  filter(covid_indicator > 0) %>%
+  group_by(NAME.y, total_population_estimate) %>%
+  count() %>%
+  mutate(rate_per_1000 = round(n/total_population_estimate * 1000)) %>%
+  ungroup() %>%
+  st_as_sf()
+
+range(summed_data$rate_per_1000)
+hist(summed_data$rate_per_1000)
+
+breaks <- unique(BAMMtools::getJenksBreaks(summed_data$rate_per_1000, 5))
+n_breaks <- length(breaks)
+quantile(summed_data$rate_per_1000, seq(0, 1, 1/n_breaks))
+color_scale <- colorBin("BuPu", c(0,1600), breaks)
+
+summed_data %>%
+  leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_per_1000),
+              label = ~map(glue("{NAME.y}<br/>
+                                Patients with >= 1 COVID symptom per 1000: {rate_per_1000}"), htmltools::HTML)) %>%
+  addPolygons(data = city_border,
+              color = "#222222", weight = 3, smoothFactor = 0.5,
+              fill = NA,
+              fillOpacity = 0) %>%
+  addLegend("bottomright", pal = color_scale, values = ~rate_per_1000,
+            title = "Patients with >= 1 COVID symptom per 1000",
+            opacity = .8)
 
 
 # period <- ymd("2020-03-01")
