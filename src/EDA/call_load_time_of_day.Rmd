@@ -6,11 +6,15 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+library(dplyr)
 library(lubridate)
 library(ggplot2)
 library(plotly)
+library(here)
+library(stringr)
 
-source(here::here("src", "Profiling", "joining_albemarle_charlottesville.R"))
+#source(here::here("src", "Profiling", "joining_albemarle_charlottesville.R"))
+new_ems_data <- readr::read_csv(here("data", "final", "ems_clean_data.csv"))
 ```
 
 ```{r include = FALSE}
@@ -20,12 +24,12 @@ new_ems_data <- new_ems_data %>%
          psap_hour = hour(psap_time_of_day),
          psap_minute = minute(psap_time_of_day)) %>%
   ## Categorizing primary impressions manually:
-  mutate(primary_impression_category = case_when(str_detect(situation_provider_primary_impression_code_and_description, "lcohol") ~ "Abuse of Alcohol",
-                                                 str_detect(situation_provider_primary_impression_code_and_description, "Abuse") ~ "Abuse of Substance",
-                                                 str_detect(situation_provider_primary_impression_code_and_description, "Allergic") ~ "Allergic Reaction",
-                                                 str_detect(situation_provider_primary_impression_code_and_description, "OB") ~ "OB",
-                                                 str_detect(situation_provider_primary_impression_code_and_description, "Endocrine") ~ "Endocrine",
-                                                 str_detect(situation_provider_primary_impression_code_and_description, "GI") ~ "GI/GU",
+  mutate(primary_impression_category = case_when(str_detect(situation_provider_primary_impression_code_and_description, "alcohol") ~ "Abuse of Alcohol",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "abuse") ~ "Abuse of Substance",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "allergic") ~ "Allergic Reaction",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "ob") ~ "OB",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "endocrine") ~ "Endocrine",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "gi") ~ "GI/GU",
                                                  str_detect(situation_provider_primary_impression_code_and_description, " - ") ~ str_extract(situation_provider_primary_impression_code_and_description, "[^-]+"), 
                                                  !str_detect(situation_provider_primary_impression_code_and_description, " - ") ~ str_extract(situation_provider_primary_impression_code_and_description, "[^\\(]+")),
          primary_impression_category = trimws(primary_impression_category))
@@ -102,25 +106,27 @@ new_ems_data %>%
 ```
 
 ```{r}
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
-
-plot_data <- new_ems_data %>%
-  filter(!is.na(agency_name), 
-         !is.na(psap_time_of_day),
-         !str_detect(agency_name, "Test")) 
-
-ggplot(plot_data) +
-  geom_density(aes(x = psap_time_of_day, fill = agency_name, color = agency_name), alpha = 0.2, position = "identity") +
-  scale_color_manual(values = cbPalette) +
-  scale_fill_manual(values = cbPalette) +
-  facet_grid(agency_name ~ .) +
-  scale_x_datetime(date_breaks = "2 hour", labels = date_format("%H:%M")) +
-  coord_cartesian(xlim = c(as.POSIXct("2020-01-01 01:00:00", tz = "UTC"), as.POSIXct("2020-01-01 22:00:00", tz = "UTC"))) +
-  labs(title = "Call Density Across Day", y = "", x = "Time of Day") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-        axis.text.y = element_blank(),
-        strip.text = element_blank())
+## ONLY WORKS ON UNIT LEVEL DATA
+# cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
+# 
+# plot_data <- new_ems_data %>%
+#   filter(!is.na(agency_name), 
+#          !is.na(psap_time_of_day),
+#          !str_detect(agency_name, "Test")) 
+# 
+# ggplot(plot_data) +
+#   geom_density(aes(x = psap_time_of_day, fill = agency_name, color = agency_name), alpha = 0.2, position = "identity") +
+#   #scale_color_manual(values = cbPalette) +
+#   #scale_fill_manual(values = cbPalette) +
+#   #facet_grid(agency_name ~ .) +
+#   #scale_x_datetime(date_breaks = "2 hour", labels = format("%H:%M")) +
+#   coord_cartesian(xlim = c(as.POSIXct("2020-01-01 01:00:00", tz = "UTC"), as.POSIXct("2020-01-01 22:00:00", tz = "UTC"))) +
+#   labs(title = "Call Density Across Day", y = "", x = "Time of Day") +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+#         axis.text.y = element_blank(),
+#         strip.text = element_blank(),
+#         legend.position = "none")
 ```
 
 
