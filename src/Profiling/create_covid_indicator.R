@@ -173,6 +173,7 @@ ems$sob <- ifelse(ems$sob_in_primary_complaint |
                     ems$racemic_epinephrine |
                     ems$oxygen, 1, 0);
 sum(ems$sob) # 8702
+sum(ems$sob & ymd(ems$incident_date) >= "2020-03-15")
 ## end sob
 
 
@@ -317,10 +318,13 @@ ems <- ems %>% mutate(
 )
 
 # look at number of cases at each level
-sum(ems$covid_indicator > 0) # 20731
-sum(ems$covid_indicator > 1) # 5247
-sum(ems$covid_indicator > 2) # 706
-sum(ems$covid_indicator > 3) # 52
+sum(ems$covid_indicator > 0) # 21913
+sum(ems$covid_indicator > 0 & ymd(ems$incident_date) >= "2020-03-15") # 1189
+sum(ymd(ems$incident_date) >= "2020-03-15") # 3589
+sum(ems$covid_indicator > 1) # 8221
+sum(ems$covid_indicator > 2) # 2597
+sum(ems$covid_indicator > 3 & ymd(ems$incident_date) >= "2020-03-15") # 385 / 15
+sum(ems$covid_indicator > 4) # 29
 
 ems %>%
   filter(ymd(incident_date) >= "2020-02-15") %>%
@@ -336,6 +340,7 @@ ems$covid2 <- ifelse(ems$covid_indicator > 1, 1, 0);
 
 # create variable for at least 3 covid symptoms
 ems$covid3 <- ifelse(ems$covid_indicator > 2, 1, 0)
+sum(ems$covid3 & ymd(ems$incident_date) >= "2020-03-15") # 126
 
 # symptom probability, taken from https://www.cdc.gov/mmwr/volumes/69/wr/pdfs/mm6928a2-H.pdf
 # cough 0.84
