@@ -11,42 +11,25 @@
     
     
     <item>
-      <title>General Overview of the Project</title>
-      <link>/findings/general-overview/</link>
+      <title>Symposium Presentation</title>
+      <link>/findings/symposium_page/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>/findings/general-overview/</guid>
+      <guid>/findings/symposium_page/</guid>
       <description>While this page is optional, it probably makes sense to have one weighted at the top (see the front matter at the top of this Rmd file) that gives a general overview of the project. This could be something like the final poster while the other pages highlight more in-depth observations. Here is a general schema of what should be covered throughout your website:
 Main Findings [Here you will describe the results and include important visualizations from your project.</description>
     </item>
     
     <item>
-      <title>Results Section One</title>
-      <link>/findings/results-section-one/</link>
+      <title>Response Time Analysis</title>
+      <link>/findings/response-time-modeling/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>/findings/results-section-one/</guid>
-      <description>/* this chunnk of code centers all of the headings */ h1, h2, h3 { text-align: center; }  Examples Page If you want to add in an image on an Rmd file, use this link here. It ends up being a little tricky, but as long as you have created a folder to insert your images, you can just use some markdown code or html to insert images in the format you want.</description>
-    </item>
-    
-    <item>
-      <title>Results Section Two</title>
-      <link>/findings/results-section-two/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>/findings/results-section-two/</guid>
-      <description>[Here you will describe the data discoversy process, the data used, and the methods employed for this single page. Since you already have a Project Overview and Data &amp;amp; Methods tabs, you probably want to keep this first paragraph fairly short and use the rest of the document to walk your readers through your analyses.]
-Main Findings [Here you will describe the results and include important visualizations from your project.</description>
-    </item>
-    
-    <item>
-      <title>Results Section Three</title>
-      <link>/findings/results-section-three/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>/findings/results-section-three/</guid>
-      <description>[Here you will describe the data discoversy process, the data used, and the methods employed for this single page. Since you already have a Project Overview and Data &amp;amp; Methods tabs, you probably want to keep this first paragraph fairly short and use the rest of the document to walk your readers through your analyses.]
-Main Findings [Here you will describe the results and include important visualizations from your project.</description>
+      <guid>/findings/response-time-modeling/</guid>
+      <description>Model Results 
+For more details on the specification of our model, see the Data &amp;amp; Methods tab.
+
+Measures of Model Fit We assessed the specification of our model using a posterior predictive check, which is common in Bayesian estimation. The posterior predictive check compares the distribution of predicted response times for each MCMC draw (I think this needs a very brief elaboration – people may not know what is being drawn exactly) to the actual distribution of response times in the data.</description>
     </item>
     
     <item>
@@ -55,8 +38,8 @@ Main Findings [Here you will describe the results and include important visualiz
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>/methods/</guid>
-      <description>2020 Fairfax County Summer Project Data and Methodology Example text: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam in varius purus. Nullam ut sodales ante. Fusee justo nisi, suscipit a lacus et, posuere sagittis ex. Nulla convallis ante elit, at consequat ipsum ultricies ut. Aliquam erat volutpat. nderline. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam in variu convallis ante elit, at consequat ipsum ultricies ut.
-Lorem ipsum dolor sit amet, consectetur adipiscing elit.</description>
+      <description>h3, h4 { text-align: center }  Data Sources This project relied primarily on a dataset of EMS incidents in Charlottesville City and Albemarle County that spanned from the December 2016 to June 2020. These data consisted of numerous variables regularly recorded by EMS providers when responding to an incident. The variables available can be broken down into three rough categories:
+ Operations  These variables include details about the incident itself, and include things like  Incident date and time Unit and crew dispatched Scene location and type Response time to incident Hospital patient was delivered to   Medical  These variables include details about potential diagnoses and medical care provided to the patient at the scene, like  Patient symptoms (based on provider&#39;s impression and/or patient&#39;s reported complaints) Vital signs (temperature, pulse, etc.</description>
     </item>
     
     <item>
@@ -65,12 +48,12 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit.</description>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>/overview/</guid>
-      <description>2020 Fairfax County Summer Project Example text: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam in varius purus. Nullam ut sodales ante. Fusee justo nisi, suscipit a lacus et, posuere sagittis ex. Nulla convallis ante elit, at consequat ipsum ultricies ut. Aliquam erat volutpat. nderline. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam in variu convallis ante elit, at consequat ipsum ultricies ut.
-Project Goals Example text: We&amp;rsquo;re devising and assessing methods that make human populations more resilient not just during, but also before and after natural disasters.</description>
+      <description>h3, h4 { text-align: center }  The Impact of COVID-19 on the Equitable Delivery of Emergency Medical Services 
+Background In recent years, public health efforts have begun to focus increasingly on the social determinants of health as a means of understanding the prevailing health inequalities in the United States and across the world. While many of these determinants very clearly relate to population health (access to health care resources, for instance), others are more subtle in their health impacts, like residential segregation, education, and cultural values1.</description>
     </item>
     
     <item>
-      <title>Team</title>
+      <title></title>
       <link>/team/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       

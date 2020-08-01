@@ -1,0 +1,124 @@
+---
+output: html_document
+---
+
+
+
+<style type="text/css">
+h3, h4 {
+  text-align: center
+}
+</style>
+<div id="data-sources" class="section level3">
+<h3>Data Sources</h3>
+<p>This project relied primarily on a dataset of EMS incidents in Charlottesville City and Albemarle County that spanned from the December 2016 to June 2020. These data consisted of numerous variables regularly recorded by EMS providers when responding to an incident. The variables available can be broken down into three rough categories:</p>
+<ul>
+<li>Operations
+<ul>
+<li>These variables include details about the incident itself, and include things like
+<ul>
+<li>Incident date and time</li>
+<li>Unit and crew dispatched</li>
+<li>Scene location and type</li>
+<li>Response time to incident</li>
+<li>Hospital patient was delivered to</li>
+</ul></li>
+</ul></li>
+<li>Medical
+<ul>
+<li>These variables include details about potential diagnoses and medical care provided to the patient at the scene, like
+<ul>
+<li>Patient symptoms (based on provider's impression and/or patient's reported complaints)</li>
+<li>Vital signs (temperature, pulse, etc.)</li>
+<li>Medications provided</li>
+</ul></li>
+</ul></li>
+<li>Patient Characteristics
+<ul>
+<li>These include demographic charactersitics of the patient:
+<ul>
+<li>Age</li>
+<li>Race</li>
+<li>Sex</li>
+<li>Medical history</li>
+</ul></li>
+</ul></li>
+</ul>
+<p>In addition to this EMS dataset, we also used data from the American Community Survey to develop an understanding of the baseline demographic patterns in the region and mortality data from the Virginia Department of Health in an attempt to link any observed changes in EMS delivery to overall trends in COVID-19-related mortality.</p>
+<p><br></p>
+</div>
+<div id="data-quality" class="section level3">
+<h3>Data Quality</h3>
+<p>This project required an extensive assessment of data quality because of the complicated nature of the underlying processes involved. For instance, in an ideal scenario, each entry in the dataset would correspond to a single patient, with a single response unit recording information for that patient. Of course, the real-world nature of these data make them far more messy.</p>
+<p>Most importantly, it is common that multiple units respond to the same incident, with each unit keeping records. For these cases, the dataset ends up with multiple rows that reference the same patient, and we risk over-counting the true number of patients serviced, with the potential to skew the actual distribution of the patient-level variables we hope to explore.</p>
+<p>Further complicating things is the fact that in some cases, multiple units may respond to a single incident, but may actually service <em>different</em> patients (this is often true for traffic-related incidents, which commonly have multiple patients involved).</p>
+<p>Avoiding both the possibility of removing legitimate entries from the dataset while also identifying duplicated patients proved to be a challenge. Ultimately, we needed to reduce the raw dataset to two clean datasets: one where each observation is a single patient, and one where each observation is a single unit (either may be appropriate depending on the research question being explored).</p>
+<p>By cross-referencing demographic characteristics, medical numbers (where they existed), and operations variables across rows, we were ultimately able to identify approximately ~HOW MANY duplicate patients in the dataset and remove them. One key takeaway from this process is that the development of systems to better link EMS records when multiple units are involved would be valuable tool for more extensive analysis of EMS data in general.</p>
+<p><br></p>
+</div>
+<div id="response-time-modeling" class="section level3">
+<h3>Response Time Modeling</h3>
+<p>Of key interest to the Charlottesville and Albemarle EMS teams was the potential that services were being distributed unequally across demographic and socioeconomic subpopulations.</p>
+<p>By their very nature, the incidents that EMS providers encounter are highly time-sensitive. With this in mind, we attempted to assess whether response times varied across demographic groups after accounting for the effects of other operational factors. Even without intent on the part of service providers, longstanding systemic racism could still reveal itself in response times: for instance, decades-old practices of redlining and targeted infrastructure development may serve to increase accessibility to certain areas within the response region, and these areas may be highly correlated with race, age, and socioeconomic factors. Additionally, we were especially interested to determine how any observed differences may have changed since the advent of the COVID-19 pandemic.</p>
+<p><br></p>
+<div id="model-specification" class="section level4">
+<h4>Model Specification</h4>
+<p>We used an iterative process to specify our final model. We began by explicitly specifying the covariates of interest and the covariates we needed to control for:</p>
+<ul>
+<li>Covariates of interest:
+<ul>
+<li>Age</li>
+<li>Gender</li>
+<li>Race</li>
+<li>Symptoms recorded (by provider and/or patient)</li>
+<li>Whether the COVID-19 pandemic had begun yet</li>
+</ul></li>
+<li>Covariates to control for:
+<ul>
+<li>Type of vehicle responding</li>
+<li>Travel time to location</li>
+<li>Time of Day</li>
+<li>Possible Spatial Effects</li>
+</ul></li>
+</ul>
+<p>Unfortunately, systematic data on location at dispatch was not available, limiting our ability to control for an important variable: distance between dispatch and incident locations. To account for some of this variability, we instead used the neighborhood (within Charlottesville) or census tract (outside Charlottesville) as a proxy for distance. However, this is only a rough approximation, and should be considered when interpreting the model results.</p>
+<p>We began by using a linear model. Because the distribution of response times was heavily right skewed, we log transformed the data prior to fitting. Our model was as follows:</p>
+<p><span class="math display">\[
+\begin{align*}
+log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{iid}\sim N(\alpha &amp;+ \beta_1 (\mbox{During COVID-19})_i  +
+\boldsymbol{\beta_2}^T\boldsymbol{(\mbox{Demographics})_i} +
+\boldsymbol{\beta_3}^T\boldsymbol{(\mbox{Symptoms})_i} +
+\boldsymbol{\beta_4}^T\boldsymbol{(\mbox{Vehicle})_i} + 
+\boldsymbol{\beta_5}^T\boldsymbol{(\mbox{Time of Day})_i} \\
+&amp;+(\mbox{During COVID-19})_i* (
+\boldsymbol{\beta_6}^T\boldsymbol{(\mbox{Demographics})_i} +
+\boldsymbol{\beta_7}^T\boldsymbol{(\mbox{Symptoms})_i} + 
+\boldsymbol{\beta_8}^T\boldsymbol{(\mbox{Vehicle})_i} + 
+\boldsymbol{\beta_9}^T\boldsymbol{(\mbox{Time of Day})_i}),\; \sigma^2)
+\end{align*} \\
+\beta_1,\dots,\beta_9 \overset{iid}\sim N(0, 1.1)\\
+\alpha \sim N(0, 4.6) \\
+\sigma \sim Exp(2.2)
+\]</span></p>
+<p><em>I think we could stand to mention why these particular priors were selected</em></p>
+<p>Where &quot;During COVID-19&quot; is an indicator variable with value 1 for incidents after March 15th, 2020 and 0 otherwise. Note that each bolded coefficient actually represents a set of coefficients that accounts for the multiple categorical levels within each variable type.</p>
+<p>We included an interaction term for &quot;During COVID-19&quot; so we could assess whether the effects on response times of any of the other factors included in the model have changed with the advent of the COVID-19 pandemic.</p>
+<p>This model performed reasonably well, but didn't control for either spatial effects or travel time to location. <em>(The way this is written makes me wonder why we even ran the first model at all – should have a very brief explanation)</em></p>
+<p>In an attempt to control for these variables, we fit the following multilevel model:</p>
+<p><span class="math display">\[
+log(\mbox{Response Time})\vert\alpha,\boldsymbol{\beta},\boldsymbol{b},\sigma \sim N(\alpha + \boldsymbol{X\beta} + \boldsymbol{Zb}, \sigma^2\boldsymbol{I}) \\
+\alpha \sim N(0,4.6)\\
+\boldsymbol{\beta} \sim N(0, 1.15\boldsymbol{I})\\
+\boldsymbol{b}\vert\boldsymbol{\Sigma} \sim N(0, \boldsymbol{\Sigma})\\
+\sigma \sim Exp(0,2.2)\\
+\boldsymbol{\Sigma} \sim \mbox{Decomposition of Covariance}(1, 1, 1, 1)
+\]</span></p>
+<p>Here <span class="math inline">\(\boldsymbol{X}\)</span> and <span class="math inline">\(\boldsymbol{\beta}\)</span> are identical to the earlier specification and have been written as such for simplicity. <span class="math inline">\(\boldsymbol{Z}\)</span> is a matrix encoding deviations in intercepts and covariates across neighborhoods. The prior for <span class="math inline">\(\boldsymbol\Sigma\)</span> is complicated to write out, and is specificed using the <code>rstanarm</code> function <code>decov(1,1,1,1)</code>. More can be found on this specification <a href="http://mc-stan.org/rstanarm/articles/glmer.html">here</a>.</p>
+<p>By including information about the neighborhood that each incident occurred in, we hoped to both account for any spatial autocorrelation as well as our inability to more directly measure vehicle travel time.</p>
+<p>Both of these models were fit using Bayesian estimation with the R package rstanarm. Due to its superior performance (Might be worth a very brief explanation of how we determine “performance”) of the model including neighborhoods, we used the multilevel model for our interpretations (though results were similar for both models). Model assessment and results are discussed on the &quot;Findings&quot; page of this website.</p>
+<p><br></p>
+</div>
+</div>
+<div id="covid-19-indicator-development" class="section level3">
+<h3>COVID-19 Indicator Development</h3>
+</div>
