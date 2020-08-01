@@ -10,36 +10,23 @@ library(purrr)
 
 # load in data
 source(here::here("src", "Profiling", "create_covid_indicator.R"));
-ems_full <- ems;
 
-# load population estimates
-acs_total_pop_tract <- get_acs(geography = "tract",
-                               year = 2018,
-                               variables = c(total_population = "DP05_0001"),
-                               state = "VA",
-                               county = c("albemarle", "charlottesville")) %>%
-  pivot_wider(names_from = variable,
-              values_from = c(estimate, moe),
-              names_glue = "{variable}_{.value}")
+# load neighborhoods
+neighborhoods <- st_read(here::here("data", "working", "neighborhood_demographics.geojson")) %>%
+  rename(pop = n)
 
-# join geometries with population estimates for census tracts
-acs_total_pop_tract_sp <- tigris::tracts(state = "VA", county = c("charlottesville", "albemarle"),
-                                         cb = TRUE, year = 2018, class = "sf") %>%
-  st_transform(crs = 4326) %>%
-  left_join(acs_total_pop_tract, by = "GEOID")
 
+ems_full_sp <- ems %>%
+  distinct %>%
+  filter(!is.na(scene_gps_latitude), !is.na(scene_gps_longitude)) %>%
+  st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude"), remove = FALSE, crs = 4326)
 
 city_border <- tigris::counties(state = "VA",
                                 cb = TRUE, year = 2018, class = "sf") %>%
   filter(COUNTYFP == 540) %>%
   st_transform(crs = 4326)
 
-ems_full_sp <- ems_full %>%
-  distinct %>%
-  filter(!is.na(scene_gps_latitude), !is.na(scene_gps_longitude)) %>%
-  st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude"), remove = FALSE, crs = 4326)
-
-joined <- st_join(acs_total_pop_tract_sp, ems_full_sp, join = st_contains)
+joined <- st_join(neighborhoods, ems_full_sp, join = st_contains)
 
 total_days <- as.numeric(range(ems_full_sp$incident_date)[2] - range(ems_full_sp$incident_date)[1])
 
@@ -53,13 +40,13 @@ total_days <- as.numeric(range(ems_full_sp$incident_date)[2] - range(ems_full_sp
 #   geom_sf(aes(fill = n)) +
 #   theme_minimal()
 
-cutoff <- ymd("2020-02-15");
+cutoff <- ymd("2020-03-15");
 symptom_threshold <- 0
 
 # PRE CUTOFF
 joined %>%
   filter(incident_date < cutoff) %>%
-  group_by(NAME.y) %>%
+  group_by(NAME) %>%
   summarise(count = sum(covid_indicator > symptom_threshold)) %>%
   ggplot() +
   geom_sf(aes(fill = count)) +
@@ -69,7 +56,7 @@ joined %>%
 # POST CUTOFF
 joined %>%
   filter(incident_date >= cutoff) %>%
-  group_by(NAME.y) %>%
+  group_by(NAME) %>%
   summarise(count = sum(covid_indicator > symptom_threshold)) %>%
   ggplot() +
   geom_sf(aes(fill = count)) +
@@ -78,17 +65,17 @@ joined %>%
 # diff
 pre_covid <- joined %>%
   filter(incident_date < cutoff) %>%
-  group_by(NAME.y) %>%
+  group_by(NAME) %>%
   summarise(pre_covid_count = sum(covid_indicator > symptom_threshold))
 
 post_covid <- joined %>%
   filter(incident_date >= cutoff) %>%
-  group_by(NAME.y) %>%
+  group_by(NAME) %>%
   summarise(post_covid_count = sum(covid_indicator > symptom_threshold)) %>%
   as.data.frame(.)
 
 pre_post_covid <- pre_covid %>%
-  full_join(post_covid, by = c("NAME.y", "geometry"))
+  full_join(post_covid, by = c("NAME", "geometry"))
 
 pre_post_covid$covid_diff <- pre_post_covid$post_covid_count - pre_post_covid$pre_covid_count
 
@@ -98,14 +85,13 @@ pre_post_covid %>%
   theme_minimal()
 
 
-
-# PRE COVID: counts of prob covid indicator > 0 controlled for pop
+# POST COVID: counts of prob covid indicator > 0 controlled for pop
 summed_data <- joined %>%
   filter(incident_date >= cutoff) %>%
   filter(covid_indicator > 0) %>%
-  group_by(NAME.y, total_population_estimate) %>%
+  group_by(NAME, pop) %>%
   count() %>%
-  mutate(rate_per_1000 = round(n/total_population_estimate * 1000)) %>%
+  mutate(rate_per_1000 = round(n/pop * 1000)) %>%
   ungroup() %>%
   st_as_sf()
 
@@ -123,7 +109,7 @@ summed_data %>%
   addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.8,
               fillColor = ~color_scale(rate_per_1000),
-              label = ~map(glue("{NAME.y}<br/>
+              label = ~map(glue("{NAME}<br/>
                                 Patients with >= 1 COVID symptom per 1000: {rate_per_1000}"), htmltools::HTML)) %>%
   addPolygons(data = city_border,
               color = "#222222", weight = 3, smoothFactor = 0.5,
@@ -133,13 +119,13 @@ summed_data %>%
             title = "Patients with >= 1 COVID symptom per 1000",
             opacity = .8)
 
-# POST COVID: counts of prob covid indicator > 0 controlled for pop
+# PRE COVID: counts of prob covid indicator > 0 controlled for pop
 summed_data <- joined %>%
   filter(incident_date < cutoff) %>%
   filter(covid_indicator > 0) %>%
-  group_by(NAME.y, total_population_estimate) %>%
+  group_by(NAME, pop) %>%
   count() %>%
-  mutate(rate_per_1000 = round(n/total_population_estimate * 1000)) %>%
+  mutate(rate_per_1000 = round(n/pop * 1000)) %>%
   ungroup() %>%
   st_as_sf()
 
@@ -157,7 +143,7 @@ summed_data %>%
   addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.8,
               fillColor = ~color_scale(rate_per_1000),
-              label = ~map(glue("{NAME.y}<br/>
+              label = ~map(glue("{NAME}<br/>
                                 Patients with >= 1 COVID symptom per 1000: {rate_per_1000}"), htmltools::HTML)) %>%
   addPolygons(data = city_border,
               color = "#222222", weight = 3, smoothFactor = 0.5,

@@ -1,0 +1,273 @@
+---
+title: "COVID-19 Indicator"
+author: "Chase Dawson"
+date: "7/31/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# load libraries
+library(tidycensus)
+library(tidyr)
+library(sf)
+library(leaflet)
+library(glue)
+library(lubridate)
+library(dplyr)
+library(stringr)
+library(purrr)
+
+# load in data
+source(here::here("src", "Profiling", "create_covid_indicator.R"));
+```
+
+```{r, include=FALSE}
+# setting display defaults
+theme_set(theme_minimal() +
+            theme(plot.title = element_text(hjust = 0.5, color = "gray10", size = 24),
+                  plot.subtitle = element_text(hjust = 0.5, color = "gray30", face = "italic", size = 20),
+                  axis.title = element_text(size = 20, color = "gray10"),
+                  axis.text = element_text(size = 18, color = "gray30"),
+                  strip.text = element_text(size = 22, color = "gray30"),
+                  panel.spacing = unit(4, "lines"),
+                  legend.key.size = unit(3, "line"),
+                  legend.text = element_text(size = 16, color = "gray30"),
+                  legend.title = element_text(size = 22, color = "gray10")))
+```
+
+## Background
+
+This data was last updated on June 9th, 2020 at which point there were X cases and Y deaths in the city of Charlottesville and X cases and Y deaths in Albermarle County.
+
+## Creating the Indicator
+
+Medical knowledge of COVID-19 has been rapidly evolving throughout the course of the pandemic. At first, most healthcare providers were told to look for the 3 primary symptoms: cough, fever, and shortness of breath. With time, medical professionals have realized that the novel coronavirus manifests itself in many different forms. Many people may experience no symptoms at all. Some may lose their sense of taste or smell. In rare cases, COVID-19 has been known to cause unexpected stroke or cardiac arrest in young people. Due to the various presentations of the disease, our COVID indicator attempted to cast as wide a net as possible with the hope of catching cases that healthcare providers may have missed in the past.
+
+Specifically, our COVID indicator attempts to detect the following symptoms: cough, fever, shortness of breath, myalgia, chills, fatigue, headache, diarrhea, nausea or vomiting, hypoxemia (with and without a response to oxygen), cyanosis, stroke, and cardiac arrest.
+
+Multiple columns within the data contain information about symptoms. The COVID indicator pulls information from provider impressions, patient complaints, given medications, skin assessments, temperature and pulse oximetry. The COVID indicator is a sum of the extracted symptoms that are listed below.
+
+### Cough
+True if the keyword "cough" appeared in the primary or secondary complaints. 295 patients experienced a cough, with 31 of those incidents occurring on or after March 15th, 2020.
+
+### Fever
+True if one of the following was true:
+
+* initial or last patient temperature was greater than or equal to 100.4 &deg;F
+* keyword "fever" appeared in primary or secondary complaints
+* "fever (r50.9)" listed in primary or secondary provider impressions
+
+### Shortness of Breath
+True if one of the following was true:
+
+* Keywords "breath" or "sob" appeared in primary or secondary complaints
+    + The complaints columns contain free form text, so providers may encode shortness of breath in many different ways such as "difficulty breathing", "shortness of breath", or "sob". We decided to look for the word "breath" in complaints to catch more cases under the assumption that if a patient was served by EMS and complained about breathing, then they mostly likely struggled to breath in some capacity.
+* "racemic epinephrine (314610)" or "oxygen (7806)" listed as a given medication
+
+
+### Myalgia
+
+True if one of the following keywords "myalgia", "muscle pain", "muscle ache", or "muscle soreness" appeared in the primary or secondary complaints.
+
+### Chills
+
+True if one of the following keywords "chill", "rigor", or "shiver" appeared in the primary or secondary complaints.
+
+
+### Fatigue
+
+True if the keyword "fatigue" appeared in the primary or secondary complaints.
+
+
+### Headache
+
+True if one of the following was true:
+
+* keyword "headache" appeared in primary or secondary complaints
+* "neuro - headache - migraine (g43.9)" or "neuro - headache (r51)" listed in the primary or secondary provider impressions
+
+### Diarrhea
+
+True if one of the following was true:
+
+* keyword "diarrhea" appeared in the primary or secondary complaints
+* "gi/gu - diarrhea (k59.1)" listed in the primary or secondary provider impressions
+
+### Nausea or Vomiting
+
+True if one of the following was true:
+
+* keywords "nausea" or "vomit" appeared in primary or secondary complaints
+*  "gi/gu - nausea (with vomiting) (r11.2)" or "gi/gu - nausea (without vomiting) (r11.0)" listed in primary or secondary provider impressions
+* "ondansetron (zofran) (26225)" listed as given medication
+
+### Hypoxemia
+
+True if patient first or last pulse oximetry was less than or equal to 94% oxygen saturation.
+
+### Hypoxemia (with no response to oxygen) 
+
+True if "oxygen (7806)" listed as given medication and patient last pulse oximetry is less than or equal to their initial pulse oximetry. 
+
+### Cyanosis
+
+True if keyword "cyanotic" appeared in skin assessment findings.
+
+### Stroke
+
+True if "neuro - stroke/cva (i63.9)" was listed in primary or secondary provider impressions and the patient's age was less than or equal to 64.
+
+### Cardiac Arrest
+
+True if "cv - cardiac arrest (i46.9)", "cv - cardiac arrest/obvious death (r99)", or "cv - chest pain - myocardial infarction (non-stemi)  (i21.4)" was listed in primary or secondary provider impressions and the patient's age was less than or equal to 64.
+
+### Other Medications Related to Cough and Shortness of Breath
+
+True if "albuterol (proventil) (435)", "albuterol/ipratropium (duoneb) (285059)", or "ipratropium (atrovent) (7213)" was listed as a given medication and the patient doesn't already have evidence of a cough or shortness of breath from another column.
+
+Unlike other medications which could be related to a single symptom, these three could be used to treat cough or shortness of breath. We didn't want to double count these symptoms if they received the medicine and they also had one of the symptoms. They are used as a catch-all, contributing only to the total symptom count if the patient didn't experience a cough or shortness of breath.
+
+## Mapping
+
+```{r, include=FALSE}
+# load neighborhoods
+neighborhoods <- st_read(here::here("data", "working", "neighborhood_demographics.geojson")) %>%
+  rename(pop = n)
+# filter ems data to cases with non-NA gps data
+ems_full_sp <- ems %>%
+  distinct %>%
+  filter(!is.na(scene_gps_latitude), !is.na(scene_gps_longitude)) %>%
+  st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude"), remove = FALSE, crs = 4326)
+
+city_border <- tigris::counties(state = "VA", cb = TRUE, year = 2018, class = "sf") %>%
+  filter(COUNTYFP == 540) %>%
+  st_transform(crs = 4326)
+
+joined <- st_join(neighborhoods, ems_full_sp, join = st_contains)
+total_days <- as.numeric(range(ems_full_sp$incident_date)[2] - range(ems_full_sp$incident_date)[1])
+
+cutoff_string <- "2020-03-15"
+cutoff <- ymd(cutoff_string)
+symptom_threshold <- 0
+
+summed_data <- joined %>%
+  filter(incident_date >= cutoff) %>%
+  filter(covid_indicator > symptom_threshold) %>%
+  group_by(NAME, pop) %>%
+  count() %>%
+  mutate(rate_per_1000 = round(n/pop * 1000)) %>%
+  ungroup() %>%
+  st_as_sf()
+```
+
+```{r, echo=FALSE, out.width="100%", include=FALSE}
+breaks <- unique(BAMMtools::getJenksBreaks(summed_data$rate_per_1000, 5))
+n_breaks <- length(breaks)
+quantile(summed_data$rate_per_1000, seq(0, 1, 1/n_breaks))
+color_scale <- colorBin("BuPu", c(0,1600), breaks)
+
+summed_data %>%
+  leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_per_1000),
+              label = ~map(glue("{NAME}<br/>
+                                Patients with >= 1 COVID symptom per 1000: {rate_per_1000}"), htmltools::HTML)) %>%
+  addPolygons(data = city_border,
+              color = "#222222", weight = 3, smoothFactor = 0.5,
+              fill = NA,
+              fillOpacity = 0) %>%
+  addLegend("bottomright", pal = color_scale, values = ~rate_per_1000,
+            title = "Patients with >= 1 COVID symptom per 1000",
+            opacity = .8)
+
+```
+
+The map below shows the COVID-like incident rates before and after March 15th, 2020 by neighborhood in the City of Charlottesville. An incident is considered COVID-like when it has at least one COVID symptom captured by the COVID indicator. Specifically, this looks at all rows where the covid indicator value is greater than or equal to 1.
+
+```{r, echo=FALSE, out.width="100%"}
+pre_period <- joined %>%
+  filter(incident_date < cutoff)
+
+post_period <- joined %>%
+  filter(incident_date >= cutoff)
+
+days_pre <- as.numeric(range(pre_period$incident_date)[2] - range(pre_period$incident_date)[1])
+days_post <- as.numeric(range(post_period$incident_date)[2] - range(post_period$incident_date)[1] )
+
+pre_period_summed <- pre_period %>%
+  group_by(NAME, pop) %>%
+  count() %>%
+  mutate(rate_per_1000 = (n/pop * 1000/days_pre)) %>%
+  ungroup() %>%
+  st_as_sf()
+
+post_period_summed <- post_period %>%
+  group_by(NAME, pop) %>%
+  count() %>%
+  mutate(rate_per_1000 = (n/pop * 1000/days_post)) %>%
+  ungroup() %>%
+  st_as_sf()
+
+BAMMtools::getJenksBreaks(c(pre_period_summed$rate_per_1000, post_period_summed$rate_per_1000), 7)
+color_scale <- colorBin("BuPu", c(0, 1.6), c(0, 0.03, .15, .3, .5, .8, 1.25, 2))
+
+pre_period_summed %>%
+  leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_per_1000),
+              label = ~map(glue("{NAME}<br/>
+                                COVID-like Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
+              group = "Pre 2020") %>%
+  addPolygons(data = post_period_summed,
+              color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_per_1000),
+              label = ~map(glue("{NAME}<br/>
+                                COVID-like Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
+              group = "In 2020") %>%
+  addPolygons(data = city_border,
+              color = "#222222", weight = 3, smoothFactor = 0.5,
+              fillOpacity = 0) %>%
+  addLegend("bottomright", pal = color_scale, values = ~rate_per_1000,
+            title = "Incident Rate Per 1000",
+            opacity = .8) %>%
+  addLayersControl(baseGroups = c("before March 15th, 2020", "on or after March 15th, 2020"),
+                   options = layersControlOptions(collapsed = FALSE))
+```
+
+## Modeling
+
+A primary goal of this project was to understand the impact of COVID-19 on various demographic groups within the context of EMS services. Three logistic regression models were run, each with a response variable derived from the covid indicator and explanatory variables composed of demographic or temporal variables. Unfortunately, none of the models provided strong evidence that the onset of the pandemic influenced the number of patients that were experiencing COVID-like symptoms. Though uninteresting, this result was not unexpected as Charlottesville, VA has not seen many coronavirus cases. While the actual case count is certainly higher than the reported figures to many asymptomatic people, these cases are most likely not reflected in the actual data source. We are looking at a subset of cases that are severe enough that the patient calls EMS. The model specifics are described in more detail below.
+
+* Model 1:
+    + response variable: 
+        - a binary variable that is 1 if the patient reported at least 1 COVID symptom and 0 otherwise
+    + explanatory variables:
+        - gender
+        - race
+        - age
+        - on or after March 15th, 2020; 1 if the incident date occured on or after March 15th, 2020 and 0 otherwise
+* Model 2:
+    + response variable: 
+        - a binary variable that is 1 if the patient reported at least 2 COVID symptoms and 0 otherwise
+    + explanatory variables:
+        - gender
+        - race
+        - age
+        - on or after March 15th, 2020; 1 if the incident date occured on or after March 15th, 2020 and 0 otherwise
+* Model 3:
+    + response variable: 
+        - a binary variable that is 1 if the patient reported at least 3 COVID symptoms and 0 otherwise
+    + explanatory variables:
+        - gender
+        - race
+        - age
+        - on or after March 15th, 2020; 1 if the incident date occured on or after March 15th, 2020 and 0 otherwise
+```{r}
+```

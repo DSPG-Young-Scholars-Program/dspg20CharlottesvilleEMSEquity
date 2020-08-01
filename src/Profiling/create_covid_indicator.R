@@ -7,7 +7,7 @@ library(stringr)
 library(naniar)
 
 # load data
-ems <- read.csv('./data/final/ems_clean_data.csv');
+ems <- read.csv(here::here("data", "final", "ems_clean_data.csv"));
 ems <- ems %>% mutate(incident_date = as_date(incident_date));
 
 # add race variable
@@ -56,6 +56,7 @@ ems$cough_in_secondary_complaint <- create_symptom("cough", ems$situation_second
 # combine cough vars
 ems$cough <- ifelse(ems$cough_in_primary_complaint | ems$cough_in_secondary_complaint, 1, 0);
 sum(ems$cough) # 295
+sum(ems$cough & ymd(ems$incident_date) >= "2020-03-15") # 31
 ## end cough
 
 ## create fever variable
@@ -262,7 +263,7 @@ ems$cough_sob_meds_catch_all <- ifelse(no_cough_or_sob & (ems$albuterol_proventi
 
 ## cyanosis
 # get levels of skin assessment findings
-unique(unlist(str_split(ems$situation_provider_primary_impression_code_and_description, "\\|"))) %>% sort()# look at possible values in skin assessment
+unique(unlist(str_split(ems$patient_medication_given_description_and_rxcui_codes_list, "\\|"))) %>% sort()# look at possible values in skin assessment
 ems$cyanosis <- create_symptom("cyanotic", ems$patient_skin_assessment_findings_list);
 # sum(ems$cyanosis) # 78
 ## end cyanosis
