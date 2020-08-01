@@ -1,0 +1,291 @@
+---
+title: "Model Evaluation"
+output: html_document
+---
+
+```{r}
+load(here::here("data", "working", "model_objects", "basic_model_bayes_no_interact.RData"))
+load(here::here("data", "working", "model_objects", "basic_model_bayes_yes_interact.RData"))
+load(here::here("data", "working", "model_objects", "basic_model_freq_no_interact.RData"))
+load(here::here("data", "working", "model_objects", "basic_model_freq_yes_interact.RData"))
+load(here::here("data", "working", "model_objects", "neighbor_model_bayes_no_interact.RData"))
+load(here::here("data", "working", "model_objects", "neighbor_model_bayes_yes_interact.RData"))
+
+library(rstanarm)
+library(bayesplot)
+library(dplyr)
+library(ggplot2)
+library(sf)
+library(broom)
+library(purrr)
+library(glue)
+library(stringr)
+library(viridis)
+
+prepared_data <- readr::read_csv(here::here("data", "final", "response_time_model_data_prepared.csv"))
+prepared_data_sp <- sf::st_read(here::here("data", "final", "response_time_model_data_prepared_sp.geojson"))
+
+
+freq_models <- list("basic_model_freq_no_interact" = basic_model_freq_no_interact,
+                    "basic_model_freq_yes_interact" = basic_model_freq_yes_interact)
+
+bayes_models <- stanreg_list("basic_model_bayes_no_interact" = basic_model_bayes_no_interact,
+                             "basic_model_bayes_yes_interact" = basic_model_bayes_yes_interact,
+                             "neighbor_model_bayes_no_interact" = neighbor_model_bayes_no_interact,
+                             "neighbor_model_bayes_yes_interact" = neighbor_model_bayes_yes_interact)
+```
+
+
+## Examine Coefficients
+
+Setup everything
+```{r}
+
+freq_model_coefs <- map(freq_models, tidy,
+                        conf.int = TRUE,
+                        conf.level = 0.95,
+                        exponentiate = FALSE)
+
+bayes_model_coefs <- map(bayes_models, ~tidy(.x$stanfit,
+                                             estimate.method = "median",
+                                             conf.int = TRUE,
+                                             conf.level = 0.95)) %>%
+  map(~filter(.x, !(term %in% c("sigma", "mean_PPD", "log-posterior"))))
+
+
+freq_model_coefs_trans <- freq_model_coefs %>%
+  map(~mutate(.x, across(c(estimate,
+                           conf.low,
+                           conf.high),
+                         list(scale_factor = ~exp(.x * (.x != .x[1])), # scales to exponential, expression insures intercept is right
+                              time_to_incident = ~exp(.x * (.x != .x[1]) + .x[1]))))) # scales to exponential, expression insures intercept is right
+
+bayes_model_coefs_trans <- bayes_model_coefs %>%
+  map(~mutate(.x, across(c(estimate,
+                           conf.low,
+                           conf.high),
+                         list(scale_factor = ~exp(.x * (.x != .x[1])),
+                              time_to_incident = ~exp(.x * (.x != .x[1]) + .x[1])))))
+
+
+plot_scale_factor <- function(data) {
+  ggplot(data, aes(y = term)) +
+    geom_point(aes(x = estimate_scale_factor)) +
+    geom_errorbar(aes(xmin = conf.low_scale_factor, xmax = conf.high_scale_factor)) +
+    theme_minimal() +
+    labs(x = NULL, y = glue("Scale Factor from {round(data$estimate_time_to_incident[1],
+                                                      digits = 1)} Minutes")) +
+    coord_cartesian(xlim = c(0.25, 1.75)) +
+    geom_vline(xintercept = 1, alpha = 0.5)
+}
+
+plot_time_to_incident <- function(data) {
+  ggplot(data) +
+    geom_point(aes(x = term, y = estimate_time_to_incident)) +
+    geom_errorbar(aes(x = term, ymin = conf.low_time_to_incident, ymax = conf.high_time_to_incident)) +
+    theme_minimal() +
+    coord_flip() +
+    labs(x = NULL, y = glue("Travel Time in Minutes"))
+}
+
+```
+
+Actually make the plots:
+```{r}
+map(bayes_model_coefs_trans,
+    plot_scale_factor)
+```
+
+```{r}
+map(bayes_model_coefs_trans,
+    plot_time_to_incident)
+
+```
+
+Looks like the after covid interaction term doesn't do a lot in the non neighborhood models. In the neighborhood models however, it looks like times consistently increase. 
+
+Now for frequentist models:
+
+```{r}
+map(freq_model_coefs_trans,
+    plot_scale_factor)
+```
+
+```{r}
+map(freq_model_coefs_trans,
+    plot_time_to_incident)
+```
+
+Basically identical to the bayesian models
+
+### After Covid Interaction Term
+
+```{r}
+
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+
+bayes_model_coefs_trans[[2]] %>%
+  mutate(after_covid = str_detect(term, "(after_covidTRUE.*)")) %>%
+  mutate(term = str_replace(term, "after_covidTRUE:", "")) %>%
+  ggplot(aes(y = term, color = after_covid)) +
+  geom_point(aes(x = estimate_scale_factor)) +
+  geom_errorbar(aes(xmin = conf.low_scale_factor, xmax = conf.high_scale_factor)) +
+  theme_minimal() +
+  scale_color_manual(values = cbbPalette) +
+  coord_cartesian(xlim = c(0.5, 1.5)) +
+  geom_vline(xintercept = 1, alpha = 0.5) +
+  labs(y = NULL, x = glue("Scale Factor from {round(bayes_model_coefs_trans[[2]]$estimate_time_to_incident[1],
+                                                      digits = 1)} Minutes"),
+       color = "During Covid")
+
+bayes_model_coefs_trans[[4]] %>%
+  mutate(after_covid = str_detect(term, "(after_covidTRUE.*)")) %>%
+  mutate(term = str_replace(term, "after_covidTRUE:", "")) %>%
+  ggplot(aes(y = term, color = after_covid)) +
+  geom_point(aes(x = estimate_scale_factor)) +
+  geom_errorbar(aes(xmin = conf.low_scale_factor, xmax = conf.high_scale_factor)) +
+  theme_minimal() +
+  scale_color_manual(values = cbbPalette) +
+  coord_cartesian(xlim = c(0.5, 1.5)) +
+  geom_vline(xintercept = 1, alpha = 0.5) +
+  labs(y = NULL, x = glue("Scale Factor from {round(bayes_model_coefs_trans[[4]]$estimate_time_to_incident[1],
+                                                      digits = 1)} Minutes"),
+       color = "During Covid")
+
+```
+
+
+### Neighborhood Coefficients
+
+```{r}
+neighborhood_coefs <- map(bayes_model_coefs_trans, ~.x %>% 
+    filter(str_detect(term, r"(b\[)")) %>% 
+    mutate(NAME = str_extract(term, r"((?<=NAME:).*(?=\]))")) %>% 
+    mutate(NAME = str_replace_all(NAME, "_", " ")))[3:4]
+
+neighborhood_coefs_sp <- map(neighborhood_coefs, ~left_join(prepared_data_sp %>% 
+  group_by(NAME) %>% 
+  slice_head(1) %>% 
+  ungroup(), .x, by = "NAME"))
+
+neighborhood_coefs_sp$neighbor_model_bayes_no_interact %>% 
+  ggplot() +
+  geom_sf(aes(fill = estimate_scale_factor))
+```
+
+
+
+## Technical Examination
+
+I will only be examining bayesian fits because they are almost identical to the frequentist fits. 
+
+First we'll look at the loo statistics
+
+```{r}
+(loo_list <- map(bayes_models, loo))
+loo_compare(loo_list)
+```
+
+Looks like the neighborhood level models do a lot! better, and they all have reasonable specifications
+
+```{r}
+map(bayes_models, pp_check)
+```
+
+The capture the majority of model variation, the remaining portion is likely due to it not being truly normal. Maybe a proper spatial mixed effects model could solve that?
+
+Lets now check the residuals on a map:
+
+```{r}
+bayes_residuals <- map(bayes_models, residuals)
+
+augmented_data <- prepared_data_sp %>% 
+  mutate(resid_basic_no = bayes_residuals$basic_model_bayes_no_interact,
+         resid_basic_yes = bayes_residuals$basic_model_bayes_yes_interact,
+         resid_neighbor_no = bayes_residuals$neighbor_model_bayes_no_interact,
+         resid_neighbor_yes = bayes_residuals$neighbor_model_bayes_yes_interact)
+```
+
+Basic Linear Model with No Interaction Term
+
+```{r}
+augmented_data %>% 
+  ggplot() +
+  stat_summary_hex(aes(x = scene_gps_longitude, 
+                       y = scene_gps_latitude,
+                       z = resid_basic_no)) +
+  geom_sf(fill = NA,
+          color = "#444444",
+          alpha = 0.3,
+          size = 0.1) +
+  scale_fill_viridis() +
+  theme_minimal() +
+  labs(x = "Longitude", 
+       y = "Latitude",
+       fill = "Mean Residuals",
+       title = "Basic Linear Model, No Interactions") 
+```
+
+
+Basic Linear Model with Interaction Term
+
+```{r}
+augmented_data %>% 
+  ggplot() +
+  stat_summary_hex(aes(x = scene_gps_longitude, 
+                       y = scene_gps_latitude,
+                       z = resid_basic_yes)) +
+  geom_sf(fill = NA,
+          color = "#444444",
+          alpha = 0.3,
+          size = 0.1) +
+  scale_fill_viridis() +
+  theme_minimal() +
+  labs(x = "Longitude", 
+       y = "Latitude",
+       fill = "Mean Residuals",
+       title = "Basic Linear Model, Interactions") 
+```
+
+Neighborhood Model with No Interaction Term
+
+```{r}
+augmented_data %>% 
+  ggplot() +
+  stat_summary_hex(aes(x = scene_gps_longitude, 
+                       y = scene_gps_latitude,
+                       z = resid_neighbor_no)) +
+  geom_sf(fill = NA,
+          color = "#444444",
+          alpha = 0.3,
+          size = 0.1) +
+  scale_fill_viridis() +
+  theme_minimal() +
+  labs(x = "Longitude", 
+       y = "Latitude",
+       fill = "Mean Residuals",
+       title = "Neighborhood Model, No Interactions") 
+```
+
+Neighborhood Model with Interaction Term
+
+```{r}
+augmented_data %>% 
+  ggplot() +
+  stat_summary_hex(aes(x = scene_gps_longitude, 
+                       y = scene_gps_latitude,
+                       z = resid_neighbor_yes)) +
+  geom_sf(fill = NA,
+          color = "#444444",
+          alpha = 0.3,
+          size = 0.1) +
+  scale_fill_viridis() +
+  theme_minimal() +
+  labs(x = "Longitude", 
+       y = "Latitude",
+       fill = "Mean Residuals",
+       title = "Neighborhood Model, Interactions") 
+```
+

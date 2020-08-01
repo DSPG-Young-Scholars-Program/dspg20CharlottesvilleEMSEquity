@@ -170,3 +170,4 @@ impressions_categorized_imputed <- impressions_categorized_full %>%
 #   count() %>%
 #   ungroup() %>%
 #   mutate(freq = n / sum(n))
+

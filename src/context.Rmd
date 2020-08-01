@@ -1,0 +1,56 @@
+---
+title: "Context"
+author: "Saimun"
+date: "7/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+```
+
+## COVID-19
+
+COVID-19 has affected all parts of life and we are interested in how it has impacted Emergency Medical Services in Charlottesville and the larger Albermarle County. Counterintuitively, we can observe that there is a significant drop off in call volume to emergency medical services. This may be caused by people staying at home more and thus there being less emergency incidents. For example, we can see for the monthly number of incidents for the top 7 complaints dropping off sharply. 
+
+[insert call volume drop plotly]
+![an image caption Source: Ultimate Funny Dog Videos Compilation 2013.](output/week3/silly-dog.png)
+
+
+
+One thing that is interesting to note is that the call volume for alcohol related incidents has almsot dissappeared entirely. Again, this is likely because people are staying home and the bars were closed. 
+
+[insert that]
+
+We also are interested in understanding where call volume is dropping. Discrepencies may signal other needs in the community that aren't being addressed. 
+
+[insert ellen's map of change]
+
+## Demographics
+
+In order to get a sense of what our data population looks like, it's helpful to create some plots and maps. This first map depicts the racial breakdown of each county and we can see that ----- people reside primarily near -----. 
+
+[insert]
+
+Breaking down by gender we see different distribution in ages of patients. Both appear bimodal and for both, there appears to be a high density of patients who are in their 20s. This is likely because of the high college student population. For males, there the next high density bumb occurs around patients of 55 years of age while for females, the 2nd high density bump is concentrated at 80. For females, the median age is slightly higher 
+[insert]
+
+Now if we also breakdown the incidents by race, we see that most of the patients are White or Black and in these two populations there is a bump in patients above 50 years old. In comparison, there aren't many patients who are of other racial identities. In both Asians and Hispanics we see a greater density of patients who are in their 20s, these incidents might be contributed by students attending UVA.
+[insert]
+
+## Vital Stats
+
+We had access to mortality data and were interested in how the deaths broke down. We see that the most common cause of death is a circulatory disease followed by neoplasms and extneral causes of morbidity. Racially, the dataset is primarily white or race was not recorded. Black patients make up the next highest group of people in the dataset. All other races combined represent less than 100 deaths in this dataset.
+
+[insert barplots]
+
+We see that overall, mortalities per month hasn't changed thus far. 
+[insert finns thing]
+Of course, what is contributing to these mortalities might've changed. If we look at changes to the relative frequencies of ICD 10 Codes for mortality we see a sharp increase in deaths were the category is not recorded. 
+
+[insert]
+
+When we overlay the racial distribution over the categories we note that of the deaths where race is recorded, it doesn't appear that the racial distribution is even across the categories. Calculating the relative risk of death by each category for black patients versus white patients shows that black patients are more than 2.5 times as likely to die from diseases of the blood and twice as likely to die from complications arising during the perinatal period. 
+
+[insert graphs]

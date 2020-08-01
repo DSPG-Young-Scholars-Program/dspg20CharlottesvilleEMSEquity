@@ -1,0 +1,55 @@
+---
+title: "lookin_@_new_data"
+author: "Saimun"
+date: "7/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(data.table)
+library(naniar)
+library(stringr)
+library(viridis)
+library(here)
+
+source(here::here("src","Profiling","joining_albemarle_charlottesville.R"))
+```
+
+```{r}
+find_age_mismatch = function(df){
+  df[which(is.na(df$patient_age_range_in_years)==!is.na(df$patient_age)),]
+}
+
+find_time_mismatch = function(df){
+  df[which(as.numeric(df$incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes)>as.numeric(df$total_unit_response_time)),]
+}
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+str(new_ems_data)
+# 834 incidents w missing gps coordinates, 
+colSums(is.na(new_ems_data))
+age = find_age_mismatch(new_ems_data)
+View(age)
+time = find_time_mismatch(new_ems_data)
+View(time)
+
+#seem pretty normalother than incident number being misisng,  only 97 of them.
+View(new_ems_data[which(is.na(new_ems_data$response_incident_number)),])
+
+#generally if gender is missing, then race is as well
+View(new_ems_data[which(is.na(new_ems_data$patient_race_list) & is.na(new_ems_data$patient_gender)),])
+
+
+
+
+```

@@ -117,25 +117,7 @@ synth_pop_latlong <- attach_latlong(synth_pop, method="uniform", state_names = "
 
 ## ----- Run IPF iteratively ----- ##
 
-# K <- 10
-# 
-# results <- list()
-# 
-# for (i in 1:K) {
-#   
-#   ## Sample microdata based on the marginal counts for each unique set of variable combinations
-#   synth_pop <- resample_ipf(ipf_counts, inputs, microdata, microdata_category, micro_cols = c("PUMA", "PWGTP"))
-#   
-#   ## Attach latitude and longitude to the synthetic population
-#   synth_pop_latlong <- attach_latlong(synth_pop, method="uniform", state_names = "VA", county_names = c("Charlottesville", "Albemarle"), year = 2018)
-#   
-#   results[[i]] <- synth_pop_latlong
-#   
-# }
+## This will require modifications to the functions in 03_ipf_functions.R
 
-## How to get different ACS marginal values for each run, though?
-
-
-
-
-
+## I made one attempt, but wasn't able to get reasonable results, and given the timeframe for this project just had to rever to the basic
+## ACS estimates. A more solid attempt could be made to integrate those functions into a sampling workflow, though.

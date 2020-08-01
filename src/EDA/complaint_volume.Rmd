@@ -4,7 +4,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, fig.height = 5, fit.width = 12)
 ```
 
 ```{r prep, include = FALSE}
@@ -20,7 +20,7 @@ library(gghighlight)
 ## Read in data
 #source(here("src", "Profiling", "joining_albemarle_charlottesville.R"))
 #new_ems_data <- readr::read_csv(here("data", "working", "deduplicated_data_wip.csv"))
-new_ems_data <- readr::read_csv(here("data", "working", "ems_clean_data.csv"))
+new_ems_data <- readr::read_csv(here("data", "final", "ems_clean_data.csv"))
 
 # new_ems_data <- new_ems_data %>% 
 #   mutate(incident_date = ymd(incident_date), 
@@ -66,8 +66,6 @@ plot_theme <- theme(plot.title = element_text(hjust = 0.5, size = 24),
 ```
 
 #### Here is a quick exploration of the temporal trends in call volume when grouped by complaint type. 
-
-##### _Note that this is currently using an older version of the data which is not fully cleaned yet! All interpretations should be taken with extreme caution._
 
 We start with a function just to make it easier to manually select different sets of complaints to view.
 
@@ -148,8 +146,8 @@ ggplot(plot_data) +
   #facet_wrap(~situation_provider_primary_impression_code_and_description, ncol = 1) +
   labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions\n") +
   theme_minimal() +
-  plot_theme #+
-  #theme(legend.position = "none")
+  #plot_theme #+
+  theme(legend.position = "none")
 
 ## Plot temporal trends in volume
 ggplot(plot_data) + 
@@ -160,8 +158,8 @@ ggplot(plot_data) +
   #facet_wrap(~situation_provider_primary_impression_code_and_description, ncol = 1) +
   labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions\n") +
   theme_minimal() +
-  plot_theme #+
-  #theme(legend.position = "none")
+  #plot_theme #+
+  theme(legend.position = "none")
 
 # ggsave(here("output", "top_impression_volume_prop.png"), width = 15, height = 12)
 ```
@@ -197,8 +195,8 @@ ggplot(plot_data) +
   scale_colour_manual(values = c("infectious" = "#39a6d1", "respiratory" = "#c95d1b")) +
   labs(x = "Date", y = "Monthly Incidents", color = "Impression Category", title = "Call Volume by Impression") +
   #facet_grid(~primary_impression_category) +
-  theme_minimal() +
-  plot_theme
+  theme_minimal() #+
+  #plot_theme
 
 #ggsave(here("output", "impression_category_volume.png"), width = 10, height = 6)
 
@@ -241,6 +239,8 @@ plt_highlight <- ggplotly(plt, tooltip = c("text")) %>%
   layout(showlegend = FALSE)
 
 plt_highlight
+htmlwidgets::saveWidget(as_widget(plt_highlight), here::here('output',"call_vol.html"))
+
 ```
 
 ```{r}
@@ -362,8 +362,8 @@ new_ems_data %>%
   scale_fill_manual(values = cbPalette) +
   labs(title = "Average Total Response Times by Month: Charlottesville", y = "Mean Response Time (min)", x = "Date", color = "Complaint") +
   guides(color = guide_legend(override.aes = list(alpha = 1))) +
-  theme_minimal() +
-  plot_theme
+  theme_minimal() #+
+  #plot_theme
 
 # ggsave(here("output", "response_times_by_month_top_complaints.png"), height = 10, width = 15)
 ```
@@ -399,8 +399,8 @@ ggplot(plot_data) +
   scale_color_brewer(palette = "YlGnBu") +
   #facet_wrap(~age_breaks, ncol = 1) +
   #labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions: Charlottesville\n") +
-  theme_minimal() +
-  plot_theme
+  theme_minimal() #+
+  #plot_theme
 
 
 
