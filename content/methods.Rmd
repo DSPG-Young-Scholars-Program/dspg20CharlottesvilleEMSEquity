@@ -148,6 +148,8 @@ After multiple conversations with medical professionals, we decided to focus on 
 Because information about the presence of these symptoms could be encoded in various places in the dataset (for instance, in EMS provider impressions, patient complaints, vital sign results, etc.), we consolidated the results from multiple variables as we searched for these symptoms. However, there were a variety of ways many of these symptoms could be recorded. For instance, shortness of breath could be recorded as "difficulty breathing", "shortness of breath", "sob", etc. 
 
 ```{r}
+library(stringr)
+
 indicator_summary <- readr::read_csv(here::here("data", "working", "covid_indicator_table.csv"))
 
 knitr::kable(indicator_summary, "html", caption = "Summary of Symptoms Used For COVID-19 Indicator") %>%
