@@ -1,0 +1,180 @@
+---
+title: "Context"
+author: "Saimun"
+date: "7/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(knitr)
+source(here('src','Mapping','demo_maps.R'))
+```
+
+## COVID-19
+
+COVID-19 has affected all parts of life and we are interested in how it has impacted Emergency Medical Services in Charlottesville and the larger Albermarle County. Counterintuitively, we can observe that there is a significant drop off in call volume to emergency medical services. This may be caused by people staying at home more and thus there being less emergency incidents. For example, we can see for the monthly number of incidents for the top 10 complaints dropping off sharply. 
+
+```{r , echo = F,  out.width = '100%'}
+include_graphics(here("output", "top_impression_volume_2.png"))
+```
+
+
+One thing that is interesting to note is that the call volume for alcohol related incidents has almsot dissappeared entirely. Again, this is likely because people are staying home and the bars were closed. 
+
+[insert that] 
+[where is that]
+
+We also are interested in understanding where call volume is dropping. Discrepencies may signal other needs in the community that aren't being addressed. 
+
+[insert ellen's map of change]
+[where is that]
+
+## Demographics
+
+In order to get a sense of what our data population looks like, it's helpful to create some plots and maps. This first map depicts the racial breakdown of each county and we can see that ----- people reside primarily near -----. In terms of income, ------, . Lastly, if we look at poverty rates throughout the area, we see ----. 
+
+[insert ellen's demo maps]
+```{r, echo=FALSE, out.width="100%", include=FALSE}
+## Convenience function to map race characteristics
+map_race <- function(data, border_data, fill_opacity = 0.6, 
+                     border_color = "#4D4D4D", smoothing = 0.5, 
+                     fill_pal = colorBin("YlOrRd", c(0, 100))) {
+  
+  ## Leaflet map of race distribution by block group
+  leaflet(data = data) %>%
+    addProviderTiles("CartoDB.Positron") %>%
+    addMapPane("polygons", zIndex = 400) %>%
+    addMapPane("borders", zIndex = 410) %>%
+    addPolygons(
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_white),
+      group = "White",
+      options = pathOptions(pane = "polygons")
+    ) %>% 
+    addPolygons(
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_black),
+      group = "Black",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_asian),
+      group = "Asian",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_native_am),
+      group = "American Indian/Alaskan Native",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_pacific_isl),
+      group = "Pacific Islander",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_other),
+      group = "Other (single race)",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_multi),
+      group = "More than one",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolylines(
+      data = border_data,
+      color = "black",
+      weight = 2,
+      opacity = 1,
+      options = pathOptions(pane = "borders")
+    ) %>%
+    addLegend(pal = fill_pal,
+              values = c(0,100),
+              position = "bottomright",
+              title = "Percentage of Population<br>of Selected Race",
+              opacity = 0.7) %>%
+    addLayersControl(baseGroups = c("White", "Black", "Asian", "American Indian/Alaskan Native", "Pacific Islander", "Other (single race)", "More than one"),
+                     options = layersControlOptions(collapsed = FALSE))
+}
+
+## Maps for county and city individually
+# cville_race_map <- map_race(cville_race, cville_border) 
+# alb_race_map <- map_race(alb_race, cville_border)
+
+## Combined data for county and city
+comb_race_data <- rbind(cville_race, alb_race)
+
+## Map of race breakdown
+comb_race_map <- map_race(comb_race_data, cville_border)
+comb_race_map
+```
+
+Breaking down by gender we see different distribution in ages of patients. Both appear bimodal and for both, there appears to be a high density of patients who are in their 20s. This is likely because of the high college student population. For males, there the next high density bumb occurs around patients of 55 years of age while for females, the 2nd high density bump is concentrated at 80. For females, the median age is slightly higher 
+
+```{r , echo = F,  out.width = '100%'}
+include_graphics(here("output", "Violin_Plot_of_Age_Distribution_of_Gender.png"))
+```
+
+Now if we also breakdown the incidents by race, we see that most of the patients are White or Black and in these two populations there is a bump in patients above 50 years old. In comparison, there aren't many patients who are of other racial identities. In both Asians and Hispanics we see a greater density of patients who are in their 20s, these incidents might be contributed by students attending UVA.
+
+```{r , echo = F,  out.width = '100%'}
+include_graphics(here("output", "Violin_Plot_of_Age_Distribution_of_Races.png"))
+```
+
+## Vital Stats
+
+We had access to mortality data and were interested in how the deaths broke down. We see that the most common cause of death is a circulatory disease followed by neoplasms and extneral causes of morbidity. Racially, the dataset is primarily white or race was not recorded. Black patients make up the next highest group of people in the dataset. All other races combined represent less than 100 deaths in this dataset.
+
+```{r , echo = F,  out.width = '100%'}
+include_graphics(here("output", "Number of Deaths by Race.png"))
+include_graphics(here("output", "Number_of_Deaths_by_ICD-10_Code.png"))
+```
+
+We see that overall, mortalities per month hasn't changed thus far. 
+
+```{r, echo = F,  out.width = '100%'}
+include_graphics(here("output", "ICD10_Relative_Freq.png"))
+```
+
+Of course, what is contributing to these mortalities might've changed. If we look at changes to the relative frequencies of ICD 10 Codes for mortality we see a sharp increase in deaths were the category is not recorded. 
+
+```{r, echo = F,  out.width = '100%'}
+include_graphics(here("output", "mortality.png"))
+```
+
+When we overlay the racial distribution over the categories we note that of the deaths where race is recorded, it doesn't appear that the racial distribution is even across the categories. Calculating the relative risk of death by each category for black patients versus white patients shows that black patients are more than 2.5 times as likely to die from diseases of the blood and twice as likely to die from complications arising during the perinatal period. 
+
+```{r, echo = F,  out.width = '100%'}
+include_graphics(here("output", "Death_by_race_prop.png"))
+include_graphics(here("output", "rel_risk.png"))
+```
+
