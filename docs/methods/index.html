@@ -278,12 +278,12 @@ h3, h4 {
 <p>We began by using a linear model. Because the distribution of response times was heavily right skewed, we log transformed the data prior to fitting. Our model was as follows:</p>
 <p><span class="math display">\[
 \begin{align*}
-log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{iid}\sim N(\alpha &amp;+ \beta_1 (\mbox{During COVID-19})_i  +
+log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{iid}\sim N(\alpha &amp;+ \beta_1 (\mbox{COVID era})_i  +
 \boldsymbol{\beta_2}^T\boldsymbol{(\mbox{Demographics})_i} +
 \boldsymbol{\beta_3}^T\boldsymbol{(\mbox{Symptoms})_i} +
 \boldsymbol{\beta_4}^T\boldsymbol{(\mbox{Vehicle})_i} + 
 \boldsymbol{\beta_5}^T\boldsymbol{(\mbox{Time of Day})_i} \\
-&amp;+(\mbox{During COVID-19})_i* (
+&amp;+(\mbox{COVID era})_i* (
 \boldsymbol{\beta_6}^T\boldsymbol{(\mbox{Demographics})_i} +
 \boldsymbol{\beta_7}^T\boldsymbol{(\mbox{Symptoms})_i} + 
 \boldsymbol{\beta_8}^T\boldsymbol{(\mbox{Vehicle})_i} + 
@@ -294,7 +294,7 @@ log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{ii
 \sigma \sim Exp(2.2)
 \]</span></p>
 <p><em>I think we could stand to mention why these particular priors were selected</em></p>
-<p>Where &quot;During COVID-19&quot; is an indicator variable with value 1 for incidents after March 15th, 2020 and 0 otherwise. Note that each bolded coefficient actually represents a set of coefficients that accounts for the multiple categorical levels within each variable type.</p>
+<p>Where COVID era is an indicator variable with value 1 for incidents after March 15th, 2020 and 0 otherwise. Note that each bolded coefficient actually represents a set of coefficients that accounts for the multiple categorical levels within each variable type.</p>
 <p>We included an interaction term for &quot;During COVID-19&quot; so we could assess whether the effects on response times of any of the other factors included in the model have changed with the advent of the COVID-19 pandemic.</p>
 <p>This model performed reasonably well, but didn't control for either spatial effects or travel time to location. <em>(The way this is written makes me wonder why we even ran the first model at all – should have a very brief explanation)</em></p>
 <p>In an attempt to control for these variables, we fit the following multilevel model:</p>

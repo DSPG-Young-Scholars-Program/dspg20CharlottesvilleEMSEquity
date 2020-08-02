@@ -7,6 +7,10 @@
   </url>
   
   <url>
+    <loc>/findings/context/</loc>
+  </url>
+  
+  <url>
     <loc>/findings/response-time-modeling/</loc>
   </url>
   
@@ -32,10 +36,6 @@
   
   <url>
     <loc>/categories/</loc>
-  </url>
-  
-  <url>
-    <loc>/findings/context/</loc>
   </url>
   
   <url>
