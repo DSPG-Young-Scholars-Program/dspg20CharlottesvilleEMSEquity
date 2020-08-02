@@ -11,6 +11,10 @@
   </url>
   
   <url>
+    <loc>/findings/covid-indicator/</loc>
+  </url>
+  
+  <url>
     <loc>/methods/</loc>
   </url>
   
@@ -28,6 +32,10 @@
   
   <url>
     <loc>/categories/</loc>
+  </url>
+  
+  <url>
+    <loc>/findings/context/</loc>
   </url>
   
   <url>

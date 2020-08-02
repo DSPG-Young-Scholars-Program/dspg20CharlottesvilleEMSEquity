@@ -2,6 +2,14 @@
 output: html_document
 ---
 
+```{r, echo = FALSE}
+library(kableExtra)
+
+options(knitr.kable.NA = "--")
+
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.width = 15, fig.height = 10)
+```
+
 ```{css, echo = FALSE}
 h3, h4 {
   text-align: center
@@ -13,26 +21,23 @@ h3, h4 {
 This project relied primarily on a dataset of EMS incidents in Charlottesville City and Albemarle County that spanned from the December 2016 to June 2020. These data consisted of numerous variables regularly recorded by EMS providers when responding to an incident. The variables available can be broken down into three rough categories:
 
 * Operations
-    * These variables include details about the incident itself, and include things like
-        * Incident date and time
-        * Unit and crew dispatched
-        * Scene location and type
-        * Response time to incident
-        * Hospital patient was delivered to
+    * Incident date and time
+    * Unit and crew dispatched
+    * Scene location and type
+    * Response time to incident
+    * Hospital patient was delivered to
 
 * Medical
-    * These variables include details about potential diagnoses and medical care provided to the patient at the scene, like
-        * Patient symptoms (based on provider's impression and/or patient's reported complaints)
-        * Vital signs (temperature, pulse, etc.)
-        * Medications provided
+    * Patient symptoms (based on provider's impression and/or patient's reported complaints)
+    * Vital signs (temperature, pulse, etc.)
+    * Medications provided
 
 * Patient Characteristics
-    * These include demographic charactersitics of the patient:
-        * Age
-        * Race
-        * Sex
-        * Medical history
-        
+    * Age
+    * Race
+    * Sex
+    * Medical history
+
 In addition to this EMS dataset, we also used data from the American Community Survey to develop an understanding of the baseline demographic patterns in the region and mortality data from the Virginia Department of Health in an attempt to link any observed changes in EMS delivery to overall trends in COVID-19-related mortality.
 
 <br>
@@ -47,15 +52,13 @@ Further complicating things is the fact that in some cases, multiple units may r
 
 Avoiding both the possibility of removing legitimate entries from the dataset while also identifying duplicated patients proved to be a challenge. Ultimately, we needed to reduce the raw dataset to two clean datasets: one where each observation is a single patient, and one where each observation is a single unit (either may be appropriate depending on the research question being explored).
 
-By cross-referencing demographic characteristics, medical numbers (where they existed), and operations variables across rows, we were ultimately able to identify approximately ~HOW MANY duplicate patients in the dataset and remove them. One key takeaway from this process is that the development of systems to better link EMS records when multiple units are involved would be valuable tool for more extensive analysis of EMS data in general.
+By cross-referencing demographic characteristics, medical numbers (where they existed), and operations variables across rows, we were ultimately able to identify approximately _HOW MANY_ duplicate patients in the dataset and remove them. One key takeaway from this process is that the development of systems to better link EMS records when multiple units are involved would be valuable tool for more extensive analysis of EMS data in general.
 
 <br>
 
 ### Response Time Modeling
 
-Of key interest to the Charlottesville and Albemarle EMS teams was the potential that services were being distributed unequally across demographic and socioeconomic subpopulations.
-
-By their very nature, the incidents that EMS providers encounter are highly time-sensitive. With this in mind, we attempted to assess whether response times varied across demographic groups after accounting for the effects of other operational factors. Even without intent on the part of service providers, longstanding systemic racism could still reveal itself in response times: for instance, decades-old practices of redlining and targeted infrastructure development may serve to increase accessibility to certain areas within the response region, and these areas may be highly correlated with race, age, and socioeconomic factors. Additionally, we were especially interested to determine how any observed differences may have changed since the advent of the COVID-19 pandemic.
+Of key interest to the Charlottesville and Albemarle EMS teams was the potential that services were being distributed unequally across demographic and socioeconomic subpopulations. By their very nature, the incidents that EMS providers encounter are highly time-sensitive. With this in mind, we attempted to assess whether response times varied across demographic groups after accounting for the effects of other operational factors. Even without intent on the part of service providers, longstanding systemic racism could still reveal itself in response times: for instance, decades-old practices of redlining and targeted infrastructure development may serve to increase accessibility to certain areas within the response region, and these areas may be highly correlated with race, age, and socioeconomic factors. Additionally, we were especially interested to determine how any observed differences may have changed since the advent of the COVID-19 pandemic.
 
 <br>
 
@@ -81,12 +84,12 @@ We began by using a linear model. Because the distribution of response times was
 
 \[
 \begin{align*}
-log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{iid}\sim N(\alpha &+ \beta_1 (\mbox{During COVID-19})_i  +
+log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{iid}\sim N(\alpha &+ \beta_1 (\mbox{COVID era})_i  +
 \boldsymbol{\beta_2}^T\boldsymbol{(\mbox{Demographics})_i} +
 \boldsymbol{\beta_3}^T\boldsymbol{(\mbox{Symptoms})_i} +
 \boldsymbol{\beta_4}^T\boldsymbol{(\mbox{Vehicle})_i} + 
 \boldsymbol{\beta_5}^T\boldsymbol{(\mbox{Time of Day})_i} \\
-&+(\mbox{During COVID-19})_i* (
+&+(\mbox{COVID era})_i* (
 \boldsymbol{\beta_6}^T\boldsymbol{(\mbox{Demographics})_i} +
 \boldsymbol{\beta_7}^T\boldsymbol{(\mbox{Symptoms})_i} + 
 \boldsymbol{\beta_8}^T\boldsymbol{(\mbox{Vehicle})_i} + 
@@ -99,7 +102,7 @@ log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{ii
 
 _I think we could stand to mention why these particular priors were selected_
 
-Where "During COVID-19" is an indicator variable with value 1 for incidents after March 15th, 2020 and 0 otherwise. Note that each bolded coefficient actually represents a set of coefficients that accounts for the multiple categorical levels within each variable type.
+Where COVID era is an indicator variable with value 1 for incidents after March 15th, 2020 and 0 otherwise. Note that each bolded coefficient actually represents a set of coefficients that accounts for the multiple categorical levels within each variable type.
 
 We included an interaction term for "During COVID-19" so we could assess whether the effects on response times of any of the other factors included in the model have changed with the advent of the COVID-19 pandemic.
 
@@ -124,9 +127,38 @@ Both of these models were fit using Bayesian estimation with the R package rsta
 
 <br>
 
-### COVID-19 Indicator Development
+### COVID-19 Indicator
 
+Medical knowledge of COVID-19 has been rapidly evolving throughout the course of the pandemic. Initially, healthcare providers focused on three primary symptoms: cough, fever, and shortness of breath, but over time other symptoms, like diarrhea and loss of taste or smell have also become associated with the virus. Furthermore, a large number of people may exhibit few to no symptoms at all, which is one of the primary challenges to containing the virus. Thus, while few of the provider impressions in the EMS dataset directly refer to COVID-19, it remains possible that far more cases exist in the dataset than may be explicitly identified. Because of the numerous symptoms that may be associated with COVID-19, though, we needed to produce a more concise indicator that would give a sense of whether COVID-19 symptoms were present for a given patient before we could explore potential trends.
 
+After multiple conversations with medical professionals, we decided to focus on identifying the following symptoms as we developed an indicator for COVID-19:
+
+* Cough
+* Fever/Chills
+* Shortness of breath
+* Myalgia
+* Fatigue
+* Headache
+* Diarrhea
+* Nausea/Vomiting
+* Hypoxemia (with or without response to oxygen)
+* Cyanosis
+* Stroke/cardiac arrest (in young people)
+
+Because information about the presence of these symptoms could be encoded in various places in the dataset (for instance, in EMS provider impressions, patient complaints, vital sign results, etc.), we consolidated the results from multiple variables as we searched for these symptoms. However, there were a variety of ways many of these symptoms could be recorded. For instance, shortness of breath could be recorded as "difficulty breathing", "shortness of breath", "sob", etc. 
+
+```{r}
+indicator_summary <- readr::read_csv(here::here("data", "working", "covid_indicator_table.csv"))
+
+knitr::kable(indicator_summary, "html", caption = "Summary of Symptoms Used For COVID-19 Indicator") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered", "hover"), full_width = FALSE) %>%
+  column_spec(1, bold = T) %>%
+  column_spec(3, width = "20em") %>%
+  column_spec(4, width = "30em") %>%
+  footnote(symbol = "Because these medications are more generally used (and not specifically targeted toward a potential COVID symptom), we include them only as a catch-all: they do not contribute to the total symptom count if cough or shortness of breath are already listed in the impression/complaint columns.")
+```
+
+At this point, we had a record of the frequency that these symptoms appeard in the dataset, and could use our combined indicator to assess trends in these symptoms in Charlottesville and Albemarle.
 
 
 

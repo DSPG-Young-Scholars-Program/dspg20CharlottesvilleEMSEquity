@@ -33,13 +33,23 @@ Measures of Model Fit We assessed the specification of our model using a posteri
     </item>
     
     <item>
+      <title>COVID-19 Symptoms</title>
+      <link>/findings/covid-indicator/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/findings/covid-indicator/</guid>
+      <description>Background This data was last updated on June 9th, 2020 at which point there were X cases and Y deaths in the city of Charlottesville and X cases and Y deaths in Albermarle County.
+ Creating the Indicator  Mapping The map below shows the COVID-like incident rates before and after March 15th, 2020 by neighborhood in the City of Charlottesville.</description>
+    </item>
+    
+    <item>
       <title></title>
       <link>/methods/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>/methods/</guid>
       <description>h3, h4 { text-align: center }  Data Sources This project relied primarily on a dataset of EMS incidents in Charlottesville City and Albemarle County that spanned from the December 2016 to June 2020. These data consisted of numerous variables regularly recorded by EMS providers when responding to an incident. The variables available can be broken down into three rough categories:
- Operations  These variables include details about the incident itself, and include things like  Incident date and time Unit and crew dispatched Scene location and type Response time to incident Hospital patient was delivered to   Medical  These variables include details about potential diagnoses and medical care provided to the patient at the scene, like  Patient symptoms (based on provider&#39;s impression and/or patient&#39;s reported complaints) Vital signs (temperature, pulse, etc.</description>
+ Operations  Incident date and time Unit and crew dispatched Scene location and type Response time to incident Hospital patient was delivered to  Medical  Patient symptoms (based on provider&#39;s impression and/or patient&#39;s reported complaints) Vital signs (temperature, pulse, etc.</description>
     </item>
     
     <item>
@@ -59,6 +69,15 @@ Background In recent years, public health efforts have begun to focus increasing
       
       <guid>/team/</guid>
       <description>.justify { text-align: justify } { box-sizing: border-box; } .column { float: left; width: 25%; } .row:after { content: &#34;&#34;; display: table; clear: both; }  UVA Data Science for the Public Good Program The Data Science for the Public Good (DSPG) Young Scholars program is a summer immersive program held at the Biocomplexity Institute’s Social and Decision Analytics division (SDAD). In its seventh year, the program engages students from across the country to work together on projects that address state, federal, and local government challenges around critical social issues relevant in the world today.</description>
+    </item>
+    
+    <item>
+      <title>Context</title>
+      <link>/findings/context/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/findings/context/</guid>
+      <description>COVID-19 COVID-19 has affected all parts of life and we are interested in how it has impacted Emergency Medical Services in Charlottesville and the larger Albermarle County. Counterintuitively, we can observe that there is a significant drop off in call volume to emergency medical services. This may be caused by people staying at home more and thus there being less emergency incidents.</description>
     </item>
     
   </channel>

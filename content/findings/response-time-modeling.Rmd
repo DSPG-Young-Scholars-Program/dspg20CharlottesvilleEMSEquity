@@ -1,8 +1,8 @@
 ---
 title: "Response Time Analysis"
-description: "How has COVID-19 affected EMS response times?"
+description: "How do EMS response times vary throughout the region?"
 tags: ["R", "Bayesian", "Geospatial"]
-weight: 2
+weight: 3
 draft: false
 output: html_document
 ---
