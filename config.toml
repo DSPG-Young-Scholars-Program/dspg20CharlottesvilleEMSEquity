@@ -13,7 +13,7 @@ publishDir = "docs"
 
 [params]
     author = "UVA Biocomplexity Institute"
-    description = "2020 DSPG Charlottesville Fire/EMS"
+    description = "The Impact of COVID-19 on the Equitable Delivery of Emergency Medical Services"
     logo = "favicon/uva-dspg-logo.jpg"
     githubUsername = "uva-bi-sdad"
     accent = "#232D4B" # dark colors do best

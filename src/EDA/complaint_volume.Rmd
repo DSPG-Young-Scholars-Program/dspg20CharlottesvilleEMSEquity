@@ -239,6 +239,8 @@ plt_highlight <- ggplotly(plt, tooltip = c("text")) %>%
   layout(showlegend = FALSE)
 
 plt_highlight
+htmlwidgets::saveWidget(as_widget(plt_highlight), here::here('output',"call_vol.html"))
+
 ```
 
 ```{r}

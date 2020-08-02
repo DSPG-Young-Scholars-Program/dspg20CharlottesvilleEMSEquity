@@ -1,0 +1,205 @@
+---
+title: "COVID-19 Symptoms"
+description: "Can we use EMS data to identify COVID-19 trends?"
+tags: ["R", "Geospatial"]
+weight: 4
+draft: false
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# load libraries
+library(tidycensus)
+library(tidyr)
+library(sf)
+library(leaflet)
+library(glue)
+library(lubridate)
+library(dplyr)
+library(stringr)
+library(purrr)
+library(leaflet.mapboxgl)
+
+# load in data
+source(here::here("src", "Profiling", "create_covid_indicator.R"));
+
+options(mapbox.accessToken = Sys.getenv("MAPBOX_TOKEN"))
+```
+
+```{r, include=FALSE}
+# setting display defaults
+theme_set(theme_minimal() +
+            theme(plot.title = element_text(hjust = 0.5, color = "gray10", size = 24),
+                  plot.subtitle = element_text(hjust = 0.5, color = "gray30", face = "italic", size = 20),
+                  axis.title = element_text(size = 20, color = "gray10"),
+                  axis.text = element_text(size = 18, color = "gray30"),
+                  strip.text = element_text(size = 22, color = "gray30"),
+                  panel.spacing = unit(4, "lines"),
+                  legend.key.size = unit(3, "line"),
+                  legend.text = element_text(size = 16, color = "gray30"),
+                  legend.title = element_text(size = 22, color = "gray10")))
+```
+
+## Background
+
+While we were obviously interested in identifying patterns in COVID-19 symptoms across demographic groups, time, and space, this portion of the project was also quite exploratory, as it was unclear how difficult it might be to isolate potential COVID-19 cases in a large EMS dataset.
+
+According to the Johns Hopkins Center for Systems Science and Engineering, as of June 9, 2020 (the most current date in our data), there were 258 confirmed cases and 8 deaths in Albemarle County, and 141 confirmed cases and 3 deaths in Charlottesville City.[^JHU] While experts expect that actual case counts may be as much as 10 times higher than the confirmed case counts.[^NYT] However, it is unclear whether this figure is reprsentative of the most severe cases, which are those most likely to appear in the EMS dataset. Given the uncertainty surrounding the total number of cases in the area as well as the proportion of cases that may be present in our dataset, it was unclear how effective an analysis of COVID-symptoms would be. Still, we were curious to see whether any trends would emerge, and in doing so hoped to learn about the potential for future use of EMS data in evaluating the state of the pandemic.
+
+## Mapping
+
+```{r, include=FALSE}
+# load neighborhoods
+neighborhoods <- st_read(here::here("data", "working", "neighborhood_demographics.geojson")) %>%
+  rename(pop = n)
+# filter ems data to cases with non-NA gps data
+ems_full_sp <- ems %>%
+  distinct %>%
+  filter(!is.na(scene_gps_latitude), !is.na(scene_gps_longitude)) %>%
+  st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude"), remove = FALSE, crs = 4326)
+
+city_border <- tigris::counties(state = "VA", cb = TRUE, year = 2018, class = "sf") %>%
+  filter(COUNTYFP == 540) %>%
+  st_transform(crs = 4326)
+
+joined <- st_join(neighborhoods, ems_full_sp, join = st_contains)
+total_days <- as.numeric(range(ems_full_sp$incident_date)[2] - range(ems_full_sp$incident_date)[1])
+
+cutoff_string <- "2020-03-15"
+cutoff <- ymd(cutoff_string)
+symptom_threshold <- 0
+
+summed_data <- joined %>%
+  filter(incident_date >= cutoff) %>%
+  filter(covid_indicator > symptom_threshold) %>%
+  group_by(NAME, pop) %>%
+  count() %>%
+  mutate(rate_per_1000 = round(n/pop * 1000)) %>%
+  ungroup() %>%
+  st_as_sf()
+```
+
+```{r, echo=FALSE, out.width="100%", include=FALSE}
+# breaks <- unique(BAMMtools::getJenksBreaks(summed_data$rate_per_1000, 5))
+# n_breaks <- length(breaks)
+# quantile(summed_data$rate_per_1000, seq(0, 1, 1/n_breaks))
+# color_scale <- colorBin("BuPu", c(0,1600), breaks)
+# 
+# summed_data %>%
+#   leaflet() %>%
+#   addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
+#   addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+#               opacity = 1.0, fillOpacity = 0.8,
+#               fillColor = ~color_scale(rate_per_1000),
+#               label = ~map(glue("{NAME}<br/>
+#                                 Patients with >= 1 COVID symptom per 1000: {rate_per_1000}"), htmltools::HTML)) %>%
+#   # addPolygons(data = city_border,
+#   #             color = "#222222", weight = 3, smoothFactor = 0.5,
+#   #             fill = NA,
+#   #             fillOpacity = 0) %>%
+#   addLegend("bottomright", pal = color_scale, values = ~rate_per_1000,
+#             title = "Patients with >= 1 COVID symptom per 1000",
+#             opacity = .8)
+
+```
+
+The map below breaks down the incident rates of our COVID-19 indicator across Charlottesville's neighborhoods and Albemarle County's census tracts. In this case, an incident is considered COVID-like when it includes at least one COVID symptom (as described in the _Data & Methods_ page).
+
+Few changes are visible from before and after March 15, 2020, though there appears to be a slightly higher prevalence of COVID-like symptoms downtown and in neighborhoods south of downtown. Interestingly, these neighborhoods also have a higher proportion of Black residents, which is consistent with widely-reported disparities in COVID-19 outcomes between Black and white populations.
+
+_Finn asks: can we get a map with more strict COVID symptom split point?_
+
+```{r, echo=FALSE, out.width="100%"}
+pre_period <- joined %>%
+  filter(incident_date < cutoff)
+
+post_period <- joined %>%
+  filter(incident_date >= cutoff)
+
+days_pre <- as.numeric(range(pre_period$incident_date)[2] - range(pre_period$incident_date)[1])
+days_post <- as.numeric(range(post_period$incident_date)[2] - range(post_period$incident_date)[1] )
+
+pre_period_summed <- pre_period %>%
+  group_by(NAME, pop) %>%
+  count() %>%
+  mutate(rate_per_1000 = (n/pop * 1000/days_pre)) %>%
+  ungroup() %>%
+  st_as_sf()
+
+post_period_summed <- post_period %>%
+  group_by(NAME, pop) %>%
+  count() %>%
+  mutate(rate_per_1000 = (n/pop * 1000/days_post)) %>%
+  ungroup() %>%
+  st_as_sf()
+
+#BAMMtools::getJenksBreaks(c(pre_period_summed$rate_per_1000, post_period_summed$rate_per_1000), 7)
+color_scale <- colorBin("BuPu", c(0, 1.6), c(0, 0.03, .15, .3, .5, .8, 1.25, 2))
+
+leaflet() %>%
+  addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
+  addPolygons(data = pre_period_summed,
+              color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.7,
+              fillColor = ~color_scale(rate_per_1000),
+              label = ~map(glue("{NAME}<br/>
+                                COVID-like Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
+              group = "Pre 2020") %>%
+  addPolygons(data = post_period_summed,
+              color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.7,
+              fillColor = ~color_scale(rate_per_1000),
+              label = ~map(glue("{NAME}<br/>
+                                COVID-like Incident Rate Per 1000: {round(rate_per_1000, 2)}"), htmltools::HTML),
+              group = "In 2020") %>%
+  addLegend("bottomright", pal = color_scale, values = post_period_summed$rate_per_1000,
+            title = "Incident Rate Per 1000",
+            opacity = .8) %>%
+  addLayersControl(baseGroups = c("Pre 2020", "In 2020"),
+                   options = layersControlOptions(collapsed = FALSE))
+```
+
+
+_Finn asks: Can we get some other Viz in here? I know the model didn't show much, but I'd like to have some sort of EDA to discuss here. Of interest: comparison of COVID indicator values across race and age (since these are not captured in the above map)_
+
+## Modeling
+
+While our initial exploration did not seem to indicate much variation in COVID-like symptoms, we still developed simple logistic regression models to confirm or refute these suspicions. 
+
+\begin{align*}
+\log(\frac{\pi}{1 - \pi}) = \alpha &+ \boldsymbol{\beta^T_1}(\mbox{gender}) + \boldsymbol{\beta^T_2}({\mbox{race}}) + \boldsymbol{\beta^T_3}(\mbox{age range}) + \boldsymbol{\beta^T_4}(\mbox{COVID era}) \\
+&+ (\mbox{COVID era}) \times (\boldsymbol{\beta^T_5}(\mbox{gender}) + \boldsymbol{\beta^T_6}({\mbox{race}}) + \boldsymbol{\beta^T_7}(\mbox{age range}))
+\end{align*}
+
+where $\pi$ represents the probability of a patient being classified as COVID-like based on our COVID indicator (which incorporates the presence of various symptoms). We initially included an interaction term between COVID era and the rest of our variables to determine whether the changes in COVID symptoms had varied across the levels of these variables. We ran a model of this general form with three different specifications of our outcome variable. In the first specification, we classifed patients as COVID-like if they had at least 1 COVID-like symptom. In the second, we used 2 COVID-like symptoms as the cutoff, and in the third we used 3 COVID-like symptoms as the cutoff. Differences in results at varying levels of "strictness" in classying COVID-like cases would potentially allow us to home in on an appropriate cutoff when classifying COVID cases in this dataset.
+
+Unfortunately, as was likely given our visual exploration of the data, none of these models produced any notable findings. In retrospect, this result seems entirely intuitive. Between the uncertainty surrounding the actual prevalence of COVID cases in our dataset (described above) and our inclusive approach in classifying COVID-like symptoms, we likely have incorporated a lot of noise into our COVID indicator variable. That is, our indicator likely captures many of the COVID cases that do exist in the datset, but is not specific enough, and so also captures so many non-COVID cases that we are unable to discern subtle trends in COVID symptoms.
+
+### Future Directions
+
+While disappointing, this outcome does provide important ramifications for similar research going forward.
+
+First, for EMS data to be a valuable source of information in assessing the course of the COVID-19 pandemic, a more thorough effort to classify COVID symptoms accurately is required. Given the messy nature of EMS data, classifying symptoms effectively is an immense challenge. However, a more complex approach than our baseline could be implemented. Improvements on our methodology may be:
+
+* Link EMS data with data on patient outcomes
+    * Being able to link the symptom data reported by EMS with COVID-19 results could vastly improve our ability to determine which symptoms in the EMS dataset are actually important in determining a COVID-19 diagnosis.
+
+* Implement more complex logic when classifying symptoms
+    * For instance, a certain symptom may be a strong indicator of COVID, but only in the presence of another symptom as well
+    
+* Include a weighting scheme for more important symptoms
+    * This could reduce noise by highlighting those symptoms thare are known to be particularly indicative of COVID
+    
+* Develop an indicator using a dataset from an area with a greater proportion of COVID cases
+    * More cases may make it easier to detect cases in a dataset, and allow for a refinement of the symptoms included. This more specific scheme could then be implemented in other areas with fewer case counts.
+    
+* Link multiple EMS datasets
+    * This could improve the sensitivity of our indicator, but perhaps more importantly would allow for an assessment of the standardization across EMS data platforms. In the future, a large-scale network of EMS data could be a valuable tool in identifying emerging diseases 
+
+It will also be valuable to revisit this topic continuously as the medical understanding of COVID-19 evolves. Symptoms that were once thought to be clear identifiers of the virus may become less important, and vice versa. The null results in our preliminary exploration in this area should not be interpreted as a referendum on the value of EMS data in understanding COVID-19, but as a guide to the considerations and improvements that will need to be made to more effectively use EMS data as a tool to fight emerging diseases in the future.
+
+[^JHU]: https://coronavirus.jhu.edu/us-map
+
+[^NYT]: https://www.nytimes.com/2020/06/27/health/coronavirus-antibodies-asymptomatic.html
