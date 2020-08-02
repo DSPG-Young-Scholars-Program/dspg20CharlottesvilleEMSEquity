@@ -111,12 +111,13 @@ top_category <- vital %>%
 
 vital %>%
   count(category, sort = T) %>%
-  ggplot(aes(reorder(category,-n),n))+
-  geom_bar(stat='identity', position='dodge', fill = my_cols[5])+
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 8))+
+  ggplot(aes(reorder(category,n),n))+
+  geom_bar(stat='identity', position=position_dodge(.5), fill = my_cols[5])+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 15))+
   labs(x= "ICD 10- Code", y= "Count", title = "Number of Deaths by ICD-10 Code")+
-    theme(axis.text = element_text(size = 10, color = "gray30"))+
-  ggsave(here::here('output','Number_of_Deaths_by_ICD-10_Code.png'), height = 10, width = 20)
+  theme(axis.text = element_text(size = 14, color = "gray30"))+
+  coord_flip()+
+  ggsave(here::here('output','Number_of_Deaths_by_ICD-10_Code.png'), height = 15, width = 20) 
 
 
 vital %>%
@@ -126,8 +127,9 @@ vital %>%
   scale_x_discrete(labels = function(x) str_wrap(x, width = 5))+
   scale_fill_manual(values = rev(my_cols[1:6]), name = "Race")+
   labs(x= "ICD 10- Code", y= "Proportion", title = " Proportion of Mortalities by Race")+
-  theme(axis.text = element_text(size = 10, color = "gray30"))+
-  ggsave(here::here('output','Death_by_race_prop.png'), height = 10, width = 20)
+  theme(axis.text = element_text(size = 14, color = "gray30"))+
+  coord_flip()+
+  ggsave(here::here('output','Death_by_race_prop.png'), height = 15, width = 20)
 
 tapply(vital$RACE, vital$category, summary)
 
@@ -173,7 +175,7 @@ relative_risk %>%
   labs(x= "ICD 10- Code", y= "Relative Risk", title = "Relative Risk of Death of Black Patients to White Patients")+
   geom_hline(yintercept = 1, color = "#E57200")+
   coord_flip()+
-  theme(axis.text = element_text(size = 14, color = "gray30"))+
+  theme(axis.text = element_text(size = 16, color = "gray30"))+
   ggsave(here::here('output','rel_risk.png'), height = 15, width = 20)
 
 

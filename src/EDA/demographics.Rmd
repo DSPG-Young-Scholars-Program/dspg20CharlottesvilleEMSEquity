@@ -18,7 +18,16 @@ library(here)
 # source(here::here("src","Profiling","joining_albemarle_charlottesville.R"))
 ems_full <-read.csv(here::here("data", "final", "ems_clean_data.csv"))
 cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
-
+theme_set(theme_minimal() +
+            theme(plot.title = element_text(hjust = 0.5, color = "gray10", size = 24),
+                  plot.subtitle = element_text(hjust = 0.5, color = "gray30", face = "italic", size = 20),
+                  axis.title = element_text(size = 20, color = "gray10"),
+                  axis.text = element_text(size = 18, color = "gray30"),
+                  strip.text = element_text(size = 22, color = "gray30"),
+                  panel.spacing = unit(4, "lines"),
+                  legend.key.size = unit(3, "line"),
+                  legend.text = element_text(size = 16, color = "gray30"),
+                  legend.title = element_text(size = 22, color = "gray10")))
 
 ```
 
@@ -70,6 +79,11 @@ Plot shows distribution of patient ages broken up by they're gender and race for
 ```{r race, fig.width=10, fig.height=8}
 #takes the first lsited race of people who were listed as multiple races
 ems_full$patient_race_list = gsub("(.*?)\\|.*", "\\1", ems_full$patient_race_list)
+ems_full$patient_race_list  = factor(ems_full$patient_race_list,
+                    levels = c('white',"black or african american","american indian or alaska native" ,
+                               "asian","native hawaiian or other pacific islander"),
+                    labels = c('White', "Black", 'Amer. Indian', "Asian",
+                               "Native Hawaiian"))
 
 ems_full %>% 
   replace_with_na(replace = list(patient_race_list = c("Not Recorded", "Not Applicable"))) %>% # groups not recorded, etc. into NAs
@@ -101,10 +115,8 @@ ggplot(aes(patient_race_list, as.numeric(patient_age), fill = patient_gender)) +
   geom_split_violin()+
     labs(title= "Violin Plot of Age Distribution of Races", x = "Race", y = "Ages", fill = "Gender")+
      scale_x_discrete(expand=c(0, 0) ,labels = function(x) str_wrap(x, width = 10))+
-  scale_fill_manual(values = cbPalette)+
-  geom_jitter(data =  sample_n(char_race_gen_na,7500) ,position = position_jitter(.1), size = .7, alpha =.25, shape = 15)+
-  theme_minimal()
-
+  scale_fill_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))+
+  geom_jitter(data =  sample_n(char_race_gen_na,7500) ,position = position_jitter(.1), size = .7, alpha =.25, shape = 15)
   ggsave(here("output", "Violin_Plot_of_Age_Distribution_of_Races.png"), height = 6, width = 8)
 
 ```
@@ -138,11 +150,11 @@ ggplot(aes(as.numeric(patient_age), fill  = patient_gender)) +
 char_race_gen_na %>%
 ggplot(aes(patient_gender, as.numeric(patient_age), fill = patient_gender)) +
   geom_violin()+
-  labs(title= "Violin Plot of Age Distribution of Genders", x = "Gender", y = "Ages", fill = "Gender")+
+  labs(title= "Violin Plot of Age Distribution of Genders", x = "Sex", y = "Ages", fill = "Gender")+
   scale_x_discrete(expand=c(0, 0) ,labels = function(x) str_wrap(x, width = 10))+
   scale_fill_manual(values = cbPalette)+ 
   geom_boxplot(aes(patient_gender, as.numeric(patient_age)),width =.1, inherit.aes = F)+
-  theme_minimal()
+  scale_fill_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))+
   ggsave(here("output", "Violin_Plot_of_Age_Distribution_of_Gender.png"), height = 6, width = 8)
 
 ```
