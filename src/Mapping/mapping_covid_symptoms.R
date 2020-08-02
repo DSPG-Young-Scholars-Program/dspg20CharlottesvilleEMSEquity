@@ -153,108 +153,107 @@ summed_data %>%
             title = "Patients with >= 1 COVID symptom per 1000",
             opacity = .8)
 
+# pre-post period
+pre_period <- joined %>%
+  filter(incident_date < cutoff)
 
-# period <- ymd("2020-03-01")
-# pre_period <- joined %>%
-#   filter(incident_date < period)
-#
-# post_period <- joined %>%
-#   filter(incident_date >= period)
-#
-# days_pre <- as.numeric(range(pre_period$incident_date)[2] - range(pre_period$incident_date)[1])
-# days_post <- as.numeric(range(post_period$incident_date)[2] - range(post_period$incident_date)[1] )
-#
-# pre_period_summed <- pre_period %>%
-#   group_by(NAME.y, total_population_estimate) %>%
-#   count() %>%
-#   mutate(rate_per_1000 = (n/total_population_estimate * 1000/days_pre)) %>%
-#   ungroup() %>%
-#   st_as_sf()
-#
-# post_period_summed <- post_period %>%
-#   group_by(NAME.y, total_population_estimate) %>%
-#   count() %>%
-#   mutate(rate_per_1000 = (n/total_population_estimate * 1000/days_post)) %>%
-#   ungroup() %>%
-#   st_as_sf()
-#
-#
-# range(pre_period_summed$rate_per_1000)
-# range(post_period_summed$rate_per_1000)
-#
-# hist(pre_period_summed$rate_per_1000)
-# hist(post_period_summed$rate_per_1000)
-#
-# BAMMtools::getJenksBreaks(c(pre_period_summed$rate_per_1000, post_period_summed$rate_per_1000), 7)
-# color_scale <- colorBin("BuPu", c(0, 1.6), c(0, 0.07, .26, .42, .58, .80, 1.0, 1.6))
-#
-# pre_period_summed %>%
-#   leaflet() %>%
-#   addTiles() %>%  # Add default OpenStreetMap map tiles
-#   addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
-#               opacity = 1.0, fillOpacity = 0.8,
-#               fillColor = ~color_scale(rate_per_1000),
-#               label = ~map(glue("{NAME.y}<br/>
-#                                 Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
-#               group = "Pre 2020") %>%
-#   addPolygons(data = post_period_summed,
-#               color = "#444444", weight = 0.5, smoothFactor = 0.5,
-#               opacity = 1.0, fillOpacity = 0.8,
-#               fillColor = ~color_scale(rate_per_1000),
-#               label = ~map(glue("{NAME.y}<br/>
-#                                 Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
-#               group = "In 2020") %>%
-#   addPolygons(data = city_border,
-#               color = "#222222", weight = 3, smoothFactor = 0.5,
-#               fillOpacity = 0) %>%
-#   addLegend("bottomright", pal = color_scale, values = ~rate_per_1000,
-#             title = "Incident Rate Per 1000",
-#             opacity = .8) %>%
-#   addLayersControl(baseGroups = c("Pre 2020", "In 2020"),
-#                    options = layersControlOptions(collapsed = FALSE))
-#
-#
-# diff_period_summed <- post_period_summed %>%
-#   mutate(rate_diff = rate_per_1000 - pre_period_summed$rate_per_1000,
-#          rate_ratio = 100*(rate_per_1000 / pre_period_summed$rate_per_1000 - 1))
-#
-#
-# hist(diff_period_summed$rate_diff)
-# color_scale <- colorBin("BuPu", c(-0.6,0.1), c(-0.6, -0.3, -0.15, -0.10, -0.05, 0.1), reverse = TRUE)
-#
-#
-# diff_period_summed %>%
-#   leaflet() %>%
-#   addTiles() %>%  # Add default OpenStreetMap map tiles
-#   addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
-#               opacity = 1.0, fillOpacity = 0.8,
-#               fillColor = ~color_scale(rate_diff),
-#               label = ~map(glue("{NAME.y}<br/>
-#                                 Change in Incident Rate Per 1000: {round(rate_diff, 2)}"), htmltools::HTML)) %>%
-#   addPolygons(data = city_border,
-#               color = "#222222", weight = 3, smoothFactor = 0.5,
-#               fill = NA) %>%
-#   addLegend("bottomright", pal = color_scale, values = ~rate_diff,
-#             title = "Change in Daily Incident Rate Per 1000",
-#             opacity = .8)
-#
-#
-# hist(diff_period_summed$rate_ratio)
-# BAMMtools::getJenksBreaks(diff_period_summed$rate_ratio, 5)
-# color_scale <- colorBin("PuRd", 100 * (c(0.2,1.2) - 1), 100 * (c(0.2, 0.5, 0.65, 0.8, 1, 1.2) - 1), reverse = TRUE)
-#
-# diff_period_summed %>%
-#   leaflet() %>%
-#   addTiles() %>%  # Add default OpenStreetMap map tiles
-#   addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
-#               opacity = 1.0, fillOpacity = 0.8,
-#               fillColor = ~color_scale(rate_ratio),
-#               label = ~map(glue("{NAME.y}<br/>
-#                                 Change in Incident Rate Per 1000: {round(rate_ratio, 2)}"), htmltools::HTML)) %>%
-#   addPolygons(data = city_border,
-#               color = "#222222", weight = 3, smoothFactor = 0.5,
-#               fill = NA) %>%
-#   addLegend("bottomright", pal = color_scale, values = ~rate_ratio,
-#             title = htmltools::HTML("Percent Change in Daily Incident Rate<br>After March 1st 2020"),
-#             opacity = .8,
-#             labFormat = labelFormat(suffix = "%", between = " to "))
+post_period <- joined %>%
+  filter(incident_date >= cutoff)
+
+days_pre <- as.numeric(range(pre_period$incident_date)[2] - range(pre_period$incident_date)[1])
+days_post <- as.numeric(range(post_period$incident_date)[2] - range(post_period$incident_date)[1] )
+
+pre_period_summed <- pre_period %>%
+  group_by(NAME, pop) %>%
+  count() %>%
+  mutate(rate_per_1000 = (n/pop * 1000/days_pre)) %>%
+  ungroup() %>%
+  st_as_sf()
+
+post_period_summed <- post_period %>%
+  group_by(NAME, pop) %>%
+  count() %>%
+  mutate(rate_per_1000 = (n/pop * 1000/days_post)) %>%
+  ungroup() %>%
+  st_as_sf()
+
+
+range(pre_period_summed$rate_per_1000)
+range(post_period_summed$rate_per_1000)
+
+hist(pre_period_summed$rate_per_1000)
+hist(post_period_summed$rate_per_1000)
+
+BAMMtools::getJenksBreaks(c(pre_period_summed$rate_per_1000, post_period_summed$rate_per_1000), 7)
+color_scale <- colorBin("BuPu", c(0, 1.6), c(0, 0.07, .26, .42, .58, .80, 1.0, 1.6))
+
+pre_period_summed %>%
+  leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_per_1000),
+              label = ~map(glue("{NAME}<br/>
+                                Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
+              group = "Pre 2020") %>%
+  addPolygons(data = post_period_summed,
+              color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_per_1000),
+              label = ~map(glue("{NAME}<br/>
+                                Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
+              group = "In 2020") %>%
+  addPolygons(data = city_border,
+              color = "#222222", weight = 3, smoothFactor = 0.5,
+              fillOpacity = 0) %>%
+  addLegend("bottomright", pal = color_scale, values = ~rate_per_1000,
+            title = "Incident Rate Per 1000",
+            opacity = .8) %>%
+  addLayersControl(baseGroups = c("Pre 2020", "In 2020"),
+                   options = layersControlOptions(collapsed = FALSE))
+
+##############
+diff_period_summed <- post_period_summed %>%
+  mutate(rate_diff = rate_per_1000 - pre_period_summed$rate_per_1000,
+         rate_ratio = 100*(rate_per_1000 / pre_period_summed$rate_per_1000 - 1))
+
+
+hist(diff_period_summed$rate_diff)
+color_scale <- colorBin("BuPu", c(-0.6,0.1), c(-0.6, -0.3, -0.15, -0.10, -0.05, 0.1), reverse = TRUE)
+
+
+diff_period_summed %>%
+  leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_diff),
+              label = ~map(glue("{NAME}<br/>
+                                Change in Incident Rate Per 1000: {round(rate_diff, 2)}"), htmltools::HTML)) %>%
+  addPolygons(data = city_border,
+              color = "#222222", weight = 3, smoothFactor = 0.5,
+              fill = NA) %>%
+  addLegend("bottomright", pal = color_scale, values = ~rate_diff,
+            title = "Change in Daily Incident Rate Per 1000",
+            opacity = .8)
+
+
+hist(diff_period_summed$rate_ratio)
+BAMMtools::getJenksBreaks(diff_period_summed$rate_ratio, 5)
+color_scale <- colorBin("PuRd", 100 * (c(0.2,1.2) - 1), 100 * (c(0.2, 0.5, 0.65, 0.8, 1, 1.2) - 1), reverse = TRUE)
+
+diff_period_summed %>%
+  leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_ratio),
+              label = ~map(glue("{NAME}<br/>
+                                Change in Incident Rate Per 1000: {round(rate_ratio, 2)}"), htmltools::HTML)) %>%
+  addPolygons(data = city_border,
+              color = "#222222", weight = 3, smoothFactor = 0.5,
+              fill = NA) %>%
+  addLegend("bottomright", pal = color_scale, values = ~rate_ratio,
+            title = htmltools::HTML("Percent Change in Daily Incident Rate<br>After March 1st 2020"),
+            opacity = .8,
+            labFormat = labelFormat(suffix = "%", between = " to "))

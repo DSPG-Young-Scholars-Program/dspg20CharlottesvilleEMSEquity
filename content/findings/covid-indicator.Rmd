@@ -190,10 +190,12 @@ The map below shows the COVID-like incident rates before and after March 15th, 2
 
 ```{r, echo=FALSE, out.width="100%"}
 pre_period <- joined %>%
-  filter(incident_date < cutoff)
+  filter(incident_date < cutoff) %>%
+  filter(covid_indicator > symptom_threshold)
 
 post_period <- joined %>%
-  filter(incident_date >= cutoff)
+  filter(incident_date >= cutoff) %>%
+  filter(covid_indicator > symptom_threshold)
 
 days_pre <- as.numeric(range(pre_period$incident_date)[2] - range(pre_period$incident_date)[1])
 days_post <- as.numeric(range(post_period$incident_date)[2] - range(post_period$incident_date)[1] )
@@ -213,7 +215,7 @@ post_period_summed <- post_period %>%
   st_as_sf()
 
 BAMMtools::getJenksBreaks(c(pre_period_summed$rate_per_1000, post_period_summed$rate_per_1000), 7)
-color_scale <- colorBin("BuPu", c(0, 1.6), c(0, 0.03, .15, .3, .5, .8, 1.25, 2))
+color_scale <- colorBin("BuPu", c(0, .38), c(0, 0.02, .05, .1, .13, .19, .27, .38))
 
 pre_period_summed %>%
   leaflet() %>%
@@ -223,14 +225,14 @@ pre_period_summed %>%
               fillColor = ~color_scale(rate_per_1000),
               label = ~map(glue("{NAME}<br/>
                                 COVID-like Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
-              group = "Pre 2020") %>%
+              group = "before March 15th, 2020") %>%
   addPolygons(data = post_period_summed,
               color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.8,
               fillColor = ~color_scale(rate_per_1000),
               label = ~map(glue("{NAME}<br/>
                                 COVID-like Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
-              group = "In 2020") %>%
+              group = "on or after March 15th, 2020") %>%
   addPolygons(data = city_border,
               color = "#222222", weight = 3, smoothFactor = 0.5,
               fillOpacity = 0) %>%
