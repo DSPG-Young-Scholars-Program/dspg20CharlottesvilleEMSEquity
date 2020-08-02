@@ -12,7 +12,7 @@ library(dplyr)
 library(ggplot2)
 library(stringr)
 library(naniar)
-ems <- read.csv('../../data/working/ems_clean_data.csv')
+ems <- read.csv('../../data/final/ems_clean_data.csv')
 ```
 
 ```{r, echo=FALSE }

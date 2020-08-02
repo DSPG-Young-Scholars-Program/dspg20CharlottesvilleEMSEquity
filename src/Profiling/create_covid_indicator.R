@@ -7,8 +7,11 @@ library(stringr)
 library(naniar)
 
 # load data
-ems <- read.csv('./data/working/ems_clean_data.csv');
+ems <- read.csv(here::here("data", "final", "ems_clean_data.csv"));
 ems <- ems %>% mutate(incident_date = as_date(incident_date));
+
+# add race variable
+ems$race <- gsub("^(.*?)\\|.*", "\\1", ems$patient_race_list);
 
 # symptom probabilities in symptomatic patients, could be used in weighting scheme
 # cough 0.84
@@ -53,6 +56,7 @@ ems$cough_in_secondary_complaint <- create_symptom("cough", ems$situation_second
 # combine cough vars
 ems$cough <- ifelse(ems$cough_in_primary_complaint | ems$cough_in_secondary_complaint, 1, 0);
 sum(ems$cough) # 295
+sum(ems$cough & ymd(ems$incident_date) >= "2020-03-15") # 31
 ## end cough
 
 ## create fever variable
@@ -87,11 +91,11 @@ sum(ems$fever) # 974
 
 ## create myalgia variable
 # in primary complaint
-ems$myalgia_in_primary_complaint <- create_symptom("myalgia|muscle pain|muscle ache", ems$situation_primary_complaint_statement_list);
+ems$myalgia_in_primary_complaint <- create_symptom("myalgia|muscle pain|muscle ache|muscle soreness", ems$situation_primary_complaint_statement_list);
 # sum(ems$myalgia_in_primary_complaint) # 7
 
 # in secondary complaint
-ems$myalgia_in_secondary_complaint <- create_symptom("myalgia|muscle pain|muscle ache", ems$situation_secondary_complaint_statement_list);
+ems$myalgia_in_secondary_complaint <- create_symptom("myalgia|muscle pain|muscle ache|muscle soreness", ems$situation_secondary_complaint_statement_list);
 # sum(ems$myalgia_in_secondary_complaint) # 1
 
 # combine myalgia vars
@@ -102,11 +106,11 @@ sum(ems$myalgia) # 8
 
 ## create chills variable
 # in primary complaint
-ems$chills_in_primary_complaint <- create_symptom("chills", ems$situation_primary_complaint_statement_list);
+ems$chills_in_primary_complaint <- create_symptom("chill|rigor|shiver", ems$situation_primary_complaint_statement_list);
 # sum(ems$chills_in_primary_complaint) # 86
 
 # in secondary complaint
-ems$chills_in_secondary_complaint <- create_symptom("chills", ems$situation_secondary_complaint_statement_list);
+ems$chills_in_secondary_complaint <- create_symptom("chill|rigor|shiver", ems$situation_secondary_complaint_statement_list);
 # sum(ems$chills_in_secondary_complaint) # 1
 
 # combine chills vars
@@ -158,9 +162,19 @@ ems$sob_in_primary_complaint <- create_symptom("breath|sob", ems$situation_prima
 ems$sob_in_secondary_complaint <- create_symptom("breath|sob", ems$situation_secondary_complaint_statement_list);
 # sum(ems$sob_in_secondary_complaint) # 20
 
+ems$racemic_epinephrine <- create_symptom(coll("racemic epinephrine (314610)"), ems$patient_medication_given_description_and_rxcui_codes_list);
+# sum(ems$racemic_epinephrine) # 2
+
+ems$oxygen <- create_symptom("oxygen", ems$patient_medication_given_description_and_rxcui_codes_list);
+# sum(ems$oxygen)
+
 # combine sob vars
-ems$sob <- ifelse(ems$sob_in_primary_complaint | ems$sob_in_secondary_complaint, 1, 0);
-sum(ems$sob) # 4125
+ems$sob <- ifelse(ems$sob_in_primary_complaint |
+                    ems$sob_in_secondary_complaint |
+                    ems$racemic_epinephrine |
+                    ems$oxygen, 1, 0);
+sum(ems$sob) # 8702
+sum(ems$sob & ymd(ems$incident_date) >= "2020-03-15")
 ## end sob
 
 
@@ -232,17 +246,59 @@ ems$hypoxemia_no_improvement <- ifelse(has_hypoxemia_no_improvement, 1, 0);
 # sum(ems$hypoxemia_no_improvement) # 2573
 ## end hypoxemia
 
+# add symptoms from medications
+ems$albuterol_proventil <- create_symptom(coll("albuterol (proventil) (435)"), ems$patient_medication_given_description_and_rxcui_codes_list);
+# sum(ems$albuterol_proventil) # 897
+
+ems$albuterol_duoneb <- create_symptom(coll("albuterol/ipratropium (duoneb) (285059)"), ems$patient_medication_given_description_and_rxcui_codes_list);
+# sum(ems$albuterol_duoneb) # 691
+
+ems$ipratropium_astrovent <- create_symptom(coll("ipratropium (atrovent) (7213)"), ems$patient_medication_given_description_and_rxcui_codes_list);
+# sum(ems$ipratropium_astrovent) # 347
+
+# should only be 1 if cough and sob are both 0
+no_cough_or_sob <- ems$cough | ems$sob
+ems$cough_sob_meds_catch_all <- ifelse(no_cough_or_sob & (ems$albuterol_proventil | ems$albuterol_duoneb | ems$ipratropium_astrovent), 1, 0);
+# sum(ems$cough_sob_meds_catch_all) # 1214
 
 ## cyanosis
 # get levels of skin assessment findings
-# unique(unlist(str_split(ems$patient_medication_given_description_and_rxcui_codes_list, "\\|"))) %>% sort()# look at possible values in skin assessment
+unique(unlist(str_split(ems$patient_medication_given_description_and_rxcui_codes_list, "\\|"))) %>% sort()# look at possible values in skin assessment
 ems$cyanosis <- create_symptom("cyanotic", ems$patient_skin_assessment_findings_list);
 # sum(ems$cyanosis) # 78
 ## end cyanosis
 
 
+## stroke
+ems$stroke_in_primary_impression <- create_symptom(coll("neuro - stroke/cva (i63.9)"), ems$situation_provider_primary_impression_code_and_description);
+# sum(ems$stroke_in_primary_impression) # 893
+
+ems$stroke_in_secondary_impression <- create_symptom(coll("neuro - stroke/cva (i63.9)"), ems$situation_provider_secondary_impression_description_and_code_list);
+# sum(ems$stroke_in_secondary_impression) # 433
+
+young_person <- ems$patient_age <= 64
+young_person[is.na(young_person)] <- FALSE
+
+ems$young_person_stroke <- ifelse((ems$stroke_in_secondary_impression | ems$stroke_in_secondary_impression) & young_person, 1, 0);
+# sum(ems$young_person_stroke) # 134
+## end stroke
+
+## cardiac arrest
+ems$cardiac_arrest_in_primary_impression <- create_symptom("cardiac arrest", ems$situation_provider_primary_impression_code_and_description) |
+  create_symptom("myocardial infarction", ems$situation_provider_primary_impression_code_and_description);
+# sum(ems$cardiac_arrest_in_primary_impression) # 971
+
+ems$cardiac_arrest_in_secondary_impression <- create_symptom("cardiac arrest", ems$situation_provider_secondary_impression_description_and_code_list) |
+  create_symptom("myocardial infarction", ems$situation_provider_secondary_impression_description_and_code_list);
+# sum(ems$cardiac_arrest_in_secondary_impression) # 289
+
+ems$young_person_cardiac_arrest <- ifelse((ems$cardiac_arrest_in_primary_impression | ems$cardiac_arrest_in_secondary_impression) & young_person, 1, 0);
+# sum(ems$young_person_cardiac_arrest) # 472
+## end cardiac arrest
+
+
 ## COMBINE VARIABLES TO CREATE COVID INDICATOR
-weights <- rep(1, 13) # could replace later on with customized weights
+weights <- rep(1, 16) # could replace later on with customized weights
 ems <- ems %>% mutate(
   covid_indicator = weights[1] * cough +
                     weights[2] * fever +
@@ -256,14 +312,36 @@ ems <- ems %>% mutate(
                     weights[10] * hypoxemia +
                     weights[11] * hypoxemia_no_improvement +
                     weights[12] * cyanosis +
-                    weights[13] * covid_in_impressions
+                    weights[13] * covid_in_impressions +
+                    weights[14] * young_person_stroke +
+                    weights[15] * young_person_cardiac_arrest +
+                    weights[16] * cough_sob_meds_catch_all
 )
 
 # look at number of cases at each level
-sum(ems$covid_indicator > 0) # 20731
-sum(ems$covid_indicator > 1) # 5247
-sum(ems$covid_indicator > 2) # 706
-sum(ems$covid_indicator > 3) # 52
+sum(ems$covid_indicator > 0) # 21913
+sum(ems$covid_indicator > 0 & ymd(ems$incident_date) >= "2020-03-15") # 1189
+sum(ymd(ems$incident_date) >= "2020-03-15") # 3589
+sum(ems$covid_indicator > 1) # 8221
+sum(ems$covid_indicator > 2) # 2597
+sum(ems$covid_indicator > 3 & ymd(ems$incident_date) >= "2020-03-15") # 385 / 15
+sum(ems$covid_indicator > 4) # 29
+
+ems %>%
+  filter(ymd(incident_date) >= "2020-02-15") %>%
+  filter(covid_indicator > 1) %>%
+  count() # >0 = 1701, >1 = 462
+
+
+# create variable for at least 1 covid symptom
+ems$covid1 <- ifelse(ems$covid_indicator > 0, 1, 0);
+
+# create variable for at least 2 covid symptoms
+ems$covid2 <- ifelse(ems$covid_indicator > 1, 1, 0);
+
+# create variable for at least 3 covid symptoms
+ems$covid3 <- ifelse(ems$covid_indicator > 2, 1, 0)
+sum(ems$covid3 & ymd(ems$incident_date) >= "2020-03-15") # 126
 
 # symptom probability, taken from https://www.cdc.gov/mmwr/volumes/69/wr/pdfs/mm6928a2-H.pdf
 # cough 0.84
@@ -335,7 +413,7 @@ sum(ems$covid_indicator > 3) # 52
 #   inner_join(race_counts, by = "patient_first_race_listed") %>%
 #   mutate(rate_per_100 = (n / total) * 100)
 #
-# # provider primary impression counts
+# provider primary impression counts
 # pri_imps <- unique(unlist(str_split(ems$situation_provider_primary_impression_code_and_description, "\\|"))) %>% sort()
 # sec_imps <- unique(unlist(str_split(ems$situation_provider_secondary_impression_description_and_code_list, "\\|"))) %>% sort()
 #
@@ -358,7 +436,7 @@ sum(ems$covid_indicator > 3) # 52
 # );
 #
 # View(impression_landscape)
-# write.csv("impression_landscape.csv")
+# write.csv(impression_landscape, "impression_landscape.csv")
 
 
 
