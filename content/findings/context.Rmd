@@ -20,12 +20,6 @@ COVID-19 has affected all parts of life and we are interested in how it has impa
 include_graphics(here("output", "top_impression_volume_2.png"))
 ```
 
-
-One thing that is interesting to note is that the call volume for alcohol related incidents has almsot dissappeared entirely. Again, this is likely because people are staying home and the bars were closed. 
-
-[insert that] 
-[where is that]
-
 We also are interested in understanding where call volume is dropping. Discrepencies may signal other needs in the community that aren't being addressed. 
 
 [insert ellen's map of change]
@@ -33,9 +27,14 @@ We also are interested in understanding where call volume is dropping. Discrepen
 
 ## Demographics
 
-In order to get a sense of what our data population looks like, it's helpful to create some plots and maps. This first map depicts the racial breakdown of each county and we can see that ----- people reside primarily near -----. In terms of income, ------, . Lastly, if we look at poverty rates throughout the area, we see ----. 
+In order to get a sense of what our data population looks like, it's helpful to create some plots and maps. This first map depicts the racial breakdown of each county and we can see that the area is predominantly white and black people make up the next largest racial group. Black people are more concentrated within a few tracts within Charlottesville.. In terms of income, we see areas of lower income coincide with areas with higher black populations and can also observe the same trend with higher poverty rates. Income and poverty rates seem to coincide as well with areas of higher income to have lower poverty rates.
 
-[insert ellen's demo maps]
+```{r, echo  = F, out.width='100%'}
+
+comb_income_map
+comb_race_map
+comb_pov_map
+```
 
 
 Breaking down by gender we see different distribution in ages of patients. Both appear bimodal and for both, there appears to be a high density of patients who are in their 20s. This is likely because of the high college student population. For males, there the next high density bumb occurs around patients of 55 years of age while for females, the 2nd high density bump is concentrated at 80. For females, the median age is slightly higher.
