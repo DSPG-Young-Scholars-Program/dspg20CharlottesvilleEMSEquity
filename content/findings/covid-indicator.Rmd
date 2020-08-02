@@ -7,6 +7,12 @@ draft: false
 output: html_document
 ---
 
+```{css}
+.footnotes {
+  color:rgb(195,206,208)
+}
+```
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -46,7 +52,7 @@ theme_set(theme_minimal() +
 
 While we were obviously interested in identifying patterns in COVID-19 symptoms across demographic groups, time, and space, this portion of the project was also quite exploratory, as it was unclear how difficult it might be to isolate potential COVID-19 cases in a large EMS dataset.
 
-According to the Johns Hopkins Center for Systems Science and Engineering, as of June 9, 2020 (the most current date in our data), there were 258 confirmed cases and 8 deaths in Albemarle County, and 141 confirmed cases and 3 deaths in Charlottesville City.[^JHU] While experts expect that actual case counts may be as much as 10 times higher than the confirmed case counts.[^NYT] However, it is unclear whether this figure is reprsentative of the most severe cases, which are those most likely to appear in the EMS dataset. Given the uncertainty surrounding the total number of cases in the area as well as the proportion of cases that may be present in our dataset, it was unclear how effective an analysis of COVID-symptoms would be. Still, we were curious to see whether any trends would emerge, and in doing so hoped to learn about the potential for future use of EMS data in evaluating the state of the pandemic.
+According to the Johns Hopkins Center for Systems Science and Engineering, as of June 9, 2020 (the most current date in our data), there were 258 confirmed cases and 8 deaths in Albemarle County, and 141 confirmed cases and 3 deaths in Charlottesville City.[^JHU] While experts expect that actual case counts may be as much as 10 times higher than the confirmed case counts[^NYT] it remains unclear whether this figure is reprsentative of the most severe cases, which are those most likely to appear in the EMS dataset. Given the uncertainty surrounding the total number of cases in the area as well as the proportion of cases that may be present in our dataset, it was unclear how effective an analysis of COVID-symptoms would be. Still, we were curious to see whether any trends would emerge, and in doing so hoped to learn about the potential for future use of EMS data in evaluating the state of the pandemic.
 
 ## Mapping
 
@@ -109,7 +115,7 @@ The map below breaks down the incident rates of our COVID-19 indicator across Ch
 
 Few changes are visible from before and after March 15, 2020, though there appears to be a slightly higher prevalence of COVID-like symptoms downtown and in neighborhoods south of downtown. Interestingly, these neighborhoods also have a higher proportion of Black residents, which is consistent with widely-reported disparities in COVID-19 outcomes between Black and white populations.
 
-_Finn asks: can we get a map with more strict COVID symptom split point?_
+_Add tracts to map, potentially add another map with stricter COVID cutoff_
 
 ```{r, echo=FALSE, out.width="100%"}
 pre_period <- joined %>%
@@ -161,8 +167,7 @@ leaflet() %>%
                    options = layersControlOptions(collapsed = FALSE))
 ```
 
-
-_Finn asks: Can we get some other Viz in here? I know the model didn't show much, but I'd like to have some sort of EDA to discuss here. Of interest: comparison of COVID indicator values across race and age (since these are not captured in the above map)_
+_Add in some more viz of demographic breakdown for COVID cases_
 
 ## Modeling
 
@@ -181,7 +186,7 @@ Unfortunately, as was likely given our visual exploration of the data, none of t
 
 While disappointing, this outcome does provide important ramifications for similar research going forward.
 
-First, for EMS data to be a valuable source of information in assessing the course of the COVID-19 pandemic, a more thorough effort to classify COVID symptoms accurately is required. Given the messy nature of EMS data, classifying symptoms effectively is an immense challenge. However, a more complex approach than our baseline could be implemented. Improvements on our methodology may be:
+First, for EMS data to be a valuable source of information in assessing the course of the COVID-19 pandemic, a more thorough effort to classify COVID symptoms accurately is required. Given the messy nature of EMS data, classifying symptoms effectively is a challenge. However, a more complex approach could certainly be implemented. Improvements on our methodology may be:
 
 * Link EMS data with data on patient outcomes
     * Being able to link the symptom data reported by EMS with COVID-19 results could vastly improve our ability to determine which symptoms in the EMS dataset are actually important in determining a COVID-19 diagnosis.

@@ -283,7 +283,7 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
 
 The primary takeaway from this graph is the across all types of incidents, response times have increased since the beginning of COVID-19. This increase appears to be stable across the levels of our other variables of interest. That is, it does not appear that response times have changed more or less for particular subgroups within our variables of interest.  
 
-Because this is a neighborhood-level model, the expected change in response time due to being in a particular neighborhood is also interpretable (the interpretation of units is the same as explained above). When plotting response times across the region, we see that rural areas are expected to wait longer for emergency medical services than their urban counterparts. *However, these results should be interpreted with caution because of our inability directly control for distance traveled. As neighborhood or census tract regions get larger, this deficiency in our model becomes more and more meaningful. Therefore, comparing smaller regions within Charlottesville to those in Albemarle is suspect. Still, differences within similarly-sized regions may be meaningful.*
+Because this is a neighborhood-level model, the expected change in response time due to being in a particular neighborhood is also interpretable (the interpretation of units is the same as explained above). When plotting response times across the region, we see that rural areas are expected to wait longer for emergency medical services than their urban counterparts. **However, these results should be interpreted with caution because of our inability directly control for distance traveled. As neighborhood or census tract regions get larger, this deficiency in our model becomes more and more meaningful. Therefore, comparing smaller regions within Charlottesville to those in Albemarle is suspect. Still, differences within similarly-sized regions may be meaningful.**
 
 ```{r, fig.height = 8}
 map_colors <- colorBin(sf_map_colors, c(0.5, 2), c(0.65, 0.8, .95, 1.05, 1.30, 1.8))
@@ -321,7 +321,7 @@ While this analysis suffers from the lack of data to control for travel distance
 
 Second, some types of symptoms are expected to be served much faster than others. For example, holding all other variables constant, we expect a cardiovascular incident to be responded to about 15% more quickly than a drug of alcohol related incident. With this information, EMS teams may be able to identify inconsistencies between response times and highly time-sensitive incident types, potentially increasing efficiency.
 
-_Just picked some other colors from the cbbpalette for this because I found the orange/blue to be confusing since it was used for pre/post COVID earlier. But if we want nicer colors feel free to update this further._
+_Just picked some other colors from the cbbpalette for this because I found the orange/blue to be confusing since it was used for pre/post COVID earlier. Of course these are sort of confusing given the residual maps above (other cbbpalette combos were pretty ugly though)....if we want nicer colors feel free to update this further._
 
 <br>
 
