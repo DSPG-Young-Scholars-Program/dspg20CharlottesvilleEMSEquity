@@ -1,0 +1,80 @@
+---
+title: "Context"
+author: "Saimun"
+date: "7/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(knitr)
+source(here('src','Mapping','demo_maps.R'))
+```
+
+## COVID-19
+
+COVID-19 has affected all parts of life and we are interested in how it has impacted Emergency Medical Services in Charlottesville and the larger Albermarle County. Counterintuitively, we can observe that there is a significant drop off in call volume to emergency medical services. This may be caused by people staying at home more and thus there being less emergency incidents. For example, we can see the monthly number of incidents for the top 10 complaints dropping off sharply. 
+
+```{r , echo = F,  out.width = '100%'}
+include_graphics(here("output", "top_impression_volume_2.png"))
+```
+
+We also are interested in understanding where call volume is dropping. Discrepencies may signal other needs in the community that aren't being addressed. 
+
+[insert ellen's map of change]
+[where is that]
+
+## Demographics
+
+In order to get a sense of what our data population looks like, it's helpful to create some plots and maps. This first map depicts the racial breakdown of each county and we can see that the area is predominantly white and black people make up the next largest racial group. Black people are more concentrated within a few tracts within Charlottesville.. In terms of income, we see areas of lower income coincide with areas with higher black populations and can also observe the same trend with higher poverty rates. Income and poverty rates seem to coincide as well with areas of higher income to have lower poverty rates.
+
+```{r, echo  = F, out.width='100%'}
+
+comb_income_map
+comb_race_map
+comb_pov_map
+```
+
+
+Breaking down by gender we see different distribution in ages of patients. Both appear bimodal and for both, there appears to be a high density of patients who are in their 20s. This is likely because of the high college student population. For males, there the next high density bumb occurs around patients of 55 years of age while for females, the 2nd high density bump is concentrated at 80. For females, the median age is slightly higher.
+
+```{r , echo = F,  out.width = '100%'}
+include_graphics(here("output", "Violin_Plot_of_Age_Distribution_of_Gender.png"))
+```
+
+Now if we also breakdown the incidents by race, we see that most of the patients are White or Black and in these two populations there is a bump in patients above 50 years old. In comparison, there aren't many patients who are of other racial identities. In both Asians and Hispanics we see a greater density of patients who are in their 20s, these incidents might be contributed by students attending UVA.
+
+```{r , echo = F,  out.width = '100%'}
+include_graphics(here("output", "Violin_Plot_of_Age_Distribution_of_Races.png"))
+```
+
+## Vital Stats
+
+We had access to mortality data and were interested in how the deaths broke down. We see that the most common cause of death is a circulatory disease followed by neoplasms and extneral causes of morbidity. Racially, the dataset is primarily white or race was not recorded. Black patients make up the next highest group of people in the dataset. All other races combined represent less than 100 deaths in this dataset.
+
+```{r , echo = F,  out.width = '100%'}
+include_graphics(here("output", "Number of Deaths by Race.png"))
+include_graphics(here("output", "Number_of_Deaths_by_ICD-10_Code.png"))
+```
+
+We see that overall, mortalities per month hasn't changed thus far. 
+
+```{r, echo = F,  out.width = '100%'}
+include_graphics(here("output", "mortality.png"))
+```
+
+Of course, what is contributing to these mortalities might've changed. If we look at changes to the relative frequencies of ICD 10 Codes for mortality we see a sharp increase in deaths were the category is not recorded. 
+
+```{r, echo = F,  out.width = '100%'}
+include_graphics(here("output", "ICD10_Relative_Freq.png"))
+```
+
+
+When we overlay the racial distribution over the categories we note that of the deaths where race is recorded, it doesn't appear that the racial distribution is even across the categories. Calculating the relative risk of death by each category for black patients versus white patients shows that black patients are more than 2.5 times as likely to die from diseases of the blood and twice as likely to die from complications arising during the perinatal period. 
+
+```{r, echo = F,  out.width = '100%'}
+include_graphics(here("output", "Death_by_race_prop.png"))
+include_graphics(here("output", "rel_risk.png"))
+```
+
