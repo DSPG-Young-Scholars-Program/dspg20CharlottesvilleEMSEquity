@@ -145,21 +145,23 @@ geom_split_violin <- function(mapping = NULL, data = NULL, stat = "ydensity", po
 ```
 
 
-## Demographics
+### Demographics
 
 Given this project's focus on health equity, we need to first develop a better understanding of the demographic makeup of Charlottesville and Albemarle. While this information is readily available from the American Community Survey (ACS), census tracts and block groups often don't present an accurate representation of the population distribution in a town or city. We therefore used data from the ACS in Charlottesville to estimate the demographic makeup of the city's actual neighborhoods. We used [iterated proportional fitting](https://en.wikipedia.org/wiki/Iterative_proportional_fitting) to sample from the ACS data and re-aggregate values to the neighborhood level in Charlottesville. Of course, since Albemarle County does not have distinct neighborhoods, we use data reported for the census tracts in the county.
 
-In order to get a sense of what our data population looks like, it's helpful to create some plots and maps. This first map depicts the racial breakdown of each county and we can see that the area is predominantly white and black people make up the next largest racial group. Black people are more concentrated within a few tracts within Charlottesville.. In terms of income, we see areas of lower income coincide with areas with higher black populations and can also observe the same trend with higher poverty rates. Income and poverty rates seem to coincide as well with areas of higher income to have lower poverty rates.
+At the neighborhood level, neighborhoods south of downtown appear to have the largest proportion of black residents. There is a slightly larger Asian population in the Jefferson Park Avenue area south of the University of Virginia, but in general we will limit our observations primarily to black and white residents because of the relatively low representation of other groups in the area.
+
+_In terms of income, we see areas of lower income coincide with areas with higher black populations and can also observe the same trend with higher poverty rates. Income and poverty rates seem to coincide as well with areas of higher income to have lower poverty rates._
+
+[SAIMUN TO INSERT NEW DEMO MAPS]
 
 ```{r, echo  = F, out.width='100%', message=FALSE, warning=FALSE}
-comb_income_map
-comb_race_map
-comb_pov_map
+# comb_income_map
+# comb_race_map
+# comb_pov_map
 ```
 
-Breaking down by gender we see different distribution in ages of patients. Both appear bimodal and for both, there appears to be a high density of patients who are in their 20s. This is likely because of the high college student population. For males, there the next high density bumb occurs around patients of 55 years of age while for females, the 2nd high density bump is concentrated at 80. For females, the median age is slightly higher.
-git 
-Now if we also breakdown the incidents by race, we see that most of the patients are White or Black and in these two populations there is a bump in patients above 50 years old. In comparison, there aren't many patients who are of other racial identities. In both Asians and Hispanics we see a greater density of patients who are in their 20s, these incidents might be contributed by students attending UVA.
+The distribution of various demographic characteristics reveals some notable patterns in the characteristics of EMS patients. First, black and white patients represent the overwhelming majority of EMS patients. Second, the age distribution of patients varies quite a bit across racial categories. Whites and blacks using EMS services tend to be older than other racial groups. This is likely a result of the presence of the University of Virginia, which has more Asian student representation than the city and county as a whole. Similar patterns may be at play in the slight bump at young ages for black patients as well. While this pattern is less noticable for whites, this is likely a result of a generally larger white population muting out the effects of the University demographics. Given the increased risks of COVID-19 for older adults, the higher representation of blacks and whites at older ages is worth noting when considering groups at highest risk in Charlottesville.
 
 ```{r , echo = F,  out.width = '100%', message=FALSE, warning=FALSE, fig.height = 6, fig.width=8}
 char_race_gen_na = ems_full %>% 
@@ -170,17 +172,22 @@ char_race_gen_na = ems_full %>%
 
 char_race_gen_na %>%
 ggplot(aes(patient_race_list, as.numeric(patient_age), fill = patient_gender)) +
-  geom_split_violin()+
-    labs(title= "Violin Plot of Age Distribution of Races", x = "Race", y = "Ages", fill = "Gender")+
+  geom_split_violin(alpha= 1, color = "#fafafa")+
+    labs(title= "EMS Patient Demographics", x = "Race", y = "Age", fill = "Gender")+
      scale_x_discrete(expand=c(0, 0) ,labels = function(x) str_wrap(x, width = 10))+
   scale_fill_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))+
-  geom_jitter(data =  sample_n(char_race_gen_na,7500) ,position = position_jitter(.1), size = .7, alpha =.25, shape = 15)
+  #scale_color_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))+
+  geom_jitter(data =  sample_n(char_race_gen_na,7500), position = position_jitter(.025), size = .7, alpha =.25, show.legend = FALSE) +
+  theme(legend.position = "bottom",
+        legend.title = element_blank(),
+        legend.key.size = unit(1, "line"),
+        axis.title.x = element_blank(),
+        panel.grid.minor = element_blank())
 ```
 
-## COVID-19
+### COVID-19
 
-COVID-19 has affected all parts of life and we are interested in how it has impacted Emergency Medical Services in Charlottesville and the larger Albermarle County. Counterintuitively, we can observe that there is a significant drop off in call volume to emergency medical services. This may be caused by people staying at home more and thus there being less emergency incidents. For example, we can see the monthly number of incidents for the top 10 complaints dropping off sharply. 
-
+The pattern most immediately visible in the EMS data is the sudden drop in call volume after the onset of the pandemic. While slightly counterintuitive in the context of a rapidly-spreading virus, residents evidently have become much more hesitant to rely on EMS services in the past few months. This is likely a result both of residents' fears about increased risk of contracting COVID-19 in hospitals and through contact with medical professionals (who may have been in contact with other COVID-19 patients) as well as a reduction in certain types of incidents resulting from stay-at-home orders. As a prime example, calls for injuries (many of which are related to traffic accidents) appear to have dropped at a faster rate than calls that may be related to COVID-19. However, there appears to be a reduction in call volume across nearly all call categories, suggesting that resident fears are likely the primary driver of this trend.
 
 ```{r , echo = F,  out.width = '100%', message=FALSE, fig.height = 10, fig.width=15, warning=FALSE}
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
@@ -221,9 +228,9 @@ plot_data <- new_ems_data %>%
 ggplot(plot_data) +
   geom_line(aes(x = mo_yr, y = n, group = primary_impression_category, color = primary_impression_category), lwd = 1.1) +
   geom_vline(xintercept = dmy("01-02-2020"), linetype = "dashed", alpha = 0.8) +
-  gghighlight(primary_impression_category %in% c("infectious", "respiratory"), use_direct_label = FALSE,
+  gghighlight(primary_impression_category %in% c("infectious", "respiratory", "injury"), use_direct_label = FALSE,
               unhighlighted_params = list(alpha = 0.3)) +
-  scale_colour_manual(values = cbbPalette, labels = c("Infectious", "Respiratory")) +
+  scale_colour_manual(values = cbbPalette, labels = c("Infectious", "Injury", "Respiratory")) +
   labs(x = "Date", y = "Monthly Incidents", color = "Impression Category", title = "Call Volume by Impression") +
   theme(legend.title = element_blank(),
         legend.position = "bottom",
