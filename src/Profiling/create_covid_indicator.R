@@ -357,9 +357,11 @@ ems %>%
 
 # create variable for at least 1 covid symptom
 ems$covid1 <- ifelse(ems$covid_indicator > 0, 1, 0);
+sum(ems$covid1) # 21913
 
 # create variable for at least 2 covid symptoms
 ems$covid2 <- ifelse(ems$covid_indicator > 1, 1, 0);
+sum(ems$covid2) # 8221
 
 # create variable for at least 3 covid symptoms
 ems$covid3 <- ifelse(ems$covid_indicator > 2, 1, 0)

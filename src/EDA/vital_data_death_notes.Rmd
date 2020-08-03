@@ -1,0 +1,217 @@
+---
+title: "vital_data_death_notes"
+author: "Saimun"
+date: "7/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(lubridate)
+
+```
+
+
+```{r data}
+my_cols =  c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+vital = read.csv(here('data','original','vital_stats','Death_dataset_from_2016_to_YTD.csv'))
+vital$RACE = factor(vital$RACE,
+                    levels = c(1:11,15,21,22,24,99),
+                    labels = c('White', "Black", 'Amer. Indian', rep("Asian",7),
+                               "Native Hawaiian", "Other", rep("Other", 4)))
+vital = vital %>% 
+    mutate(DATE_OF_DEATH = mdy(DATE_OF_DEATH))
+
+cutoff = as.Date("2020-02-15")
+vital = vital %>%
+  mutate(covid = DATE_OF_DEATH>= cutoff )
+
+theme_set(theme_minimal() +
+            theme(plot.title = element_text(hjust = 0.5, color = "gray10", size = 24),
+                  plot.subtitle = element_text(hjust = 0.5, color = "gray30", face = "italic", size = 20),
+                  axis.title = element_text(size = 20, color = "gray10"),
+                  axis.text = element_text(size = 18, color = "gray30"),
+                  strip.text = element_text(size = 22, color = "gray30"),
+                  panel.spacing = unit(4, "lines"),
+                  legend.key.size = unit(3, "line"),
+                  legend.text = element_text(size = 16, color = "gray30"),
+                  legend.title = element_text(size = 22, color = "gray10")))
+```
+
+
+
+```{r}
+firt = str_sub(vital$CAUSE_OF_DEATH, 1,3) 
+
+
+category = vector(length = length(firt))
+#ICD 10 CODEBOOK
+category = case_when(
+  grepl("^A|^B", firt) ~ "Certain Infectious Diseases",
+  grepl("^C|^D0|^D1|^D2|^D3|^D4", firt) ~ "Neoplasms",
+  grepl("^D5|^D6|^D7|^D8", firt) ~ "Diseases of the Blood",
+  grepl("^E", firt) ~ "Endocrine, Nutritional, Metabolic Disease",
+  grepl("^F", firt) ~ "Mental, Behavioural, Neurodev. Disease",
+  grepl("^G", firt) ~ "Nervous System",
+  grepl("^H0|^H1|^H2|^H3|^H4|^H5", firt) ~ "Eye/ Adnexa Disease",
+  grepl("^H6|^H7|^H8|^H9", firt) ~ "Ear/ Mastoid Disease",
+  grepl("^I", firt) ~ "Circulatory System",
+  grepl("^J", firt) ~ "Respiratory System",
+  grepl("^K", firt) ~ "Digestive System",
+  grepl("^L", firt) ~ "Skin Tissue Disease",
+  grepl("^M", firt) ~ "Muscoskeletal/ Connective Tissue",
+  grepl("^N", firt) ~ "Genitourinary System",
+  grepl("^O", firt) ~ "Pregnancy/ Childbirth/ Puerperium",
+  grepl("^P", firt) ~ "Perinatal Period Complications",
+  grepl("^Q", firt) ~ "Congenital Malformations/Chromsomal Abnormalities",
+  grepl("^R", firt) ~ "Unclassified Abnormalities",
+  grepl("^S|^T", firt) ~ "Injury/ Poisoning/ Consequences of Extenral Causes",
+  grepl("^V|^W|^X|^Y", firt) ~ "External Causes of Morbidity",
+  grepl("^Z", firt) ~ "Factors Influencing Healthcare Access"
+)
+
+vital$category = category
+```
+
+```{r}
+prop.table(table(vital$RACE))
+vital %>%
+  ggplot(aes(RACE))+
+  geom_bar(fill = my_cols[5])+
+    labs(x= "Race", y= "Count", title = "Number of Deaths by Race")+
+    scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+    ggsave(here::here('output','Number of Deaths by Race.png'),width = 10)
+
+
+vital %>%
+  ggplot(aes(AGE))+
+  geom_histogram()+
+  facet_grid(~GENDER)
+tapply(vital$AGE,vital$GENDER, summary)
+
+vital %>%
+  filter(RACE %in% c("White","Black"))%>%
+  ggplot(aes(AGE))+
+  geom_histogram()+
+  facet_grid(~as.factor(RACE))
+```
+
+
+
+```{r}
+top_category <- vital %>%
+  group_by(category) %>%
+  summarize(count = n()) %>%
+  top_n(10, count)
+
+vital %>%
+  count(category, sort = T) %>%
+  ggplot(aes(reorder(category,n),n))+
+  geom_bar(stat='identity', position=position_dodge(.5), fill = my_cols[5])+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 15))+
+  labs(x= "ICD 10- Code", y= "Count", title = "Number of Deaths by ICD-10 Code")+
+  theme(axis.text = element_text(size = 14, color = "gray30"))+
+  coord_flip()+
+  ggsave(here::here('output','Number_of_Deaths_by_ICD-10_Code.png'), height = 15, width = 20) 
+
+
+vital %>%
+  filter(!is.na(RACE))%>%
+  ggplot(aes(category, fill = as.factor(RACE)))+
+  geom_bar(position = "fill")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 5))+
+  scale_fill_manual(values = rev(my_cols[1:6]), name = "Race")+
+  labs(x= "ICD 10- Code", y= "Proportion", title = " Proportion of Mortalities by Race")+
+  theme(axis.text = element_text(size = 14, color = "gray30"))+
+  coord_flip()+
+  ggsave(here::here('output','Death_by_race_prop.png'), height = 15, width = 20)
+
+tapply(vital$RACE, vital$category, summary)
+
+```
+
+```{r}
+#calc relative risk for each condition for black patients vs white patients
+tots = vital %>% 
+  filter(RACE %in% c('White','Black')) %>%
+  count(RACE)
+
+all_cat_death_tots = vital %>%
+  filter(RACE %in% c('White','Black')) %>%
+  group_by(RACE)%>%
+  count(category, sort = T)
+
+calc_relative_risk = function(death_cat){
+  cat_death = all_cat_death_tots %>%
+  filter(category == death_cat) %>%
+  select(n) %>%
+  summarise_all(funs(sum))
+
+  risk = cat_death/tots 
+  risk = risk %>%
+    select(n)
+  relative_risk = risk[2,]/risk[1,]
+}
+
+relative_risk = data.frame()
+for( i in unique(na.omit(vital$category))){
+  relative_risk = rbind(relative_risk, c(i,calc_relative_risk(i)))
+}
+colnames(relative_risk) = c('category','relative_risk')
+relative_risk[,2] <- as.numeric(relative_risk[,2])
+
+
+relative_risk %>%
+  arrange(desc(relative_risk)) %>%
+  # filter(RACE %in% c('White', 'Black'))%>%
+  ggplot(aes(reorder(category,relative_risk), relative_risk))+
+  geom_col(fill = my_cols[5])+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
+  labs(x= "ICD 10- Code", y= "Relative Risk", title = "Relative Risk of Death of Black Patients to White Patients")+
+  geom_hline(yintercept = 1, color = "#E57200")+
+  coord_flip()+
+  theme(axis.text = element_text(size = 16, color = "gray30"))+
+  ggsave(here::here('output','rel_risk.png'), height = 15, width = 20)
+
+
+```
+
+```{r}
+post_covid = vital %>%
+  arrange(desc(DATE_OF_DEATH)) %>%
+  filter(DATE_OF_DEATH>= cutoff)
+post_covid %>%
+  group_by(category)%>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+vital %>%
+  # filter(!is.na(category))%>%
+  group_by(covid,category)%>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n)) %>%
+  ggplot(aes(covid,freq, group = category, color = str_wrap(paste0(category,'\n'),20)))+
+  geom_line()+
+  labs(colour="ICD 10 Code", x= 'Covid Era', y= 'Relative Frequency',
+       title = 'Relative Frequencies of ICD 10 Codes Before\nand During Covid Era') +
+  guides(color=guide_legend(ncol=2))+
+  ggsave(here("output", "ICD10_Relative_Freq.png"), height = 10, width = 15)
+
+
+vital %>%
+  group_by(covid) %>%
+  count(category, sort = T) %>%
+  ggplot()+
+  geom_bar(aes(reorder(category,-n),n), stat='identity', position='dodge')+
+  facet_grid(rows = vars(covid))+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  labs(x= "ICD 10- Code", y= "Proportion", title = " Proportion of Mortalities by Race")
+
+
+```
+
+
