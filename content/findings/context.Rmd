@@ -158,7 +158,7 @@ comb_pov_map
 ```
 
 Breaking down by gender we see different distribution in ages of patients. Both appear bimodal and for both, there appears to be a high density of patients who are in their 20s. This is likely because of the high college student population. For males, there the next high density bumb occurs around patients of 55 years of age while for females, the 2nd high density bump is concentrated at 80. For females, the median age is slightly higher.
-
+git 
 Now if we also breakdown the incidents by race, we see that most of the patients are White or Black and in these two populations there is a bump in patients above 50 years old. In comparison, there aren't many patients who are of other racial identities. In both Asians and Hispanics we see a greater density of patients who are in their 20s, these incidents might be contributed by students attending UVA.
 
 ```{r , echo = F,  out.width = '100%', message=FALSE, warning=FALSE, fig.height = 6, fig.width=8}
