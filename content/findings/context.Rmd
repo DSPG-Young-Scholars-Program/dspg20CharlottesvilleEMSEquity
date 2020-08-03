@@ -18,6 +18,7 @@ library(stringr)
 library(stringr)
 library(lubridate)
 library(knitr)
+library(gghighlight)
 
 source(here('src','Mapping','demo_maps.R'))
 
@@ -34,6 +35,8 @@ theme_set(theme_minimal() +
 my_cols =  c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 ```
+
+
 ```{r, vital stats, echo =F}
 vital = read.csv(here('data','original','vital_stats','Death_dataset_from_2016_to_YTD.csv'))
 vital$RACE = factor(vital$RACE,
@@ -147,30 +150,63 @@ COVID-19 has affected all parts of life and we are interested in how it has impa
 
 
 ```{r , echo = F,  out.width = '100%', message=FALSE, fig.height = 10, fig.width=15, warning=FALSE}
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
-top_impressions <- ems_full %>% 
-  filter(!is.na(situation_provider_primary_impression_code_and_description)) %>%
-  group_by(situation_provider_primary_impression_code_and_description) %>% 
-  count() %>% 
-  ungroup() %>%
-  top_n(10) %>%
-  arrange(desc(n))
+new_ems_data <- readr::read_csv(here("data", "final", "ems_clean_data.csv")) ## Plot actual data
+#new_ems_data <- readr::read_csv(here("data", "final", "ems_clean_data_impressions_categorized.csv")) ## Plot imputed impressions
 
-top_impressions <- top_impressions$situation_provider_primary_impression_code_and_description
-plot_data <- ems_full %>%
-  filter(situation_provider_primary_impression_code_and_description %in% top_impressions) %>%
-  group_by(mo_yr, situation_provider_primary_impression_code_and_description) %>%
+new_ems_data <- new_ems_data %>% 
+  mutate(incident_date = ymd(incident_date), 
+         yr = as.factor(year(incident_date)), 
+         mo = as.factor(month(incident_date)), 
+         dy = as.character(day(incident_date)),
+         mo_yr = dmy(paste0("01-", mo, "-", yr)))
+
+## Data before possible impression categorization
+plot_data <- new_ems_data %>%
+  mutate(primary_impression_category = case_when(is.na(situation_provider_primary_impression_code_and_description) ~ "missing",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "alcohol") ~ "abuse of alcohol",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "abuse") ~ "abuse of substance",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "allergic") ~ "allergic reaction",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "ob") ~ "ob",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "endocrine") ~ "endocrine",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, "gi") ~ "gi/gu",
+                                                 str_detect(situation_provider_primary_impression_code_and_description, " - ") ~ str_extract(situation_provider_primary_impression_code_and_description, "[^-]+"),
+                                                 !str_detect(situation_provider_primary_impression_code_and_description, " - ") ~ str_extract(situation_provider_primary_impression_code_and_description, "[^\\(]+")),
+         primary_impression_category = trimws(primary_impression_category)) %>%
+  group_by(mo_yr, primary_impression_category) %>%
   count() %>%
-  mutate(situation_provider_primary_impression_code_and_description = factor(situation_provider_primary_impression_code_and_description, levels = top_impressions))
+  filter(!str_detect(primary_impression_category, "\\|"))
 
-## Plot temporal trends in volume
-ggplot(plot_data) + 
-  geom_line(aes(x = mo_yr, y = n, color = situation_provider_primary_impression_code_and_description), alpha = 1) + 
-  geom_point(aes(x = mo_yr, y = n, color = situation_provider_primary_impression_code_and_description), alpha = 0.7) +
+## For imputed impressions
+# plot_data <- new_ems_data %>%
+#   group_by(mo_yr, possible_impression_category) %>%
+#   count() %>%
+#   filter(!str_detect(possible_impression_category, "\\|"), possible_impression_category != "missing")
+
+## For actual data
+ggplot(plot_data) +
+  geom_line(aes(x = mo_yr, y = n, group = primary_impression_category, color = primary_impression_category), lwd = 1.1) +
   geom_vline(xintercept = dmy("01-02-2020"), linetype = "dashed", alpha = 0.8) +
-  #scale_color_manual(values = cbPalette) +
-  #facet_wrap(~situation_provider_primary_impression_code_and_description, ncol = 1) +
-  labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions\n")
+  gghighlight(primary_impression_category %in% c("infectious", "respiratory"), use_direct_label = FALSE,
+              unhighlighted_params = list(alpha = 0.3)) +
+  scale_colour_manual(values = cbbPalette, labels = c("Infectious", "Respiratory")) +
+  labs(x = "Date", y = "Monthly Incidents", color = "Impression Category", title = "Call Volume by Impression") +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom",
+        axis.title.x = element_blank())
+
+## For imputed impressions
+# ggplot(plot_data) + 
+#   geom_line(aes(x = mo_yr, y = n, group = possible_impression_category, color = possible_impression_category), lwd = 1.1) +
+#   geom_vline(xintercept = dmy("01-02-2020"), linetype = "dashed", alpha = 0.8) +
+#   gghighlight(possible_impression_category %in% c("infectious", "respiratory"), use_direct_label = FALSE,
+#               unhighlighted_params = list(alpha = 0.3)) +
+#   scale_colour_manual(values = cbbPalette, labels = c("Infectious", "Respiratory")) +
+#   labs(y = "Monthly Incidents", color = "Impression Category", title = "Call Volume by Impression", caption = "Note: Impressions imputed where missing") +
+#   theme(legend.title = element_blank(),
+#         legend.position = "bottom",
+#         axis.title.x = element_blank())
 ```
 
 We also are interested in understanding where call volume is dropping. Discrepencies may signal other needs in the community that aren't being addressed. 
