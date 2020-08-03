@@ -249,14 +249,21 @@ ggplot(plot_data) +
 #         axis.title.x = element_blank())
 ```
 
-We also are interested in understanding where call volume is dropping. Discrepencies may signal other needs in the community that aren't being addressed. 
+Call volume is not dropping uniformly across Charlottesville and Albemarle, either. 
+
+...
 
 [insert ellen's map of change]
 [where is that]
 
 ## Vital Stats
 
-We had access to mortality data and were interested in how the deaths broke down. We see that the most common cause of death is a circulatory disease followed by neoplasms and extneral causes of morbidity. Racially, the dataset is primarily white or race was not recorded. Black patients make up the next highest group of people in the dataset. All other races combined represent less than 100 deaths in this dataset.
+Using data from the Virginia Department of Health, we were able to investigate the trends in mortality in Charlottesville and Albemarle over the same period present in the EMS dataset.
+
+
+
+
+_We had access to mortality data and were interested in how the deaths broke down. We see that the most common cause of death is a circulatory disease followed by neoplasms and extneral causes of morbidity. Racially, the dataset is primarily white or race was not recorded. Black patients make up the next highest group of people in the dataset. All other races combined represent less than 100 deaths in this dataset._
 
 ```{r , echo = F,  out.width = '100%',warning=FALSE, message=FALSE}
 vital %>%
@@ -349,4 +356,10 @@ relative_risk %>%
   coord_flip()+
   theme(axis.text = element_text(size = 16, color = "gray30"))
 ```
+
+However, while the VDH data are helpful in evaluating underlying health disparities in the region, we did not notice an overall increase in mortality since the beginning of the COVID-19 pandemic, suggesting that the pandemic may have to play out longer before we are able to assess its overall effects on mortality in the region.
+
+The patterns in general health outlined above provide important context as we interpret the results of our [analysis of response times](https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/findings/response-time-modeling/) and [exploration of COVID-19 symptoms](https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/findings/covid-indicator/) across the region.
+
+
 
