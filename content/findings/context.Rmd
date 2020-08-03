@@ -10,16 +10,167 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(here)
+library(dplyr)
+library(ggplot2)
+library(data.table)
+library(naniar)
+library(stringr)
+library(stringr)
+library(lubridate)
 library(knitr)
+
 source(here('src','Mapping','demo_maps.R'))
+
+theme_set(theme_minimal() +
+            theme(plot.title = element_text(hjust = 0.5, color = "gray10", size = 24),
+                  plot.subtitle = element_text(hjust = 0.5, color = "gray30", face = "italic", size = 20),
+                  axis.title = element_text(size = 20, color = "gray10"),
+                  axis.text = element_text(size = 18, color = "gray30"),
+                  strip.text = element_text(size = 22, color = "gray30"),
+                  panel.spacing = unit(4, "lines"),
+                  legend.key.size = unit(3, "line"),
+                  legend.text = element_text(size = 16, color = "gray30"),
+                  legend.title = element_text(size = 22, color = "gray10")))
+my_cols =  c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+```
+```{r, vital stats, echo =F}
+vital = read.csv(here('data','original','vital_stats','Death_dataset_from_2016_to_YTD.csv'))
+vital$RACE = factor(vital$RACE,
+                    levels = c(1:11,15,21,22,24,99),
+                    labels = c('White', "Black", 'Amer. Indian', rep("Asian",7),
+                               "Native Hawaiian", "Other", rep("Other", 4)))
+vital = vital %>% 
+    mutate(DATE_OF_DEATH = mdy(DATE_OF_DEATH))
+
+cutoff = as.Date("2020-02-15")
+vital = vital %>%
+  mutate(covid = DATE_OF_DEATH>= cutoff )
+
+firt = str_sub(vital$CAUSE_OF_DEATH, 1,3) 
+
+
+category = vector(length = length(firt))
+#ICD 10 CODEBOOK
+category = case_when(
+  grepl("^A|^B", firt) ~ "Certain Infectious Diseases",
+  grepl("^C|^D0|^D1|^D2|^D3|^D4", firt) ~ "Neoplasms",
+  grepl("^D5|^D6|^D7|^D8", firt) ~ "Diseases of the Blood",
+  grepl("^E", firt) ~ "Endocrine, Nutritional, Metabolic Disease",
+  grepl("^F", firt) ~ "Mental, Behavioural, Neurodev. Disease",
+  grepl("^G", firt) ~ "Nervous System",
+  grepl("^H0|^H1|^H2|^H3|^H4|^H5", firt) ~ "Eye/ Adnexa Disease",
+  grepl("^H6|^H7|^H8|^H9", firt) ~ "Ear/ Mastoid Disease",
+  grepl("^I", firt) ~ "Circulatory System",
+  grepl("^J", firt) ~ "Respiratory System",
+  grepl("^K", firt) ~ "Digestive System",
+  grepl("^L", firt) ~ "Skin Tissue Disease",
+  grepl("^M", firt) ~ "Muscoskeletal/ Connective Tissue",
+  grepl("^N", firt) ~ "Genitourinary System",
+  grepl("^O", firt) ~ "Pregnancy/ Childbirth/ Puerperium",
+  grepl("^P", firt) ~ "Perinatal Period Complications",
+  grepl("^Q", firt) ~ "Congenital Malformations/Chromsomal Abnormalities",
+  grepl("^R", firt) ~ "Unclassified Abnormalities",
+  grepl("^S|^T", firt) ~ "Injury/ Poisoning/ Consequences of Extenral Causes",
+  grepl("^V|^W|^X|^Y", firt) ~ "External Causes of Morbidity",
+  grepl("^Z", firt) ~ "Factors Influencing Healthcare Access"
+)
+
+vital$category = category
+
+```
+
+
+```{r, ems, echo = F}
+ems_full <-read.csv(here::here("data", "final", "ems_clean_data.csv"))
+cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
+ems_full$patient_race_list = gsub("(.*?)\\|.*", "\\1", ems_full$patient_race_list)
+ems_full$patient_race_list  = factor(ems_full$patient_race_list,
+                    levels = c('white',"black or african american","american indian or alaska native" ,
+                               "asian","native hawaiian or other pacific islander"),
+                    labels = c('White', "Black", 'Amer. Indian', "Asian",
+                               "Native Hawaiian"))
+
+# new_ems_data <- new_ems_data %>% 
+#   mutate(incident_date = ymd(incident_date), 
+#          yr = as.factor(year(incident_date)), 
+#          mo = as.factor(month(incident_date)), 
+#          dy = as.character(day(incident_date)),
+#          mo_yr = dmy(paste0("01-", mo, "-", yr)),
+#          incident_psap_call_date_time = as.POSIXct(new_ems_data$incident_psap_call_date_time * (60 * 60 * 24), origin = "1899-12-30"))
+
+ems_full <- ems_full %>% 
+  mutate(incident_date = ymd(incident_date), 
+         yr = as.factor(year(incident_date)), 
+         mo = as.factor(month(incident_date)), 
+         dy = as.character(day(incident_date)),
+         mo_yr = dmy(paste0("01-", mo, "-", yr)))
+```
+
+```{r, functions, echo = F, message=FALSE}
+#https://stackoverflow.com/questions/35717353/split-violin-plot-with-ggplot2
+GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin, 
+                           draw_group = function(self, data, ..., draw_quantiles = NULL) {
+  data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+  grp <- data[1, "group"]
+  newdata <- plyr::arrange(transform(data, x = if (grp %% 2 == 1) xminv else xmaxv), if (grp %% 2 == 1) y else -y)
+  newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
+  newdata[c(1, nrow(newdata) - 1, nrow(newdata)), "x"] <- round(newdata[1, "x"])
+
+  if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+    stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
+      1))
+    quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
+    aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
+    aesthetics$alpha <- rep(1, nrow(quantiles))
+    both <- cbind(quantiles, aesthetics)
+    quantile_grob <- GeomPath$draw_panel(both, ...)
+    ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
+  }
+  else {
+    ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
+  }
+})
+
+geom_split_violin <- function(mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., 
+                              draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, 
+                              show.legend = NA, inherit.aes = TRUE) {
+  layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, 
+        position = position, show.legend = show.legend, inherit.aes = inherit.aes, 
+        params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
+}
 ```
 
 ## COVID-19
 
 COVID-19 has affected all parts of life and we are interested in how it has impacted Emergency Medical Services in Charlottesville and the larger Albermarle County. Counterintuitively, we can observe that there is a significant drop off in call volume to emergency medical services. This may be caused by people staying at home more and thus there being less emergency incidents. For example, we can see the monthly number of incidents for the top 10 complaints dropping off sharply. 
 
-```{r , echo = F,  out.width = '100%'}
-include_graphics(here("output", "top_impression_volume_2.png"))
+
+```{r , echo = F,  out.width = '100%', message=FALSE, fig.height = 10, fig.width=15, warning=FALSE}
+
+top_impressions <- ems_full %>% 
+  filter(!is.na(situation_provider_primary_impression_code_and_description)) %>%
+  group_by(situation_provider_primary_impression_code_and_description) %>% 
+  count() %>% 
+  ungroup() %>%
+  top_n(10) %>%
+  arrange(desc(n))
+
+top_impressions <- top_impressions$situation_provider_primary_impression_code_and_description
+plot_data <- ems_full %>%
+  filter(situation_provider_primary_impression_code_and_description %in% top_impressions) %>%
+  group_by(mo_yr, situation_provider_primary_impression_code_and_description) %>%
+  count() %>%
+  mutate(situation_provider_primary_impression_code_and_description = factor(situation_provider_primary_impression_code_and_description, levels = top_impressions))
+
+## Plot temporal trends in volume
+ggplot(plot_data) + 
+  geom_line(aes(x = mo_yr, y = n, color = situation_provider_primary_impression_code_and_description), alpha = 1) + 
+  geom_point(aes(x = mo_yr, y = n, color = situation_provider_primary_impression_code_and_description), alpha = 0.7) +
+  geom_vline(xintercept = dmy("01-02-2020"), linetype = "dashed", alpha = 0.8) +
+  #scale_color_manual(values = cbPalette) +
+  #facet_wrap(~situation_provider_primary_impression_code_and_description, ncol = 1) +
+  labs(x = "Date", y = "Monthly Incidents", color = "Complaint", title = "Call Volume for Top Provider Impressions\n")
 ```
 
 We also are interested in understanding where call volume is dropping. Discrepencies may signal other needs in the community that aren't being addressed. 
@@ -31,7 +182,7 @@ We also are interested in understanding where call volume is dropping. Discrepen
 
 In order to get a sense of what our data population looks like, it's helpful to create some plots and maps. This first map depicts the racial breakdown of each county and we can see that the area is predominantly white and black people make up the next largest racial group. Black people are more concentrated within a few tracts within Charlottesville.. In terms of income, we see areas of lower income coincide with areas with higher black populations and can also observe the same trend with higher poverty rates. Income and poverty rates seem to coincide as well with areas of higher income to have lower poverty rates.
 
-```{r, echo  = F, out.width='100%'}
+```{r, echo  = F, out.width='100%', message=FALSE, warning=FALSE}
 
 comb_income_map
 comb_race_map
@@ -41,42 +192,135 @@ comb_pov_map
 
 Breaking down by gender we see different distribution in ages of patients. Both appear bimodal and for both, there appears to be a high density of patients who are in their 20s. This is likely because of the high college student population. For males, there the next high density bumb occurs around patients of 55 years of age while for females, the 2nd high density bump is concentrated at 80. For females, the median age is slightly higher.
 
-```{r , echo = F,  out.width = '100%'}
-include_graphics(here("output", "Violin_Plot_of_Age_Distribution_of_Gender.png"))
+```{r , echo = F,  out.width = '100%', message=FALSE, warning=FALSE, fig.height = 6, fig.width=8}
+char_race_gen_na = ems_full %>% 
+  replace_with_na(replace = list(patient_race_list = c("Not Recorded", "Not Applicable"), 
+                                 patient_gender = c("Not Applicable", "unknown (unable to determine)") )) %>% # groups not recorded, etc. into NAs
+  filter(!patient_race_list %in% NA) %>%
+  filter(!patient_gender %in% NA)
+
+char_race_gen_na %>%
+ggplot(aes(patient_gender, as.numeric(patient_age), fill = patient_gender)) +
+  geom_violin()+
+  labs(title= "Violin Plot of Age Distribution of Genders", x = "Sex", y = "Ages", fill = "Gender")+
+  scale_x_discrete(expand=c(0, 0) ,labels = function(x) str_wrap(x, width = 10))+
+  scale_fill_manual(values = cbPalette)+ 
+  geom_boxplot(aes(patient_gender, as.numeric(patient_age)),width =.1, inherit.aes = F)+
+  scale_fill_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))
+
 ```
 
 Now if we also breakdown the incidents by race, we see that most of the patients are White or Black and in these two populations there is a bump in patients above 50 years old. In comparison, there aren't many patients who are of other racial identities. In both Asians and Hispanics we see a greater density of patients who are in their 20s, these incidents might be contributed by students attending UVA.
 
-```{r , echo = F,  out.width = '100%'}
-include_graphics(here("output", "Violin_Plot_of_Age_Distribution_of_Races.png"))
+```{r , echo = F,  out.width = '100%', message=FALSE, warning=FALSE, fig.height = 6, fig.width=8}
+char_race_gen_na = ems_full %>% 
+  replace_with_na(replace = list(patient_race_list = c("Not Recorded", "Not Applicable"), 
+                                 patient_gender = c("Not Applicable", "unknown (unable to determine)") )) %>% # groups not recorded, etc. into NAs
+  filter(!patient_race_list %in% NA) %>%
+  filter(!patient_gender %in% NA)
+
+char_race_gen_na %>%
+ggplot(aes(patient_race_list, as.numeric(patient_age), fill = patient_gender)) +
+  geom_split_violin()+
+    labs(title= "Violin Plot of Age Distribution of Races", x = "Race", y = "Ages", fill = "Gender")+
+     scale_x_discrete(expand=c(0, 0) ,labels = function(x) str_wrap(x, width = 10))+
+  scale_fill_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))+
+  geom_jitter(data =  sample_n(char_race_gen_na,7500) ,position = position_jitter(.1), size = .7, alpha =.25, shape = 15)
 ```
 
 ## Vital Stats
 
 We had access to mortality data and were interested in how the deaths broke down. We see that the most common cause of death is a circulatory disease followed by neoplasms and extneral causes of morbidity. Racially, the dataset is primarily white or race was not recorded. Black patients make up the next highest group of people in the dataset. All other races combined represent less than 100 deaths in this dataset.
 
-```{r , echo = F,  out.width = '100%'}
-include_graphics(here("output", "Number of Deaths by Race.png"))
-include_graphics(here("output", "Number_of_Deaths_by_ICD-10_Code.png"))
+```{r , echo = F,  out.width = '100%',warning=FALSE, message=FALSE}
+vital %>%
+  ggplot(aes(RACE))+
+  geom_bar(fill = my_cols[5])+
+    labs(x= "Race", y= "Count", title = "Number of Deaths by Race")+
+    scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
 ```
 
-We see that overall, mortalities per month hasn't changed thus far. 
+```{r , echo = F,  out.width = '100%',warning=FALSE, message=FALSE, fig.height = 15, fig.width=20}
+vital %>%
+  count(category, sort = T) %>%
+  ggplot(aes(reorder(category,n),n))+
+  geom_bar(stat='identity', position=position_dodge(.5), fill = my_cols[5])+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 15))+
+  labs(x= "ICD 10- Code", y= "Count", title = "Number of Deaths by ICD-10 Code")+
+  theme(axis.text = element_text(size = 14, color = "gray30"))+
+  coord_flip()
 
-```{r, echo = F,  out.width = '100%'}
-include_graphics(here("output", "mortality.png"))
 ```
 
 Of course, what is contributing to these mortalities might've changed. If we look at changes to the relative frequencies of ICD 10 Codes for mortality we see a sharp increase in deaths were the category is not recorded. 
 
-```{r, echo = F,  out.width = '100%'}
-include_graphics(here("output", "ICD10_Relative_Freq.png"))
+```{r, echo = F,  out.width = '100%', warning=FALSE, message=FALSE, fig.height = 10, fig.width=15}
+vital %>%
+  # filter(!is.na(category))%>%
+  group_by(covid,category)%>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n)) %>%
+  ggplot(aes(covid,freq, group = category, color = str_wrap(paste0(category,'\n'),20)))+
+  geom_line()+
+  labs(colour="ICD 10 Code", x= 'Covid Era', y= 'Relative Frequency',
+       title = 'Relative Frequencies of ICD 10 Codes Before\nand During Covid Era') +
+  guides(color=guide_legend(ncol=2))
 ```
 
 
 When we overlay the racial distribution over the categories we note that of the deaths where race is recorded, it doesn't appear that the racial distribution is even across the categories. Calculating the relative risk of death by each category for black patients versus white patients shows that black patients are more than 2.5 times as likely to die from diseases of the blood and twice as likely to die from complications arising during the perinatal period. 
 
-```{r, echo = F,  out.width = '100%'}
-include_graphics(here("output", "Death_by_race_prop.png"))
-include_graphics(here("output", "rel_risk.png"))
+```{r, echo = F,  out.width = '100%', warning=FALSE, message=FALSE, fig.height = 15, fig.width=20}
+vital %>%
+  filter(!is.na(RACE))%>%
+  ggplot(aes(category, fill = as.factor(RACE)))+
+  geom_bar(position = "fill")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 5))+
+  scale_fill_manual(values = rev(my_cols[1:6]), name = "Race")+
+  labs(x= "ICD 10- Code", y= "Proportion", title = " Proportion of Mortalities by Race")+
+  theme(axis.text = element_text(size = 14, color = "gray30"))+
+  coord_flip()
+```
+
+```{r, echo = F, out.width='100%', warning=FALSE,message=FALSE, fig.height = 15, fig.width=20}
+tots = vital %>% 
+  filter(RACE %in% c('White','Black')) %>%
+  count(RACE)
+
+all_cat_death_tots = vital %>%
+  filter(RACE %in% c('White','Black')) %>%
+  group_by(RACE)%>%
+  count(category, sort = T)
+
+calc_relative_risk = function(death_cat){
+  cat_death = all_cat_death_tots %>%
+  filter(category == death_cat) %>%
+  select(n) %>%
+  summarise_all(funs(sum))
+
+  risk = cat_death/tots 
+  risk = risk %>%
+    select(n)
+  relative_risk = risk[2,]/risk[1,]
+}
+
+relative_risk = data.frame()
+for( i in unique(na.omit(vital$category))){
+  relative_risk = rbind(relative_risk, c(i,calc_relative_risk(i)))
+}
+colnames(relative_risk) = c('category','relative_risk')
+relative_risk[,2] <- as.numeric(relative_risk[,2])
+
+
+relative_risk %>%
+  arrange(desc(relative_risk)) %>%
+  # filter(RACE %in% c('White', 'Black'))%>%
+  ggplot(aes(reorder(category,relative_risk), relative_risk))+
+  geom_col(fill = my_cols[5])+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
+  labs(x= "ICD 10- Code", y= "Relative Risk", title = "Relative Risk of Death of Black Patients to White Patients")+
+  geom_hline(yintercept = 1, color = "#E57200")+
+  coord_flip()+
+  theme(axis.text = element_text(size = 16, color = "gray30"))
 ```
 
