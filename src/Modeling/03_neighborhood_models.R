@@ -69,38 +69,3 @@ neighbor_model_bayes_yes_interact <- prepared_data_regions %>%
 
 save(neighbor_model_bayes_yes_interact, file = here::here("data", "working", "model_objects", "neighbor_model_bayes_yes_interact.RData"))
 
-# load(here::here("src", "Modeling", "model_objects", "glm_full_no_interaction.RData"))
-
-
-#############################################################
-# Check for spatial autocorrelation in residuals
-#############################################################
-#
-# model_res <- residuals(basic_linear_model)
-#
-# modeled_data <- prepared_data %>%
-#   filter(across(c(response_time_hundreths_of_minutes,
-#                   patient_age,
-#                   patient_gender,
-#                   response_vehicle_type_collapsed,
-#                   after_covid,
-#                   impression_category,
-#                   possible_impression_category_collapsed,
-#                   patient_first_race_collapsed,
-#                   time_of_day), ~!is.na(.x))) %>%
-#   mutate(residuals = model_res) %>%
-#   filter(!is.na(scene_gps_latitude)) %>%
-#   sample_frac(0.20)
-#
-#
-# incident_distances <- as.matrix(dist(cbind(modeled_data$scene_gps_latitude, modeled_data$scene_gps_longitude)))
-# incident_distances <- 1/incident_distances
-# diag(incident_distances) <- 0
-# incident_distances[is.infinite(incident_distances)] <- 0
-#
-#
-#
-# ape::Moran.I(modeled_data$residuals, incident_distances)
-
-
-## There is no global spatial autocorrelation.

@@ -357,6 +357,7 @@ The interpretation of units is the same as before. Here we see that rural areas 
 
 
 ```{r}
+set.seed(451)
 test_cases <- tibble(after_covid = c(TRUE, TRUE),
                      patient_age = rep(45, 2),
                      patient_first_race_collapsed = c("black or african american", "black or african american"),

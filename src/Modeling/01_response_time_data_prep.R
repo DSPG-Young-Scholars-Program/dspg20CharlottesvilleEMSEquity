@@ -96,6 +96,7 @@ prepared_data <- response_time_data %>%
          scene_gps_latitude,
          scene_gps_longitude,
          incident_dispatch_notified_to_unit_arrived_on_scene_in_minutes) %>%
+  filter(!is.na(response_vehicle_type_collapsed)) %>%
   mutate(across(everything(), ~ifelse(is.na(.x) & !is.numeric(.x),
                                       "missing",
                                       .x))) %>% # for categorical variables simply add missing as a category
