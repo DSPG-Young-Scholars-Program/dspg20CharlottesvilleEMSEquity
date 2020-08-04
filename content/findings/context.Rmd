@@ -8,18 +8,24 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
 library(here)
 library(dplyr)
 library(ggplot2)
 library(data.table)
 library(naniar)
 library(stringr)
-library(stringr)
 library(lubridate)
 library(knitr)
 library(gghighlight)
 library(ggalt)
+library(sf)
+library(leaflet)
+library(glue)
+library(purrr)
+library(leaflet.mapboxgl)
+
 
 source(here('src','Mapping','demo_maps.R'))
 
@@ -33,7 +39,10 @@ theme_set(theme_minimal() +
                   legend.key.size = unit(3, "line"),
                   legend.text = element_text(size = 16, color = "gray30"),
                   legend.title = element_text(size = 22, color = "gray10")))
+
 my_cols =  c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+options(mapbox.accessToken = Sys.getenv("MAPBOX_TOKEN"))
 
 ```
 
@@ -148,19 +157,68 @@ geom_split_violin <- function(mapping = NULL, data = NULL, stat = "ydensity", po
 
 ### Demographics
 
-Given this project's focus on health equity, we need to first develop a better understanding of the demographic makeup of Charlottesville and Albemarle. While this information is readily available from the American Community Survey (ACS), census tracts and block groups often don't present an accurate representation of the population distribution in a town or city. We therefore used data from the ACS in Charlottesville to estimate the demographic makeup of the city's actual neighborhoods. We used [iterated proportional fitting](https://en.wikipedia.org/wiki/Iterative_proportional_fitting) to sample from the ACS data and re-aggregate values to the neighborhood level in Charlottesville. Of course, since Albemarle County does not have distinct neighborhoods, we use data reported for the census tracts in the county.
+Given this project's focus on health equity, we first wanted to develop a better understanding of the demographic makeup of Charlottesville and Albemarle. While this information is readily available from the American Community Survey (ACS), census tracts and block groups often don't present an accurate representation of the population distribution in a town or city. We therefore used data from the ACS in Charlottesville to estimate the demographic makeup of the city's actual neighborhoods. We used [iterated proportional fitting](https://en.wikipedia.org/wiki/Iterative_proportional_fitting) to sample from the ACS data and re-aggregate values to the neighborhood level in Charlottesville. Of course, since Albemarle County does not have distinct neighborhoods, we use data reported for the census tracts in the county.
+
+```{r}
+alb_race <- get_acs(geography = "tract", state = 51, county = 003, 
+                    table = "B02001", year = 2018, survey="acs5", cache_table = TRUE, 
+                    output = "wide", geometry = TRUE, keep_geo_vars = TRUE)
+
+## Compute race percentages for Albemarle County
+alb_race <- alb_race %>% transmute(
+  NAME.y = NAME.y,
+  prop_white = B02001_002E / B02001_001E,
+  prop_black = B02001_003E / B02001_001E,
+  prop_asian = B02001_005E / B02001_001E,
+  geometry = geometry
+) %>% 
+  rename(NAME = NAME.y) %>%
+  st_transform(crs = 4326)
+
+city_border <- tigris::counties(state = "VA",
+                                cb = TRUE, year = 2018, class = "sf") %>%
+  filter(COUNTYFP == 540) %>%
+  st_transform(crs = 4326)
+
+neighborhoods_sp <- st_read(here("data", "working", "neighborhood_demographics.geojson"), quiet = TRUE) %>%
+  st_transform(crs = 4326) %>%
+  select(NAME, n, prop_white, prop_black, prop_asian)
+
+county_neighborhoods_sp <- bind_rows(alb_race, neighborhoods_sp)
+
+BAMMtools::getJenksBreaks(county_neighborhoods_sp$prop_black, 5)
+pal <- colorBin("BuPu", domain = c(0, 1), bins = c(0, 0.1, 0.2, 0.3, 0.4, 0.6))
+
+leaflet(width = "100%") %>%
+  addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
+  addMapPane("border", zIndex = 450) %>%
+  addMapPane("polygons", zIndex = 400) %>%
+  addPolygons(data = county_neighborhoods_sp,
+              color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.7,
+              fillColor = ~pal(prop_black),
+              label = ~map(glue("<strong>{NAME}</strong><br/>
+                                Ratio of Daily Incident Rate: {round(prop_black, 2)}"), htmltools::HTML),
+              group = "Black",
+              options = pathOptions(pane = "polygons")) %>%
+  # addPolygons(data = county_neighborhoods_sp,
+  #             color = "#444444", weight = 0.5, smoothFactor = 0.5,
+  #             opacity = 1.0, fillOpacity = 0.7,
+  #             fillColor = ~pal(prop_white),
+  #             label = ~map(glue("<strong>{NAME}</strong><br/>
+  #                               Ratio of Daily Incident Rate: {round(prop_black, 2)}"), htmltools::HTML),
+  #             group = "White",
+  #             options = pathOptions(pane = "polygons")) %>%
+  addPolygons(data = city_border,
+              color = "black", weight = 4, smoothFactor = 0.5,
+              fill = NA, options = pathOptions(pane = "border")) %>%
+  # addLayersControl(baseGroups = c("Black", "White")) %>%
+  addLegend("bottomright", pal = pal, values = county_neighborhoods_sp$prop_black)
+```
 
 At the neighborhood level, neighborhoods south of downtown appear to have the largest proportion of black residents. There is a slightly larger Asian population in the Jefferson Park Avenue area south of the University of Virginia, but in general we will limit our observations primarily to black and white residents because of the relatively low representation of other groups in the area.
 
 _In terms of income, we see areas of lower income coincide with areas with higher black populations and can also observe the same trend with higher poverty rates. Income and poverty rates seem to coincide as well with areas of higher income to have lower poverty rates._
-
-[SAIMUN TO INSERT NEW DEMO MAPS]
-
-```{r, echo  = F, out.width='100%', message=FALSE, warning=FALSE}
-# comb_income_map
-# comb_race_map
-# comb_pov_map
-```
 
 The distribution of various demographic characteristics reveals some notable patterns in the characteristics of EMS patients. First, black and white patients represent the overwhelming majority of EMS patients. Second, the age distribution of patients varies quite a bit across racial categories. Whites and blacks using EMS services tend to be older than other racial groups. This is likely a result of the presence of the University of Virginia, which has more Asian student representation than the city and county as a whole. Similar patterns may be at play in the slight bump at young ages for black patients as well. While this pattern is less noticable for whites, this is likely a result of a generally larger white population muting out the effects of the University demographics. Given the increased risks of COVID-19 for older adults, the higher representation of blacks and whites at older ages is worth noting when considering groups at highest risk in Charlottesville.
 
@@ -250,21 +308,82 @@ ggplot(plot_data) +
 #         axis.title.x = element_blank())
 ```
 
-Call volume is not dropping uniformly across Charlottesville and Albemarle, either. 
+Call volume is not dropping uniformly across Charlottesville and Albemarle, either. The following map makes it clear that areas immediately surrounding the University have experienced the most drastic drop in call volume, which is almost certainly related to the departure of students from campus after the beginning of the pandemic (unsurprisingly, this is accompanied by a noticable drop in alcohol-related incidents in the EMS data).
 
-...
+Simialrly, areas surrounding downtown have also seen a more noticable decrease, again likely because of the fewer interactions taking place in these public spaces after many bars and restaurants closed in the early stages of the pandemic.
 
-[insert ellen's map of change]
-[where is that]
+Importantly, the spatial patterns in call volume drop appear to be driven primarily by these peripheral factors. It is not immediatley apparent that particular neighborhoods (which may be a proxy for particular demographic groups) have experienced wildly different call volume drops.
+
+```{r, echo = FALSE, fig.height = 6}
+ems_clean_data <- readr::read_csv(here("data", "final", "ems_clean_data.csv"))
+
+county_tracts_sp <- tigris::tracts(state = "VA", county = c("albemarle"),
+               cb = TRUE, year = 2018, class = "sf") %>%
+  st_transform(crs = 4326) %>%
+  select(NAME)
+
+neighborhoods_sp <- st_read(here("data", "original", "neighborhoods", "planning_area_06_04_2020.shp"),
+                            quiet = TRUE) %>%
+  st_transform(crs = 4326) %>%
+  select(NAME)
+
+county_neighborhoods_sp <- bind_rows(county_tracts_sp,
+                                     neighborhoods_sp)
+
+ems_clean_data_sp <- ems_clean_data %>%
+  filter(!is.na(scene_gps_latitude), !is.na(scene_gps_longitude)) %>%
+  st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude"), remove = FALSE, crs = 4326)
+
+joined <- st_join(county_neighborhoods_sp, ems_clean_data_sp, join = st_contains)
+
+period <- ymd("2020-03-15")
+pre_period <- joined %>%
+  filter(incident_date < period)
+
+post_period <- joined %>%
+  filter(incident_date >= period)
+
+days_pre <- as.numeric(range(pre_period$incident_date)[2] - range(pre_period$incident_date)[1])
+days_post <- as.numeric(range(post_period$incident_date)[2] - range(post_period$incident_date)[1] )
+
+pre_daily <- pre_period %>%
+  group_by(NAME) %>%
+  summarize(daily_pre = n() / days_pre, .groups = "drop")
+
+post_daily <- post_period %>%
+  group_by(NAME) %>%
+  summarize(daily_post = n() / days_post, .groups = "drop")
+
+volume_change <- pre_daily %>%
+  st_drop_geometry() %>%
+  left_join(post_daily, ., by = "NAME") %>%
+  mutate(change_ratio = daily_post / daily_pre)
+
+color_pal <- c('#762a83','#af8dc3','#e7d4e8','#f7f7f7','#d9f0d3')
+
+color_scale <- colorBin(color_pal, c(0, 1.5), c(0.1, 0.35, 0.65, 0.90, 1.10, 1.3))
+
+volume_change %>%
+  leaflet(width = "100%") %>%
+  addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
+  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.7,
+              fillColor = ~color_scale(change_ratio),
+              label = ~map(glue("<strong>{NAME}</strong><br/>
+                                Ratio of Daily Incident Rate: {round(change_ratio, 2)}"), htmltools::HTML)) %>%
+  addPolygons(data = city_border,
+              color = "#222222", weight = 3, smoothFactor = 0.5,
+              fill = NA) %>%
+  addLegend("bottomright", pal = color_scale, values = ~change_ratio,
+            title = htmltools::HTML("Ratio of Daily Incidents:<br/>Post COVID-19 to Pre COVID-19"),
+            opacity = .8,
+            labFormat = labelFormat(suffix = "%", between = " to "))
+
+```
 
 ## Vital Stats
 
-Using data from the Virginia Department of Health, we were able to investigate the trends in mortality in Charlottesville and Albemarle over the same period present in the EMS dataset. Notably, circulatory diseases and neoplasms make up an outsize proportion of all deaths. 
-
-
-
-
-_We had access to mortality data and were interested in how the deaths broke down. We see that the most common cause of death is a circulatory disease followed by neoplasms and extneral causes of morbidity. Racially, the dataset is primarily white or race was not recorded. Black patients make up the next highest group of people in the dataset. All other races combined represent less than 100 deaths in this dataset._
+Using data from the Virginia Department of Health, we were able to investigate the trends in mortality in Charlottesville and Albemarle over the same period present in the EMS dataset. Notably, circulatory diseases and neoplasms make up an outsize proportion of all deaths. The high incidence of circulatory-related deaths is concerning given research suggesting that COVID-19 may disproportionately impact those with cardiovascular problems[^NEJM].
 
 ```{r , echo = F,  out.width = '100%',warning=FALSE, message=FALSE, fig.height = 15, fig.width=20}
 vital %>%
@@ -291,8 +410,6 @@ vital %>%
 #   guides(color=guide_legend(ncol=2))
 ```
 
-
-
 ```{r, echo = F,  out.width = '100%', warning=FALSE, message=FALSE, fig.height = 15, fig.width=20}
 # vital %>%
 #   filter(!is.na(RACE))%>%
@@ -304,24 +421,26 @@ vital %>%
 #   theme(axis.text = element_text(size = 14, color = "gray30"))+
 #   coord_flip()
 
-vital %>%
-  filter(!is.na(RACE))%>%
-  # convert variable to a factor, ordered (in descending order) by the proportion of
-  # rows where the class == "1"
-  mutate(category = forcats::fct_reorder(.f = category, 
-                                         .x = as.factor(RACE),
-                                         .fun = function(.x) mean(.x == "White"),
-                                         .desc = TRUE)) %>%
-  ggplot(aes(category, fill = as.factor(RACE)))+
-  geom_bar(position = "fill")+
-  scale_fill_manual(values = rev(my_cols[1:6]), name = "Race")+
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
-  labs(x= "ICD 10- Code", y= "Proportion", title = " Proportion of Mortalities by Race")+
-  theme( legend.position = "bottom")+
-  coord_flip()
+# vital %>%
+#   filter(!is.na(RACE))%>%
+#   # convert variable to a factor, ordered (in descending order) by the proportion of
+#   # rows where the class == "1"
+#   mutate(category = forcats::fct_reorder(.f = category, 
+#                                          .x = as.factor(RACE),
+#                                          .fun = function(.x) mean(.x == "White"),
+#                                          .desc = TRUE)) %>%
+#   ggplot(aes(category, fill = as.factor(RACE)))+
+#   geom_bar(position = "fill")+
+#   scale_fill_manual(values = rev(my_cols[1:6]), name = "Race")+
+#   scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
+#   labs(x= "ICD 10- Code", y= "Proportion", title = " Proportion of Mortalities by Race")+
+#   theme( legend.position = "bottom")+
+#   coord_flip()
 ```
 
-The causes of mortality are not uniform across racial categories, either. Black patients are more than 2.5 times as likely to die from diseases of the blood and twice as likely to die from complications arising during the perinatal period. This is consistent with the widely-reported health disaprities between black and white women when it comes to maternal morbidity.[^CDC] White individuals, in contrast, are more likely to die from skin conditions and, notably, respiratory illnesses. Understanding these underlying conditions is vital when considering the communities likely to be most impacted by COVID-19.
+The causes of mortality are not uniform across racial categories, either. Black patients are more than 2.5 times as likely to die from diseases of the blood and twice as likely to die from complications arising during the perinatal period. This is consistent with the widely-reported health disaprities between black and white women when it comes to maternal morbidity.[^CDC] White individuals, in contrast, are more likely to die from skin conditions and, notably, respiratory illnesses. The circulatory disorders mentioned earlier appear to affect blacks and whites at roughly the same rate. 
+
+However, it is worth noting that these represent very general categories of death. As a more nuanced understanding of the interactions between underlying health conditions and COVID-19 develops, it may be valuable to explore these mortality trends in more depth.
 
 ```{r, echo = F, out.width='100%', warning=FALSE,message=FALSE, fig.height = 15, fig.width=20}
 tots = vital %>% 
@@ -370,9 +489,10 @@ relative_risk %>%
        title="Relative Risk of Death of Black Patients to White Patients")
 ```
 
-However, while the VDH data provided important context for understanding the health disparities in the region, we did not notice an overall increase in mortality since the beginning of the COVID-19 pandemic, suggesting that the pandemic may have to play out longer before we are able to assess its overall effects on mortality in the region.
+While the VDH data provided important context for understanding the health disparities in the region, we did not notice an overall increase in mortality since the beginning of the COVID-19 pandemic, suggesting that the pandemic may have to play out longer before we are able to assess its overall effects on mortality in the region. Additionally, the VDH data lacked information on patient race for many of the deaths that have occurred since the beginning of the COVID-19 pandemic, preventing us from exploring the interaction between death counts, race, and the onset of COVID-19.
 
 The patterns in general health outlined above provide important context as we interpret the results of our [analysis of response times](https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/findings/response-time-modeling/) and [exploration of COVID-19 symptoms](https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/findings/covid-indicator/) across the region.
 
 [^CDC]: Petersen EE, Davis NL, Goodman D, et al. Racial/Ethnic Disparities in Pregnancy-Related Deaths — United States, 2007–2016. MMWR Morb Mortal Wkly Rep 2019;68:762–765. DOI: http://dx.doi.org/10.15585/mmwr.mm6835a3
 
+[^NEJM]: Mehra, M. R., Desai, S. S., Kuy, S., Henry, T. D., & Patel, A. N. (2020). Cardiovascular disease, drug therapy, and mortality in COVID-19. New England Journal of Medicine.
