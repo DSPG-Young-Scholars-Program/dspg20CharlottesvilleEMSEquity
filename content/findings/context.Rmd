@@ -154,12 +154,12 @@ acs_total_pop_tract <- get_acs(geography = "tract",
                                    year = 2018,
                                    variables = c(total_population = "DP05_0001"),
                                    state = "VA",
-                                   county = c("albemarle", "charlottesville")) %>%
+                                   county = c("albemarle")) %>%
   pivot_wider(names_from = variable,
               values_from = c(estimate, moe),
               names_glue = "{variable}_{.value}")
 
-acs_total_pop_tract_sp <- tigris::tracts(state = "VA", county = c("charlottesville", "albemarle"),
+acs_total_pop_tract_sp <- tigris::tracts(state = "VA", county = c( "albemarle"),
                cb = TRUE, year = 2018, class = "sf") %>%
   st_transform(crs = 4326) %>%
   left_join(acs_total_pop_tract, by = "GEOID")
@@ -179,6 +179,7 @@ neighborhoods <- st_read(here::here("data", "working", "neighborhood_demographic
   rename(pop = n)
 
 joined <- st_join(neighborhoods, ems_full_sp, join = st_contains)
+anti_joined <- st_join(acs_total_pop_tract_sp, ems_full_sp, join = st_contains)
 
 
 total_days <- as.numeric(range(ems_full_sp$incident_date)[2] - range(ems_full_sp$incident_date)[1])
@@ -190,8 +191,13 @@ summed_data <- joined %>%
   ungroup() %>%
   st_as_sf()
 
-range(summed_data$rate_per_1000)
-hist(summed_data$rate_per_1000)
+summed_data_j <- anti_joined %>%
+  group_by(NAME.y, total_population_estimate) %>%
+  count() %>%
+  mutate(rate_per_1000 = round(n/total_population_estimate * 1000 / total_days *365)) %>%
+  ungroup() %>%
+  st_as_sf()
+
 
 BAMMtools::getJenksBreaks(summed_data$rate_per_1000, 5)
 quantile(summed_data$rate_per_1000, seq(0, 1, 0.2))
@@ -207,8 +213,17 @@ pre_period <- joined %>%
 post_period <- joined %>%
   filter(incident_date >= period)
 
+pre_period_j <- anti_joined %>%
+  filter(incident_date < period)
+
+post_period_j <- anti_joined %>%
+  filter(incident_date >= period)
+
 days_pre <- as.numeric(range(pre_period$incident_date)[2] - range(pre_period$incident_date)[1])
 days_post <- as.numeric(range(post_period$incident_date)[2] - range(post_period$incident_date)[1] )
+
+days_pre_j <- as.numeric(range(pre_period_j$incident_date)[2] - range(pre_period_j$incident_date)[1])
+days_post_j <- as.numeric(range(post_period_j$incident_date)[2] - range(post_period_j$incident_date)[1] )
 
 pre_period_summed <- pre_period %>%
   group_by(NAME, pop) %>%
@@ -224,79 +239,46 @@ post_period_summed <- post_period %>%
   ungroup() %>%
   st_as_sf()
 
+pre_period_summed_j <- pre_period_j %>%
+  group_by(NAME.y, total_population_estimate) %>%
+  count() %>%
+  mutate(rate_per_1000 = (n/total_population_estimate * 1000/days_pre_j)) %>%
+  ungroup() %>%
+  st_as_sf()
 
-range(pre_period_summed$rate_per_1000)
-range(post_period_summed$rate_per_1000)
-
-hist(pre_period_summed$rate_per_1000)
-hist(post_period_summed$rate_per_1000)
-
-BAMMtools::getJenksBreaks(c(pre_period_summed$rate_per_1000, post_period_summed$rate_per_1000), 7)
-color_scale <- colorBin("BuPu", c(0, 1.6), c(0, 0.07, .26, .42, .58, .80, 1.0, 1.6))
-
-pre_period_summed %>%
-  leaflet() %>%
-  addTiles() %>%  # Add default OpenStreetMap map tiles
-  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
-              opacity = 1.0, fillOpacity = 0.8,
-              fillColor = ~color_scale(rate_per_1000),
-              label = ~map(glue("{NAME}<br/>
-                                Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
-              group = "Pre 2020") %>%
-  addPolygons(data = post_period_summed,
-              color = "#444444", weight = 0.5, smoothFactor = 0.5,
-              opacity = 1.0, fillOpacity = 0.8,
-              fillColor = ~color_scale(rate_per_1000),
-              label = ~map(glue("{NAME}<br/>
-                                Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
-              group = "In 2020") %>%
-  addPolygons(data = city_border,
-              color = "#222222", weight = 3, smoothFactor = 0.5,
-              fillOpacity = 0) %>%
-  addLegend("bottomright", pal = color_scale, values = ~rate_per_1000,
-            title = "Incident Rate Per 1000",
-            opacity = .8) %>%
-  addLayersControl(baseGroups = c("Pre 2020", "In 2020"),
-                   options = layersControlOptions(collapsed = FALSE))
+post_period_summed_j <- post_period_j %>%
+  group_by(NAME.y, total_population_estimate) %>%
+  count() %>%
+  mutate(rate_per_1000 = (n/total_population_estimate * 1000/days_post_j)) %>%
+  ungroup() %>%
+  st_as_sf()
 
 
 diff_period_summed <- post_period_summed %>%
   mutate(rate_diff = rate_per_1000 - pre_period_summed$rate_per_1000,
          rate_ratio = 100*(rate_per_1000 / pre_period_summed$rate_per_1000 - 1))
 
-
-hist(diff_period_summed$rate_diff)
-color_scale <- colorBin("BuPu", c(-0.6,0.1), c(-0.6, -0.3, -0.15, -0.10, -0.05, 0.1), reverse = TRUE)
-
-
-diff_period_summed %>%
-  leaflet() %>%
-  addTiles() %>%  # Add default OpenStreetMap map tiles
-  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
-              opacity = 1.0, fillOpacity = 0.8,
-              fillColor = ~color_scale(rate_diff),
-              label = ~map(glue("{NAME}<br/>
-                                Change in Incident Rate Per 1000: {round(rate_diff, 2)}"), htmltools::HTML)) %>%
-  addPolygons(data = city_border,
-              color = "#222222", weight = 3, smoothFactor = 0.5,
-              fill = NA) %>%
-  addLegend("bottomright", pal = color_scale, values = ~rate_diff,
-            title = "Change in Daily Incident Rate Per 1000",
-            opacity = .8)
-
+diff_period_summed_j <- post_period_summed_j %>%
+  mutate(rate_diff = rate_per_1000 - pre_period_summed_j$rate_per_1000,
+         rate_ratio = 100*(rate_per_1000 / pre_period_summed_j$rate_per_1000 - 1))
 
 hist(diff_period_summed$rate_ratio)
 BAMMtools::getJenksBreaks(diff_period_summed$rate_ratio, 5)
 color_scale <- colorBin("PuRd", 100 * (c(0.2,1.2) - 1), 100 * (c(0.2, 0.5, 0.65, 0.8, 1, 1.2) - 1), reverse = TRUE)
 
 diff_period_summed %>%
-  leaflet() %>%
+leaflet() %>%
   addTiles() %>%  # Add default OpenStreetMap map tiles
-  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+  addPolygons( color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.8,
               fillColor = ~color_scale(rate_ratio),
               label = ~map(glue("{NAME}<br/>
                                 Change in Incident Rate Per 1000: {round(rate_ratio, 2)}"), htmltools::HTML)) %>%
+  addPolygons(data = diff_period_summed_j, color = "#444444", weight = 0.5, smoothFactor = 0.5,
+          opacity = 1.0, fillOpacity = 0.8,
+          fillColor = ~color_scale(rate_ratio),
+          label = ~map(glue("{NAME.y}<br/>
+                            Change in Incident Rate Per 1000: {round(rate_ratio, 2)}"), htmltools::HTML)) %>%
   addPolygons(data = city_border,
               color = "#222222", weight = 3, smoothFactor = 0.5,
               fill = NA) %>%
@@ -343,13 +325,18 @@ We also are interested in understanding where call volume is dropping. Discrepen
 
 ```{r, echo  = F, out.width='100%', message=FALSE, warning=FALSE}
 diff_period_summed %>%
-  leaflet() %>%
+leaflet() %>%
   addTiles() %>%  # Add default OpenStreetMap map tiles
-  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+  addPolygons( color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.8,
               fillColor = ~color_scale(rate_ratio),
               label = ~map(glue("{NAME}<br/>
                                 Change in Incident Rate Per 1000: {round(rate_ratio, 2)}"), htmltools::HTML)) %>%
+  addPolygons(data = diff_period_summed_j, color = "#444444", weight = 0.5, smoothFactor = 0.5,
+          opacity = 1.0, fillOpacity = 0.8,
+          fillColor = ~color_scale(rate_ratio),
+          label = ~map(glue("{NAME.y}<br/>
+                            Change in Incident Rate Per 1000: {round(rate_ratio, 2)}"), htmltools::HTML)) %>%
   addPolygons(data = city_border,
               color = "#222222", weight = 3, smoothFactor = 0.5,
               fill = NA) %>%
