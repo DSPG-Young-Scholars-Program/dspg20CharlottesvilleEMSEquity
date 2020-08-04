@@ -259,7 +259,7 @@ Call volume is not dropping uniformly across Charlottesville and Albemarle, eith
 
 ## Vital Stats
 
-Using data from the Virginia Department of Health, we were able to investigate the trends in mortality in Charlottesville and Albemarle over the same period present in the EMS dataset.
+Using data from the Virginia Department of Health, we were able to investigate the trends in mortality in Charlottesville and Albemarle over the same period present in the EMS dataset. Notably, circulatory diseases and neoplasms make up an outsize proportion of all deaths. 
 
 
 
@@ -278,8 +278,6 @@ vital %>%
 
 ```
 
-Of course, what is contributing to these mortalities might've changed. If we look at changes to the relative frequencies of ICD 10 Codes for mortality we see a sharp increase in deaths were the category is not recorded. 
-
 ```{r, echo = F,  out.width = '100%', warning=FALSE, message=FALSE, fig.height = 10, fig.width=15}
 # vital %>%
 #   # filter(!is.na(category))%>%
@@ -294,7 +292,6 @@ Of course, what is contributing to these mortalities might've changed. If we loo
 ```
 
 
-When we overlay the racial distribution over the categories we note that of the deaths where race is recorded, it doesn't appear that the racial distribution is even across the categories. Calculating the relative risk of death by each category for black patients versus white patients shows that black patients are more than 2.5 times as likely to die from diseases of the blood and twice as likely to die from complications arising during the perinatal period. 
 
 ```{r, echo = F,  out.width = '100%', warning=FALSE, message=FALSE, fig.height = 15, fig.width=20}
 # vital %>%
@@ -323,6 +320,8 @@ vital %>%
   theme( legend.position = "bottom")+
   coord_flip()
 ```
+
+The causes of mortality are not uniform across racial categories, either. Black patients are more than 2.5 times as likely to die from diseases of the blood and twice as likely to die from complications arising during the perinatal period. This is consistent with the widely-reported health disaprities between black and white women when it comes to maternal morbidity.[^CDC] White individuals, in contrast, are more likely to die from skin conditions and, notably, respiratory illnesses. Understanding these underlying conditions is vital when considering the communities likely to be most impacted by COVID-19.
 
 ```{r, echo = F, out.width='100%', warning=FALSE,message=FALSE, fig.height = 15, fig.width=20}
 tots = vital %>% 
@@ -371,9 +370,9 @@ relative_risk %>%
        title="Relative Risk of Death of Black Patients to White Patients")
 ```
 
-However, while the VDH data are helpful in evaluating underlying health disparities in the region, we did not notice an overall increase in mortality since the beginning of the COVID-19 pandemic, suggesting that the pandemic may have to play out longer before we are able to assess its overall effects on mortality in the region.
+However, while the VDH data provided important context for understanding the health disparities in the region, we did not notice an overall increase in mortality since the beginning of the COVID-19 pandemic, suggesting that the pandemic may have to play out longer before we are able to assess its overall effects on mortality in the region.
 
 The patterns in general health outlined above provide important context as we interpret the results of our [analysis of response times](https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/findings/response-time-modeling/) and [exploration of COVID-19 symptoms](https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/findings/covid-indicator/) across the region.
 
-
+[^CDC]: Petersen EE, Davis NL, Goodman D, et al. Racial/Ethnic Disparities in Pregnancy-Related Deaths — United States, 2007–2016. MMWR Morb Mortal Wkly Rep 2019;68:762–765. DOI: http://dx.doi.org/10.15585/mmwr.mm6835a3
 
