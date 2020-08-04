@@ -26,12 +26,12 @@ library(lubridate)
 library(dplyr)
 library(stringr)
 library(purrr)
-# library(leaflet.mapboxgl)
+library(leaflet.mapboxgl)
 
 # load in data
 source(here::here("src", "Profiling", "create_covid_indicator.R"));
 
-# options(mapbox.accessToken = Sys.getenv("MAPBOX_TOKEN"))
+options(mapbox.accessToken = Sys.getenv("MAPBOX_TOKEN"))
 ```
 
 ```{r, include=FALSE}
@@ -138,8 +138,9 @@ The map below breaks down the incident rates of our COVID-19 indicator across Ch
 
 Few changes are visible from before and after March 15, 2020, though there appears to be a slightly higher prevalence of COVID-like symptoms downtown and in neighborhoods south of downtown. Interestingly, these neighborhoods also have a higher proportion of Black residents, which is consistent with widely-reported disparities in COVID-19 outcomes between Black and white populations.
 
-_Add tracts to map, potentially add another map with stricter COVID cutoff_
-_add city border to plot_
+Also of note is the slightly elevated incidence rate in Census Tract 105 to the east of the city, which includes a larger proportion of older residents who are at particular health risk when contracting COVID-19.
+
+However, there appears to be a slight overall tendency for incidence to actually decrease in the COVID-19 era. This pattern may suggest that our indicator is not sensitive enough to COVID-19 cases, and that it may be incorporating too many other types of symptoms, masking out any effects of COVID-19 itself. We discuss this more below.
 
 ```{r, echo=FALSE, out.width="100%"}
 pre_period <- joined %>%
@@ -167,36 +168,40 @@ post_period_summed <- post_period %>%
   ungroup() %>%
   st_as_sf()
 
-BAMMtools::getJenksBreaks(c(pre_period_summed$rate_per_1000, post_period_summed$rate_per_1000), 7)
+#BAMMtools::getJenksBreaks(c(pre_period_summed$rate_per_1000, post_period_summed$rate_per_1000), 7)
 color_scale <- colorBin("BuPu", c(0, 0.4), c(0, 0.02, .05, .09, .13, .19, .27, 0.4))
 
 leaflet() %>%
   addTiles() %>%
-  # addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
+  addMapPane(name = "border", zIndex = 450) %>%
+  addMapPane(name = "Pre COVID-19", zIndex = 440) %>%
+  addMapPane(name = "COVID-19 Era", zIndex = 440) %>%
+  addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
   addPolygons(data = pre_period_summed,
               color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.7,
               fillColor = ~color_scale(rate_per_1000),
-              label = ~map(glue("{NAME}<br/>
-                                COVID-like Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
-              group = "before March 15th, 2020") %>%
+              label = ~map(glue("<strong>{NAME}<br/></strong>
+                                COVID-like Incident Rate: {round(rate_per_1000, 2)}"), htmltools::HTML),
+              group = "Pre COVID-19",
+              options = pathOptions(pane = "Pre COVID-19")) %>%
   addPolygons(data = post_period_summed,
               color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.7,
               fillColor = ~color_scale(rate_per_1000),
               label = ~map(glue("{NAME}<br/>
-                      COVID-like Incident Rate Per 1000: {round(rate_per_1000, 2)}"), htmltools::HTML),
-              group = "In 2020") %>%
-  addPolylines(data = city_border, color="black", weight = 8, opacity = 0.8) %>%
+                      COVID-like Incident Rate: {round(rate_per_1000, 2)}"), htmltools::HTML),
+              group = "COVID-19 Era",
+              options = pathOptions(pane = "COVID-19 Era")) %>%
+  addPolylines(data = city_border, color="black", weight = 4, opacity = 0.8, options = pathOptions(pane = "border")) %>%
   addLegend("bottomright", pal = color_scale, values = post_period_summed$rate_per_1000,
             title = "Incident Rate Per 1000",
             opacity = .8) %>%
-  addLayersControl(baseGroups = c("before March 15th, 2020", "on or after March 15th, 2020"),
+  addLayersControl(baseGroups = c("Pre COVID-19", "COVID-19 Era"),
                    options = layersControlOptions(collapsed = FALSE))
 ```
 
-_Add in some more viz of demographic breakdown for COVID cases_
-_figure out why formatting is weird_
+_Waiting on updated plot from Chase_
 
 ```{r, echo=FALSE, out.width="100%"}
 ems$on_or_after_march_15th_2020 <- ymd(ems$incident_date) >= "2020-03-15"
@@ -281,18 +286,23 @@ While disappointing, this outcome does provide important ramifications for simil
 First, for EMS data to be a valuable source of information in assessing the course of the COVID-19 pandemic, a more thorough effort to classify COVID symptoms accurately is required. Given the messy nature of EMS data, classifying symptoms effectively is a challenge. However, a more complex approach could certainly be implemented. Improvements on our methodology may be:
 
 * Link EMS data with data on patient outcomes
+
     * Being able to link the symptom data reported by EMS with COVID-19 results could vastly improve our ability to determine which symptoms in the EMS dataset are actually important in determining a COVID-19 diagnosis.
 
 * Implement more complex logic when classifying symptoms
+
     * For instance, a certain symptom may be a strong indicator of COVID, but only in the presence of another symptom as well
     
 * Include a weighting scheme for more important symptoms
+
     * This could reduce noise by highlighting those symptoms thare are known to be particularly indicative of COVID
     
 * Develop an indicator using a dataset from an area with a greater proportion of COVID cases
+
     * More cases may make it easier to detect cases in a dataset, and allow for a refinement of the symptoms included. This more specific scheme could then be implemented in other areas with fewer case counts.
     
 * Link multiple EMS datasets
+
     * This could improve the sensitivity of our indicator, but perhaps more importantly would allow for an assessment of the standardization across EMS data platforms. In the future, a large-scale network of EMS data could be a valuable tool in identifying emerging diseases 
 
 It will also be valuable to revisit this topic continuously as the medical understanding of COVID-19 evolves. Symptoms that were once thought to be clear identifiers of the virus may become less important, and vice versa. The null results in our preliminary exploration in this area should not be interpreted as a referendum on the value of EMS data in understanding COVID-19, but as a guide to the considerations and improvements that will need to be made to more effectively use EMS data as a tool to fight emerging diseases in the future.
