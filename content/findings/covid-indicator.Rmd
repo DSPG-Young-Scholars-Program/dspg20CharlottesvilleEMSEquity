@@ -7,7 +7,7 @@ draft: false
 output: html_document
 ---
 
-```{css}
+```{css, include=FALSE}
 .footnotes {
   color:rgb(195,206,208)
 }
@@ -26,12 +26,12 @@ library(lubridate)
 library(dplyr)
 library(stringr)
 library(purrr)
-library(leaflet.mapboxgl)
+# library(leaflet.mapboxgl)
 
 # load in data
 source(here::here("src", "Profiling", "create_covid_indicator.R"));
 
-options(mapbox.accessToken = Sys.getenv("MAPBOX_TOKEN"))
+# options(mapbox.accessToken = Sys.getenv("MAPBOX_TOKEN"))
 ```
 
 ```{r, include=FALSE}
@@ -58,9 +58,32 @@ According to the Johns Hopkins Center for Systems Science and Engineering, as of
 
 ```{r, include=FALSE}
 # load neighborhoods
-neighborhoods <- st_read(here::here("data", "working", "neighborhood_demographics.geojson")) %>%
-  rename(pop = n)
+city_neighborhoods <- st_read(here::here("data", "working", "neighborhood_demographics.geojson")) %>%
+  rename(total_population_estimate = n) %>%
+  select(c("NAME", "total_population_estimate", "geometry"))
 # filter ems data to cases with non-NA gps data
+
+# load census tract geometries and population estimates for the county
+acs_total_pop_tract <- get_acs(geography = "tract",
+                                   year = 2018,
+                                   variables = c(total_population = "DP05_0001"),
+                                   state = "VA",
+                                   county = c("albemarle")) %>%
+  pivot_wider(names_from = variable,
+              values_from = c(estimate, moe),
+              names_glue = "{variable}_{.value}")
+
+acs_total_pop_tract_sp <- tigris::tracts(state = "VA", county = c("albemarle"),
+               cb = TRUE, year = 2018, class = "sf") %>%
+  st_transform(crs = 4326) %>%
+  left_join(acs_total_pop_tract, by = "GEOID")
+
+county_census_tracts <- acs_total_pop_tract_sp %>%
+  select(c("NAME.y", "total_population_estimate", "geometry")) %>%
+  rename(NAME = NAME.y)
+
+geometries <- rbind(city_neighborhoods, county_census_tracts)
+
 ems_full_sp <- ems %>%
   distinct %>%
   filter(!is.na(scene_gps_latitude), !is.na(scene_gps_longitude)) %>%
@@ -70,7 +93,7 @@ city_border <- tigris::counties(state = "VA", cb = TRUE, year = 2018, class = "s
   filter(COUNTYFP == 540) %>%
   st_transform(crs = 4326)
 
-joined <- st_join(neighborhoods, ems_full_sp, join = st_contains)
+joined <- st_join(geometries, ems_full_sp, join = st_contains)
 total_days <- as.numeric(range(ems_full_sp$incident_date)[2] - range(ems_full_sp$incident_date)[1])
 
 cutoff_string <- "2020-03-15"
@@ -80,9 +103,9 @@ symptom_threshold <- 0
 summed_data <- joined %>%
   filter(incident_date >= cutoff) %>%
   filter(covid_indicator > symptom_threshold) %>%
-  group_by(NAME, pop) %>%
+  group_by(NAME, total_population_estimate) %>%
   count() %>%
-  mutate(rate_per_1000 = round(n/pop * 1000)) %>%
+  mutate(rate_per_1000 = round(n/total_population_estimate * 1000)) %>%
   ungroup() %>%
   st_as_sf()
 ```
@@ -116,58 +139,127 @@ The map below breaks down the incident rates of our COVID-19 indicator across Ch
 Few changes are visible from before and after March 15, 2020, though there appears to be a slightly higher prevalence of COVID-like symptoms downtown and in neighborhoods south of downtown. Interestingly, these neighborhoods also have a higher proportion of Black residents, which is consistent with widely-reported disparities in COVID-19 outcomes between Black and white populations.
 
 _Add tracts to map, potentially add another map with stricter COVID cutoff_
+_add city border to plot_
 
 ```{r, echo=FALSE, out.width="100%"}
 pre_period <- joined %>%
-  filter(incident_date < cutoff)
+  filter(incident_date < cutoff) %>%
+  filter(covid_indicator > symptom_threshold)
 
 post_period <- joined %>%
-  filter(incident_date >= cutoff)
+  filter(incident_date >= cutoff) %>%
+  filter(covid_indicator > symptom_threshold)
 
 days_pre <- as.numeric(range(pre_period$incident_date)[2] - range(pre_period$incident_date)[1])
 days_post <- as.numeric(range(post_period$incident_date)[2] - range(post_period$incident_date)[1] )
 
 pre_period_summed <- pre_period %>%
-  group_by(NAME, pop) %>%
+  group_by(NAME, total_population_estimate) %>%
   count() %>%
-  mutate(rate_per_1000 = (n/pop * 1000/days_pre)) %>%
+  mutate(rate_per_1000 = (n/total_population_estimate * 1000/days_pre)) %>%
   ungroup() %>%
   st_as_sf()
 
 post_period_summed <- post_period %>%
-  group_by(NAME, pop) %>%
+  group_by(NAME, total_population_estimate) %>%
   count() %>%
-  mutate(rate_per_1000 = (n/pop * 1000/days_post)) %>%
+  mutate(rate_per_1000 = (n/total_population_estimate * 1000/days_post)) %>%
   ungroup() %>%
   st_as_sf()
 
-#BAMMtools::getJenksBreaks(c(pre_period_summed$rate_per_1000, post_period_summed$rate_per_1000), 7)
-color_scale <- colorBin("BuPu", c(0, 1.6), c(0, 0.03, .15, .3, .5, .8, 1.25, 2))
+BAMMtools::getJenksBreaks(c(pre_period_summed$rate_per_1000, post_period_summed$rate_per_1000), 7)
+color_scale <- colorBin("BuPu", c(0, 0.4), c(0, 0.02, .05, .09, .13, .19, .27, 0.4))
 
 leaflet() %>%
-  addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
+  addTiles() %>%
+  # addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
   addPolygons(data = pre_period_summed,
               color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.7,
               fillColor = ~color_scale(rate_per_1000),
               label = ~map(glue("{NAME}<br/>
                                 COVID-like Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
-              group = "Pre 2020") %>%
+              group = "before March 15th, 2020") %>%
   addPolygons(data = post_period_summed,
               color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.7,
               fillColor = ~color_scale(rate_per_1000),
               label = ~map(glue("{NAME}<br/>
-                                COVID-like Incident Rate Per 1000: {round(rate_per_1000, 2)}"), htmltools::HTML),
+                      COVID-like Incident Rate Per 1000: {round(rate_per_1000, 2)}"), htmltools::HTML),
               group = "In 2020") %>%
+  addPolylines(data = city_border, color="black", weight = 8, opacity = 0.8) %>%
   addLegend("bottomright", pal = color_scale, values = post_period_summed$rate_per_1000,
             title = "Incident Rate Per 1000",
             opacity = .8) %>%
-  addLayersControl(baseGroups = c("Pre 2020", "In 2020"),
+  addLayersControl(baseGroups = c("before March 15th, 2020", "on or after March 15th, 2020"),
                    options = layersControlOptions(collapsed = FALSE))
 ```
 
 _Add in some more viz of demographic breakdown for COVID cases_
+_figure out why formatting is weird_
+
+```{r, echo=FALSE, out.width="100%"}
+ems$on_or_after_march_15th_2020 <- ymd(ems$incident_date) >= "2020-03-15"
+
+ems %>%
+  filter(race %in% c("black or african american", "white", "hispanic or latino", NA)) %>%
+  group_by(race, covid1, on_or_after_march_15th_2020) %>%
+  count() %>%
+  filter(covid1 == 1) %>%
+  ggplot(., aes(x = race, y = n, fill = on_or_after_march_15th_2020)) +
+    geom_bar(stat = "identity", position = "dodge") + 
+    geom_text(aes(label=n), position=position_dodge(width=0.9), vjust=-0.25) + 
+    labs(title = "Patients with at Least One Covid-Like Symptom", x = "Racial Group", y = "Number of Patients") + 
+    scale_fill_discrete(name = "", labels = c("before 2020-03-15", "after 2020-03-15")) + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1), legend.position = "bottom")
+    
+```
+
+```{r, echo=FALSE}
+covid_symptoms <- c("cough", "fever", "sob", "myalgia", "chills", "fatigue", "headache", "diarrhea", "nausea_or_vomit", "hypoxemia", "hypoxemia_no_improvement", "cyanosis", "covid_in_impressions", "young_person_stroke", "young_person_cardiac_arrest", "cough_sob_meds_catch_all")
+
+total_covidlike_cases_by_race <- ems %>%
+  filter(covid_indicator >= 1) %>%
+  group_by(race) %>%
+  count() %>%
+  rename(total = n)
+
+covid_symptom_counts_by_race <- ems %>%
+  select(c("race", covid_symptoms)) %>%
+  group_by(race) %>%
+  summarize(cough = sum(cough),
+            fever = sum(fever),
+            sob = sum(sob),
+            myalgia = sum(myalgia),
+            chills = sum(chills),
+            fatigue = sum(fatigue),
+            headache = sum(headache),
+            diarrhea = sum(diarrhea),
+            nausea_or_vomit = sum(nausea_or_vomit),
+            hypoxemia = sum(hypoxemia),
+            hypoxemia_no_improvement = sum(hypoxemia_no_improvement),
+            cyanosis = sum(cyanosis),
+            covid_in_impressions = sum(covid_in_impressions),
+            young_person_stroke = sum(young_person_stroke),
+            young_person_cardiac_arrest = sum(young_person_cardiac_arrest),
+            cough_sob_meds_catch_all = sum(cough_sob_meds_catch_all))
+
+divide <- function(num, denom) {
+  return(num / denom);
+};
+
+covid_symptom_props_by_race <- covid_symptom_counts_by_race %>%
+  inner_join(total_covidlike_cases_by_race, by = "race") %>%
+  mutate_at(covid_symptoms, divide, denom = quote(total))
+
+racial_groups <- covid_symptom_props_by_race$race
+transposed <- covid_symptom_props_by_race %>% select(-c("race")) %>% t(.)
+colnames(transposed) <- racial_groups
+row.names(transposed) <- c("cough", "fever", "shortness of breath", "myalgia", "chills", "fatigue", "headache", "diarrhea", "nausea/vomit", "hypoxemia", "hypoxemia (no improvement)", "cyanosis", "COVID in impressions", "young person stroke", "young person cardiac arrest", "breathing medications", "patient count")
+
+knitr::kable(transposed, digits = 2)
+```
+
 
 ## Modeling
 
