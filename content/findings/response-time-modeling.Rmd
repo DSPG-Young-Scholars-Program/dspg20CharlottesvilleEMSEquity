@@ -38,6 +38,8 @@ library(ape)
 library(leaflet)
 library(leaflet.mapboxgl)
 library(ggthemes)
+library(tidyr)
+library(glue)
 
 prepared_data <- readr::read_csv(here::here("data", "final", "response_time_model_data_prepared.csv"))
 prepared_data_sp <- sf::st_read(here::here("data", "final", "response_time_model_data_prepared_sp.geojson"), quiet = TRUE)
@@ -120,31 +122,53 @@ theme_set(theme_minimal() +
 options(mapbox.accessToken = Sys.getenv("MAPBOX_TOKEN"))
 ```
 
+```{r}
+# fixing after covid coefs
+neighbor_coef_df <- as.data.frame(neighbor_model_bayes_yes_interact)
+
+
+fixed_coefs <- neighbor_coef_df %>% 
+  map2_df(.x = .[3:22], .y = .[23:42], .f = ~(.x + .y + neighbor_coef_df$after_covidTRUE)) %>% 
+  mutate(across(everything(), exp)) %>% 
+  rename_all(~paste0("after_covidTRUE:", .x)) %>% 
+  pivot_longer(everything(), names_to = "term") %>% 
+  group_by(term) %>% 
+  summarise(across(value, 
+                   .fns = list(estimate = median, 
+                               conf.low = ~quantile(.x, probs = 0.05), 
+                               conf.high = ~quantile(.x, probs = 0.95)),
+                   .names = "{fn}_scale_factor"),
+            .groups = "drop")
+
+bayes_model_coefs_trans$neighbor_model_bayes_yes_interact <- bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>% 
+  filter(!str_detect(term, "after_covidTRUE")) %>% 
+  bind_rows(fixed_coefs)
+```
+
+
 ### Model Results
 
-<br>
 
-_For more details on the specification of our model, see the Data & Methods tab._
+For more details on the specification of our model, see the [Data & Methods](https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/methods/) tab.
 
 <br>
 
 #### Measures of Model Fit
 
-We assessed the specification of our model using a posterior predictive check, which is common in Bayesian estimation. The posterior predictive check compares the distribution of predicted response times for each MCMC draw _(I think this needs a very brief elaboration – people may not know what is being drawn exactly)_ to the actual distribution of response times in the data. Below, we have the posterior predictive check results for the model including neighborhood effects. Light blue lines represent the distributions of response times predicted by the model, while dark blue lines represent the actual response times. The predictions follow the model closely, giving strong support to the strength of this model.
+We assessed the specification of our model using a posterior predictive check, which is common in Bayesian estimation. The posterior predictive check compares the distribution of predicted response times for each MCMC draw, where each draw represents one guess of what the model coefficients could be, to the actual distribution of response times in the data. Below, we have the posterior predictive check results for the model including neighborhood effects. Light blue lines represent the distributions of response times predicted by the model, while dark blue lines represent the actual response times. The predictions follow the model closely, giving strong support to the strength of this model.
 
 <br>
 
 ```{r}
-pp_check(neighbor_model_bayes_yes_interact)
+pp_check(neighbor_model_bayes_yes_interact) +
+  labs(x = "Log(Response Time)")
 ```
-
-_What's the x-axis here again?_
 
 <br>
 
 In our case, the posterior predictive check did not immediately favor one model over the other. To compare our two models, we can check against information criterion. These summaries indicate a model’s ability to predict data not included in the sample the model was trained on. Strong performance on this check suggests that a model represents the data generation process well.
 
-We assessed our models using the leave-one-out information criterion, which measures how well a model predicts each data point if that data point were removed from the data the model was trained on. In the following table, the model with a 0 indicates the best fit. Large negative numbers indicate that model performed much worse than the best model. **Thus, while both models produced a reasonable distribution of predicted response times, the multilevel model was superior in predicting individual response times based on the specified predictors.**
+We assessed our models using the leave-one-out information criterion, which measures how well a model predicts each data point if that data point were removed from the data the model was trained on. In the following table, the model with a 0 indicates the best fit. Large negative numbers indicate that model performed much worse than the best model. Thus, while both models produced a reasonable distribution of predicted response times, the multilevel model was superior in predicting individual response times based on the specified predictors.
 
 <br>
 
@@ -243,13 +267,15 @@ augmented_data_sampled %>%
 
 Since few areas have extreme values for the local Moran’s I statistic, we did not feel it necessary to generate a more complex model to address spatial autocorrelation. Our initial linear model suffered much more from spatial autocorrelation, which was our primary reason for abandoning it in favor of the neighborhood-level model. Evidently, the inclusion of neighborhoods was sufficient in accounting for much of the spatial autocorrelation present in the data.
 
+<br>
+
 #### Model Coefficients
 
-Having selected the neighborhood level model as the appropriate model, we move on to interpretations of the resulting coefficients. The following plot displays the effects of each variable included in the model when compared to a reference patient (in this case, the reference is a black women transported by ambulance with abuse of substance symptoms before COVID-19). The reference response time for this case is 9.9 minutes. As an example of coefficient interpretation, if the same woman instead had cardiovascular symptoms, but all other variables remained the same, we would expect an EMS unit to arrive in about 8.2 minutes, **since the coefficient associated with cardiovascular symptoms is approximately 0.83 (this is just based on visual inspection, but these values could be updated if you have the actual coefficient number) - may also be a good idea to have a table handy for the presentation in case you want to be able to quickly convert scaled coefficients to minutes or something** 
+Having selected the neighborhood level model as the appropriate model, we move on to interpretations of the resulting coefficients. The following plot displays the effects of each variable included in the model when compared to a reference patient (in this case, the reference is a black women transported by ambulance with abuse of substance symptoms before COVID-19). The reference response time for this case is 9.9 minutes. As an example of coefficient interpretation, if the same woman instead had cardiovascular symptoms, but all other variables remained the same, we would expect an EMS unit to arrive in about 8.4 minutes, since the coefficient associated with cardiovascular symptoms is approximately 0.84.
 
 <br>
 
-```{r, fig.height = 15}
+```{r, fig.height = 12}
 bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
   mutate(after_covid = str_detect(term, "(after_covidTRUE.*)")) %>%
   mutate(term = str_replace(term, "after_covidTRUE:", "")) %>%
@@ -281,11 +307,13 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
 
 <br>
 
-The primary takeaway from this graph is the across all types of incidents, response times have increased since the beginning of COVID-19. This increase appears to be stable across the levels of our other variables of interest. That is, it does not appear that response times have changed more or less for particular subgroups within our variables of interest.  
+From this, we can gather that there is no signifcant difference in how long service takes across different races and genders. While this is not the only area of EMS services where equity issues can occur, there is no systematic discrimiation in response times. 
 
-Because this is a neighborhood-level model, the expected change in response time due to being in a particular neighborhood is also interpretable (the interpretation of units is the same as explained above). When plotting response times across the region, we see that rural areas are expected to wait longer for emergency medical services than their urban counterparts. **However, these results should be interpreted with caution because of our inability directly control for distance traveled. As neighborhood or census tract regions get larger, this deficiency in our model becomes more and more meaningful. Therefore, comparing smaller regions within Charlottesville to those in Albemarle is suspect. Still, differences within similarly-sized regions may be meaningful.**
+Hpwever, we do see large differences in how long different symptoms take to treat. Some of these make sense, as a cardiovascular event is usually more time sensitive than a alcohol or drug related incident. How long these symtpms take to be treated also varies before and after covid. Based on the plot above, we can be pretty sure that GI/GU cases take longer to serve during the Covid-19 era than before. Unfortunatley, due to the smaller number of cases after March 15th compared to before, we are relatively unsure about these estimates, meaning that for most tyes of symtpoms, we are unable to be sure that response times are taking longer or shorter. 
 
-```{r, fig.height = 8}
+Because this is a neighborhood-level model, the expected change in response time due to being in a particular neighborhood is also interpretable (the interpretation of units is the same as explained above). When plotting response times across the region, we see that rural areas are expected to wait longer for emergency medical services than their urban counterparts. However, these results should be interpreted with caution because of our inability directly control for distance traveled. As neighborhood or census tract regions get larger, this deficiency in our model becomes more and more meaningful. Therefore, comparing smaller regions within Charlottesville to those in Albemarle is suspect. Still, differences within similarly-sized regions may be meaningful.
+
+```{r, fig.height = 6}
 map_colors <- colorBin(sf_map_colors, c(0.5, 2), c(0.65, 0.8, .95, 1.05, 1.30, 1.8))
 
 bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
@@ -315,22 +343,23 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
             opacity = .8)
 ```
 
-#### Conclusions
+<br>
+
+### Conclusions
 
 While this analysis suffers from the lack of data to control for travel distance, it still tells us important information about the Charlottesville and Albemarle County emergency medical services. First, there do not appear to be any glaring disparities in response times across demographic groups.
 
-Second, some types of symptoms are expected to be served much faster than others. For example, holding all other variables constant, we expect a cardiovascular incident to be responded to about 15% more quickly than a drug of alcohol related incident. With this information, EMS teams may be able to identify inconsistencies between response times and highly time-sensitive incident types, potentially increasing efficiency.
-
-_Just picked some other colors from the cbbpalette for this because I found the orange/blue to be confusing since it was used for pre/post COVID earlier. Of course these are sort of confusing given the residual maps above (other cbbpalette combos were pretty ugly though)....if we want nicer colors feel free to update this further._
+Second, some types of symptoms are expected to be served much faster than others. For example, holding all other variables constant, we expect a cardiovascular incident to be responded to about 15% more quickly than a drug or alcohol related incident. With this information, EMS teams may be able to identify inconsistencies between response times and highly time-sensitive incident types, potentially increasing efficiency. Below we show our predicted range of response times for a cardiovascular incident and a drug or alcohol related incident. 
 
 <br>
 
 ```{r}
+set.seed(451)
 test_cases <- tibble(after_covid = c(TRUE, TRUE),
                      patient_age = rep(45, 2),
                      patient_first_race_collapsed = c("black or african american", "black or african american"),
                      patient_gender = rep("female", 2),
-                     possible_impression_category_collapsed = c("cv", "infectious"),
+                     possible_impression_category_collapsed = c("cv", "abuse of substance"),
                      time_of_day = rep(12, 2),
                      response_vehicle_type_collapsed = rep("ambulance", 2),
                      NAME = rep("Belmont", 2))
@@ -357,10 +386,11 @@ test_predictions %>%
   geom_vline(aes(xintercept = median, color = case)) +
   coord_cartesian(xlim = c(0, 20)) +
   scale_color_manual(values = cbbPalette[c(3,7)],
-                     labels = c("Cardiovascular Symptoms", "Infectious Symptoms")) +
+                     labels = c("Cardiovascular Symptoms", "Abuse of Substance")) +
   labs(color = NULL, 
        x = "Predicted Response Time",
-       y = "Density") +
+       y = "Density",
+       caption = "Vertical Lines Represent Median Estimate") +
   theme(legend.position = "bottom")
                
 
@@ -368,9 +398,11 @@ test_predictions %>%
 
 <br>
 
-Finally, COVID-19 has made calls take longer on average, although this increase is very small (on the order of 10 seconds to a minute), and for the most part this change has hit all different demographics and symptom presentations equally. This change may be driven by the increased time required for EMS responders to adhere to stricter personal protective equipment guidelines. This hypothesis could be assessed with the ability to split response times into separate loadout time and travel time components.
+Finally, COVID-19 has made calls take longer on average, although this increase is very small (on the order of 10 to 20 seconds) and is likely not medically significant. This change may be driven by the increased time required for EMS responders to adhere to stricter personal protective equipment guidelines. This hypothesis could be assessed with the ability to split response times into separate loadout time and travel time components.
 
-#### Next Steps
+<br>
+
+### Next Steps
 
 The most obvious improvement to this analysis would be the inclusion of travel distance from dispatch to incident location. Even with our attempts to account for this, this variable is likely impacting many of our estimates to some degree, and it would not be surprising to see results shift were we to include it in the model. Unfortunately, this data is not reliably collected, and while alternative approaches to estimate it certainly exist, implementing them ended up being outside the timeframe of this summer project.
 
