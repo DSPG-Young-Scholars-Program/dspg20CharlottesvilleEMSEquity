@@ -71,7 +71,7 @@ summed_data %>%
 
 
 
-period <- ymd("2020-03-01")
+period <- ymd("2020-02-15")
 pre_period <- joined %>%
   filter(incident_date < period)
 
@@ -172,6 +172,6 @@ diff_period_summed %>%
               color = "#222222", weight = 3, smoothFactor = 0.5,
               fill = NA) %>%
   addLegend("bottomright", pal = color_scale, values = ~rate_ratio,
-            title = htmltools::HTML("Percent Change in Daily Incident Rate<br>After March 1st 2020"),
+            title = htmltools::HTML("Percent Change in Daily Incident Rate<br>After Febuary 15th 2020"),
             opacity = .8,
             labFormat = labelFormat(suffix = "%", between = " to "))

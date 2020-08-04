@@ -13,11 +13,17 @@ library(here)
 library(dplyr)
 library(ggplot2)
 library(data.table)
+library(purrr)
 library(naniar)
 library(stringr)
 library(stringr)
+library(tidyr)
+library(sf)
+library(leaflet)
+library(glue)
 library(lubridate)
 library(knitr)
+library(ggalt)
 
 source(here('src','Mapping','demo_maps.R'))
 
@@ -69,7 +75,7 @@ category = case_when(
   grepl("^N", firt) ~ "Genitourinary System",
   grepl("^O", firt) ~ "Pregnancy/ Childbirth/ Puerperium",
   grepl("^P", firt) ~ "Perinatal Period Complications",
-  grepl("^Q", firt) ~ "Congenital Malformations/Chromsomal Abnormalities",
+  grepl("^Q", firt) ~ "Congenital Malformations/ Chromsomal Abnormalities",
   grepl("^R", firt) ~ "Unclassified Abnormalities",
   grepl("^S|^T", firt) ~ "Injury/ Poisoning/ Consequences of Extenral Causes",
   grepl("^V|^W|^X|^Y", firt) ~ "External Causes of Morbidity",
@@ -141,6 +147,166 @@ geom_split_violin <- function(mapping = NULL, data = NULL, stat = "ydensity", po
 }
 ```
 
+
+```{r, incident, include = F, message=FALSE}
+
+acs_total_pop_tract <- get_acs(geography = "tract",
+                                   year = 2018,
+                                   variables = c(total_population = "DP05_0001"),
+                                   state = "VA",
+                                   county = c("albemarle", "charlottesville")) %>%
+  pivot_wider(names_from = variable,
+              values_from = c(estimate, moe),
+              names_glue = "{variable}_{.value}")
+
+acs_total_pop_tract_sp <- tigris::tracts(state = "VA", county = c("charlottesville", "albemarle"),
+               cb = TRUE, year = 2018, class = "sf") %>%
+  st_transform(crs = 4326) %>%
+  left_join(acs_total_pop_tract, by = "GEOID")
+
+
+city_border <- tigris::counties(state = "VA",
+                                cb = TRUE, year = 2018, class = "sf") %>%
+  filter(COUNTYFP == 540) %>%
+  st_transform(crs = 4326)
+
+ems_full_sp <- ems_full %>%
+  distinct %>%
+  filter(!is.na(scene_gps_latitude), !is.na(scene_gps_longitude)) %>%
+  st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude"), remove = FALSE, crs = 4326)
+
+neighborhoods <- st_read(here::here("data", "working", "neighborhood_demographics.geojson")) %>%
+  rename(pop = n)
+
+joined <- st_join(neighborhoods, ems_full_sp, join = st_contains)
+
+
+total_days <- as.numeric(range(ems_full_sp$incident_date)[2] - range(ems_full_sp$incident_date)[1])
+
+summed_data <- joined %>%
+  group_by(NAME, pop) %>%
+  count() %>%
+  mutate(rate_per_1000 = round(n/pop * 1000 / total_days *365)) %>%
+  ungroup() %>%
+  st_as_sf()
+
+range(summed_data$rate_per_1000)
+hist(summed_data$rate_per_1000)
+
+BAMMtools::getJenksBreaks(summed_data$rate_per_1000, 5)
+quantile(summed_data$rate_per_1000, seq(0, 1, 0.2))
+color_scale <- colorBin("BuPu", c(0,1600), c(0, 75, 125, 200, 400, 600))
+
+
+
+
+period <- ymd("2020-02-15")
+pre_period <- joined %>%
+  filter(incident_date < period)
+
+post_period <- joined %>%
+  filter(incident_date >= period)
+
+days_pre <- as.numeric(range(pre_period$incident_date)[2] - range(pre_period$incident_date)[1])
+days_post <- as.numeric(range(post_period$incident_date)[2] - range(post_period$incident_date)[1] )
+
+pre_period_summed <- pre_period %>%
+  group_by(NAME, pop) %>%
+  count() %>%
+  mutate(rate_per_1000 = (n/pop * 1000/days_pre)) %>%
+  ungroup() %>%
+  st_as_sf()
+
+post_period_summed <- post_period %>%
+  group_by(NAME, pop) %>%
+  count() %>%
+  mutate(rate_per_1000 = (n/pop * 1000/days_post)) %>%
+  ungroup() %>%
+  st_as_sf()
+
+
+range(pre_period_summed$rate_per_1000)
+range(post_period_summed$rate_per_1000)
+
+hist(pre_period_summed$rate_per_1000)
+hist(post_period_summed$rate_per_1000)
+
+BAMMtools::getJenksBreaks(c(pre_period_summed$rate_per_1000, post_period_summed$rate_per_1000), 7)
+color_scale <- colorBin("BuPu", c(0, 1.6), c(0, 0.07, .26, .42, .58, .80, 1.0, 1.6))
+
+pre_period_summed %>%
+  leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_per_1000),
+              label = ~map(glue("{NAME}<br/>
+                                Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
+              group = "Pre 2020") %>%
+  addPolygons(data = post_period_summed,
+              color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_per_1000),
+              label = ~map(glue("{NAME}<br/>
+                                Incident Rate Per 1000: {rate_per_1000}"), htmltools::HTML),
+              group = "In 2020") %>%
+  addPolygons(data = city_border,
+              color = "#222222", weight = 3, smoothFactor = 0.5,
+              fillOpacity = 0) %>%
+  addLegend("bottomright", pal = color_scale, values = ~rate_per_1000,
+            title = "Incident Rate Per 1000",
+            opacity = .8) %>%
+  addLayersControl(baseGroups = c("Pre 2020", "In 2020"),
+                   options = layersControlOptions(collapsed = FALSE))
+
+
+diff_period_summed <- post_period_summed %>%
+  mutate(rate_diff = rate_per_1000 - pre_period_summed$rate_per_1000,
+         rate_ratio = 100*(rate_per_1000 / pre_period_summed$rate_per_1000 - 1))
+
+
+hist(diff_period_summed$rate_diff)
+color_scale <- colorBin("BuPu", c(-0.6,0.1), c(-0.6, -0.3, -0.15, -0.10, -0.05, 0.1), reverse = TRUE)
+
+
+diff_period_summed %>%
+  leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_diff),
+              label = ~map(glue("{NAME}<br/>
+                                Change in Incident Rate Per 1000: {round(rate_diff, 2)}"), htmltools::HTML)) %>%
+  addPolygons(data = city_border,
+              color = "#222222", weight = 3, smoothFactor = 0.5,
+              fill = NA) %>%
+  addLegend("bottomright", pal = color_scale, values = ~rate_diff,
+            title = "Change in Daily Incident Rate Per 1000",
+            opacity = .8)
+
+
+hist(diff_period_summed$rate_ratio)
+BAMMtools::getJenksBreaks(diff_period_summed$rate_ratio, 5)
+color_scale <- colorBin("PuRd", 100 * (c(0.2,1.2) - 1), 100 * (c(0.2, 0.5, 0.65, 0.8, 1, 1.2) - 1), reverse = TRUE)
+
+diff_period_summed %>%
+  leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_ratio),
+              label = ~map(glue("{NAME}<br/>
+                                Change in Incident Rate Per 1000: {round(rate_ratio, 2)}"), htmltools::HTML)) %>%
+  addPolygons(data = city_border,
+              color = "#222222", weight = 3, smoothFactor = 0.5,
+              fill = NA) %>%
+  addLegend("bottomright", pal = color_scale, values = ~rate_ratio,
+            title = htmltools::HTML("Percent Change in Daily Incident Rate<br>After Febuary 15th 2020"),
+            opacity = .8,
+            labFormat = labelFormat(suffix = "%", between = " to "))
+
+```
+
 ## COVID-19
 
 COVID-19 has affected all parts of life and we are interested in how it has impacted Emergency Medical Services in Charlottesville and the larger Albermarle County. Counterintuitively, we can observe that there is a significant drop off in call volume to emergency medical services. This may be caused by people staying at home more and thus there being less emergency incidents. For example, we can see the monthly number of incidents for the top 10 complaints dropping off sharply. 
@@ -175,18 +341,235 @@ ggplot(plot_data) +
 
 We also are interested in understanding where call volume is dropping. Discrepencies may signal other needs in the community that aren't being addressed. 
 
-[insert ellen's map of change]
-[where is that]
+```{r, echo  = F, out.width='100%', message=FALSE, warning=FALSE}
+diff_period_summed %>%
+  leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.8,
+              fillColor = ~color_scale(rate_ratio),
+              label = ~map(glue("{NAME}<br/>
+                                Change in Incident Rate Per 1000: {round(rate_ratio, 2)}"), htmltools::HTML)) %>%
+  addPolygons(data = city_border,
+              color = "#222222", weight = 3, smoothFactor = 0.5,
+              fill = NA) %>%
+  addLegend("bottomright", pal = color_scale, values = ~rate_ratio,
+            title = htmltools::HTML("Percent Change in Daily Incident Rate<br>After Febuary 15th 2020"),
+            opacity = .8,
+            labFormat = labelFormat(suffix = "%", between = " to "))
+
+```
 
 ## Demographics
 
 In order to get a sense of what our data population looks like, it's helpful to create some plots and maps. This first map depicts the racial breakdown of each county and we can see that the area is predominantly white and black people make up the next largest racial group. Black people are more concentrated within a few tracts within Charlottesville.. In terms of income, we see areas of lower income coincide with areas with higher black populations and can also observe the same trend with higher poverty rates. Income and poverty rates seem to coincide as well with areas of higher income to have lower poverty rates.
+```{r, echo  = F, out.width='100%', message=FALSE, warning=FALSE}
+border_color = "#4D4D4D"
+smoothing = 0.5
+fill_pal = colorBin("YlOrRd", c(0, 100))
+fill_opacity = 0.6
+  ## Leaflet map of race distribution by block group
+leaflet() %>%
+    addProviderTiles("CartoDB.Positron") %>%
+    addMapPane("polygons", zIndex = 400) %>%
+    addMapPane("borders", zIndex = 410) %>%
+    addPolygons(
+      data = neighborhoods,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(prop_white*100),
+      group = "White",
+      options = pathOptions(pane = "polygons")
+    ) %>% 
+    addPolygons(
+      data = neighborhoods,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(prop_black*100),
+      group = "Black",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      data = neighborhoods,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(prop_asian*100),
+      group = "Asian",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      data = neighborhoods,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(prop_am_ind*100),
+      group = "American Indian/Alaskan Native",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      data = neighborhoods,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(prop_hawaiian_pac_isl*100),
+      group = "Pacific Islander",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      data = neighborhoods,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(prop_other*100),
+      group = "Other (single race)",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      data = neighborhoods,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(prop_multiple*100),
+      group = "More than one",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+  addPolygons(
+      data = alb_race,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_white),
+      group = "White",
+      options = pathOptions(pane = "polygons")
+    ) %>% 
+    addPolygons(
+      data = alb_race,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_black),
+      group = "Black",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      data = alb_race,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_asian),
+      group = "Asian",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      data = alb_race,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_native_am),
+      group = "American Indian/Alaskan Native",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      data = alb_race,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_pacific_isl),
+      group = "Pacific Islander",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      data = alb_race,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_other),
+      group = "Other (single race)",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolygons(
+      data = alb_race,
+      color = border_color,
+      weight = 1,
+      smoothFactor = smoothing,
+      fillOpacity = fill_opacity,
+      fillColor = ~fill_pal(pct_multi),
+      group = "More than one",
+      options = pathOptions(pane = "polygons")
+    ) %>%
+    addPolylines(
+      data = cville_border,
+      color = "black",
+      weight = 2,
+      opacity = 1,
+      options = pathOptions(pane = "borders")
+    ) %>%
+    addLegend(pal = fill_pal,
+              values = c(0,100),
+              position = "bottomright",
+              title = "Percentage of Population<br>of Selected Race",
+              opacity = 0.7) %>%
+    addLayersControl(baseGroups = c("White", "Black", "Asian", "American Indian/Alaskan Native", "Pacific Islander", "Other (single race)", "More than one"),
+                     options = layersControlOptions(collapsed = FALSE))
+```
+
+
+
 
 ```{r, echo  = F, out.width='100%', message=FALSE, warning=FALSE}
+# 
+# joines = st_join(neighborhoods, cville_income, join = st_overlaps)
+# fill_pal = colorBin("YlGn", alb_income$med_income, bins=10, pretty=TRUE)
+# leaflet() %>%
+#     addProviderTiles("CartoDB.PositronNoLabels") %>%
+#     addPolygons(
+#       data = alb_income,
+#       color = border_color,
+#       weight = 1,
+#       smoothFactor = smoothing,
+#       fillOpacity = fill_opacity,
+#       fillColor = ~fill_pal(med_income),
+#       label = ~ifelse(!is.na(alb_income$med_income), paste0("$", prettyNum(alb_income$med_income, big.mark = ",")), "Missing")
+#     ) %>%
+#     addPolygons(
+#       data =joines,
+#       color = border_color,
+#       weight = 1,
+#       smoothFactor = smoothing,
+#       fillOpacity = fill_opacity,
+#       fillColor = ~fill_pal(med_income),
+#       label = ~ifelse(!is.na(joines$med_income), paste0("$", prettyNum(joines$med_income, big.mark = ",")), "Missing")
+#     ) %>%
+#     addPolylines(
+#       data = cville_border,
+#       color = "#222222",
+#       weight = 2,
+#       opacity = 1
+#     ) %>%
+#     addLegend(pal = fill_pal,
+#               values = data$med_income,
+#               position = "bottomright",
+#               title = "Median household income",
+#               na.label = "Missing",
+#               opacity = 0.7)
 
-comb_income_map
-comb_race_map
-comb_pov_map
+# income_map
 ```
 
 
@@ -206,7 +589,9 @@ ggplot(aes(patient_gender, as.numeric(patient_age), fill = patient_gender)) +
   scale_x_discrete(expand=c(0, 0) ,labels = function(x) str_wrap(x, width = 10))+
   scale_fill_manual(values = cbPalette)+ 
   geom_boxplot(aes(patient_gender, as.numeric(patient_age)),width =.1, inherit.aes = F)+
-  scale_fill_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))
+  scale_fill_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))+
+    theme(legend.position = "bottom")
+
 
 ```
 
@@ -225,7 +610,8 @@ ggplot(aes(patient_race_list, as.numeric(patient_age), fill = patient_gender)) +
     labs(title= "Violin Plot of Age Distribution of Races", x = "Race", y = "Ages", fill = "Gender")+
      scale_x_discrete(expand=c(0, 0) ,labels = function(x) str_wrap(x, width = 10))+
   scale_fill_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))+
-  geom_jitter(data =  sample_n(char_race_gen_na,7500) ,position = position_jitter(.1), size = .7, alpha =.25, shape = 15)
+  geom_jitter(data =  sample_n(char_race_gen_na,7500) ,position = position_jitter(.1), size = .7, alpha =.25, shape = 15)+
+  theme(legend.position = "bottom")
 ```
 
 ## Vital Stats
@@ -254,34 +640,72 @@ vital %>%
 
 Of course, what is contributing to these mortalities might've changed. If we look at changes to the relative frequencies of ICD 10 Codes for mortality we see a sharp increase in deaths were the category is not recorded. 
 
-```{r, echo = F,  out.width = '100%', warning=FALSE, message=FALSE, fig.height = 10, fig.width=15}
-vital %>%
+```{r, echo = F,  out.width = '100%', warning=FALSE, message=FALSE, fig.height = 15, fig.width=20}
+ahh = vital %>%
   # filter(!is.na(category))%>%
   group_by(covid,category)%>%
   summarise(n = n()) %>%
   mutate(freq = n / sum(n)) %>%
-  ggplot(aes(covid,freq, group = category, color = str_wrap(paste0(category,'\n'),20)))+
-  geom_line()+
-  labs(colour="ICD 10 Code", x= 'Covid Era', y= 'Relative Frequency',
-       title = 'Relative Frequencies of ICD 10 Codes Before\nand During Covid Era') +
-  guides(color=guide_legend(ncol=2))
+  as.data.frame(ahh) %>% 
+  add_row(covid = TRUE, category = "Diseases of the Blood",n =0, freq = 0) %>%
+  add_row(covid = TRUE, category = "Pregnancy/ Childbirth/ Puerperium",n =0, freq = 0)
+
+freq_pre_covid = ahh %>%
+  filter(covid==F)
+freq_post_covid = ahh %>%
+  filter(covid==T)
+
+change_in_freq = data.frame(category = freq_pre_covid$category, freq = freq_pre_covid$freq - freq_post_covid$freq)
+change_in_freq = change_in_freq %>%
+  arrange(desc(freq))
+change_in_freq$category = factor(change_in_freq$category, levels = rev(change_in_freq$category))
+change_in_freq %>%
+  ggplot(aes(category, freq))+
+  geom_bar(stat="identity", position=position_dodge(.5), fill = my_cols[5])+
+  coord_flip()
+
+change_in_freq %>%
+ggplot(aes(x=0, xend=freq, y=category)) + 
+        geom_segment(aes(x=0, 
+                         xend=freq, 
+                         y=category, 
+                         yend=category), 
+                     color=my_cols[1], size=1.5)+
+        geom_dumbbell(color=my_cols[5], 
+                      size_x=0, 
+                      size_xend = 5,
+                      #Note: there is no US:'color' for UK:'colour' 
+                      # in geom_dumbbel unlike standard geoms in ggplot()
+                      colour_x="#edae52", 
+                      colour_xend = my_cols[5])+
+        labs(x="Change in Frequency", y="ICD 10 Code", 
+             title="Change in Cause of Death Relative Frequencues \nBefore and After Febuary 15, 2020")
+
 ```
 
 
-When we overlay the racial distribution over the categories we note that of the deaths where race is recorded, it doesn't appear that the racial distribution is even across the categories. Calculating the relative risk of death by each category for black patients versus white patients shows that black patients are more than 2.5 times as likely to die from diseases of the blood and twice as likely to die from complications arising during the perinatal period. 
+When we overlay the racial distribution over the categories we note that of the deaths where race is recorded, it doesn't appear that the racial distribution is even across the categories. 
 
 ```{r, echo = F,  out.width = '100%', warning=FALSE, message=FALSE, fig.height = 15, fig.width=20}
+
 vital %>%
-  filter(!is.na(RACE))%>%
+    filter(!is.na(RACE))%>%
+
+  # convert variable to a factor, ordered (in descending order) by the proportion of
+  # rows where the class == "1"
+  mutate(category = forcats::fct_reorder(.f = category, 
+                                         .x = as.factor(RACE),
+                                         .fun = function(.x) mean(.x == "White"),
+                                         .desc = TRUE)) %>%
   ggplot(aes(category, fill = as.factor(RACE)))+
   geom_bar(position = "fill")+
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 5))+
   scale_fill_manual(values = rev(my_cols[1:6]), name = "Race")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
   labs(x= "ICD 10- Code", y= "Proportion", title = " Proportion of Mortalities by Race")+
-  theme(axis.text = element_text(size = 14, color = "gray30"))+
+  theme( legend.position = "bottom")+
   coord_flip()
 ```
-
+Calculating the relative risk of death by each category for black patients versus white patients shows that black patients are more than 2.5 times as likely to die from diseases of the blood and twice as likely to die from complications arising during the perinatal period. 
 ```{r, echo = F, out.width='100%', warning=FALSE,message=FALSE, fig.height = 15, fig.width=20}
 tots = vital %>% 
   filter(RACE %in% c('White','Black')) %>%
@@ -312,15 +736,26 @@ colnames(relative_risk) = c('category','relative_risk')
 relative_risk[,2] <- as.numeric(relative_risk[,2])
 
 
+relative_risk$white_risk = 1
+
+relative_risk = relative_risk %>%
+  arrange(desc(relative_risk))
+relative_risk$category = factor(relative_risk$category, levels = rev(relative_risk$category))
 relative_risk %>%
-  arrange(desc(relative_risk)) %>%
-  # filter(RACE %in% c('White', 'Black'))%>%
-  ggplot(aes(reorder(category,relative_risk), relative_risk))+
-  geom_col(fill = my_cols[5])+
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
-  labs(x= "ICD 10- Code", y= "Relative Risk", title = "Relative Risk of Death of Black Patients to White Patients")+
-  geom_hline(yintercept = 1, color = "#E57200")+
-  coord_flip()+
-  theme(axis.text = element_text(size = 16, color = "gray30"))
+ggplot(aes(x=white_risk, xend=relative_risk, y=category)) + 
+        geom_segment(aes(x=white_risk, 
+                         xend=relative_risk, 
+                         y=category, 
+                         yend=category), 
+                     color=my_cols[1], size=1.5)+
+        geom_dumbbell(color=my_cols[5], 
+                      size_x=0, 
+                      size_xend = 5,
+                      #Note: there is no US:'color' for UK:'colour' 
+                      # in geom_dumbbel unlike standard geoms in ggplot()
+                      colour_x="#edae52", 
+                      colour_xend = my_cols[5])+
+        labs(x="Relative Risk", y="ICD 10 Code", 
+             title="Relative Risk of Death of Black Patients to White Patients")
 ```
 
