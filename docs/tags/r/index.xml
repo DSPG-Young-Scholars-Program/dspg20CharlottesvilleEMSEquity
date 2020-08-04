@@ -25,10 +25,9 @@
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>/findings/response-time-modeling/</guid>
-      <description>Model Results 
-For more details on the specification of our model, see the Data &amp;amp; Methods tab.
+      <description>Model Results For more details on the specification of our model, see the Data &amp;amp; Methods tab.
 
-Measures of Model Fit We assessed the specification of our model using a posterior predictive check, which is common in Bayesian estimation. The posterior predictive check compares the distribution of predicted response times for each MCMC draw (I think this needs a very brief elaboration – people may not know what is being drawn exactly) to the actual distribution of response times in the data.</description>
+Measures of Model Fit We assessed the specification of our model using a posterior predictive check, which is common in Bayesian estimation. The posterior predictive check compares the distribution of predicted response times for each MCMC draw, where each draw represents one guess of what the model coefficients could be, to the actual distribution of response times in the data.</description>
     </item>
     
     <item>
