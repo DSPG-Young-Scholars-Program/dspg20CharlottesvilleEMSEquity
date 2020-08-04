@@ -19,6 +19,7 @@ library(stringr)
 library(lubridate)
 library(knitr)
 library(gghighlight)
+library(ggalt)
 
 source(here('src','Mapping','demo_maps.R'))
 
@@ -44,7 +45,7 @@ vital$RACE = factor(vital$RACE,
                     labels = c('White', "Black", 'Amer. Indian', rep("Asian",7),
                                "Native Hawaiian", "Other", rep("Other", 4)))
 vital = vital %>% 
-    mutate(DATE_OF_DEATH = mdy(DATE_OF_DEATH))
+  mutate(DATE_OF_DEATH = mdy(DATE_OF_DEATH))
 
 cutoff = as.Date("2020-02-15")
 vital = vital %>%
@@ -89,10 +90,10 @@ ems_full <-read.csv(here::here("data", "final", "ems_clean_data.csv"))
 cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
 ems_full$patient_race_list = gsub("(.*?)\\|.*", "\\1", ems_full$patient_race_list)
 ems_full$patient_race_list  = factor(ems_full$patient_race_list,
-                    levels = c('white',"black or african american","american indian or alaska native" ,
-                               "asian","native hawaiian or other pacific islander"),
-                    labels = c('White', "Black", 'Amer. Indian', "Asian",
-                               "Native Hawaiian"))
+                                     levels = c('white',"black or african american","american indian or alaska native" ,
+                                                "asian","native hawaiian or other pacific islander"),
+                                     labels = c('White', "Black", 'Amer. Indian', "Asian",
+                                                "Native Hawaiian"))
 
 # new_ems_data <- new_ems_data %>% 
 #   mutate(incident_date = ymd(incident_date), 
@@ -114,26 +115,26 @@ ems_full <- ems_full %>%
 #https://stackoverflow.com/questions/35717353/split-violin-plot-with-ggplot2
 GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin, 
                            draw_group = function(self, data, ..., draw_quantiles = NULL) {
-  data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
-  grp <- data[1, "group"]
-  newdata <- plyr::arrange(transform(data, x = if (grp %% 2 == 1) xminv else xmaxv), if (grp %% 2 == 1) y else -y)
-  newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
-  newdata[c(1, nrow(newdata) - 1, nrow(newdata)), "x"] <- round(newdata[1, "x"])
-
-  if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
-    stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
-      1))
-    quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
-    aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
-    aesthetics$alpha <- rep(1, nrow(quantiles))
-    both <- cbind(quantiles, aesthetics)
-    quantile_grob <- GeomPath$draw_panel(both, ...)
-    ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
-  }
-  else {
-    ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
-  }
-})
+                             data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+                             grp <- data[1, "group"]
+                             newdata <- plyr::arrange(transform(data, x = if (grp %% 2 == 1) xminv else xmaxv), if (grp %% 2 == 1) y else -y)
+                             newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
+                             newdata[c(1, nrow(newdata) - 1, nrow(newdata)), "x"] <- round(newdata[1, "x"])
+                             
+                             if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+                               stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
+                                                                         1))
+                               quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
+                               aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
+                               aesthetics$alpha <- rep(1, nrow(quantiles))
+                               both <- cbind(quantiles, aesthetics)
+                               quantile_grob <- GeomPath$draw_panel(both, ...)
+                               ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
+                             }
+                             else {
+                               ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
+                             }
+                           })
 
 geom_split_violin <- function(mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., 
                               draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, 
@@ -171,10 +172,10 @@ char_race_gen_na = ems_full %>%
   filter(!patient_gender %in% NA)
 
 char_race_gen_na %>%
-ggplot(aes(patient_race_list, as.numeric(patient_age), fill = patient_gender)) +
+  ggplot(aes(patient_race_list, as.numeric(patient_age), fill = patient_gender)) +
   geom_split_violin(alpha= 1, color = "#fafafa")+
-    labs(title= "EMS Patient Demographics", x = "Race", y = "Age", fill = "Gender")+
-     scale_x_discrete(expand=c(0, 0) ,labels = function(x) str_wrap(x, width = 10))+
+  labs(title= "EMS Patient Demographics", x = "Race", y = "Age", fill = "Gender")+
+  scale_x_discrete(expand=c(0, 0) ,labels = function(x) str_wrap(x, width = 10))+
   scale_fill_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))+
   #scale_color_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))+
   geom_jitter(data =  sample_n(char_race_gen_na,7500), position = position_jitter(.025), size = .7, alpha =.25, show.legend = FALSE) +
@@ -265,14 +266,6 @@ Using data from the Virginia Department of Health, we were able to investigate t
 
 _We had access to mortality data and were interested in how the deaths broke down. We see that the most common cause of death is a circulatory disease followed by neoplasms and extneral causes of morbidity. Racially, the dataset is primarily white or race was not recorded. Black patients make up the next highest group of people in the dataset. All other races combined represent less than 100 deaths in this dataset._
 
-```{r , echo = F,  out.width = '100%',warning=FALSE, message=FALSE}
-vital %>%
-  ggplot(aes(RACE))+
-  geom_bar(fill = my_cols[5])+
-    labs(x= "Race", y= "Count", title = "Number of Deaths by Race")+
-    scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
-```
-
 ```{r , echo = F,  out.width = '100%',warning=FALSE, message=FALSE, fig.height = 15, fig.width=20}
 vital %>%
   count(category, sort = T) %>%
@@ -288,30 +281,46 @@ vital %>%
 Of course, what is contributing to these mortalities might've changed. If we look at changes to the relative frequencies of ICD 10 Codes for mortality we see a sharp increase in deaths were the category is not recorded. 
 
 ```{r, echo = F,  out.width = '100%', warning=FALSE, message=FALSE, fig.height = 10, fig.width=15}
-vital %>%
-  # filter(!is.na(category))%>%
-  group_by(covid,category)%>%
-  summarise(n = n()) %>%
-  mutate(freq = n / sum(n)) %>%
-  ggplot(aes(covid,freq, group = category, color = str_wrap(paste0(category,'\n'),20)))+
-  geom_line()+
-  labs(colour="ICD 10 Code", x= 'Covid Era', y= 'Relative Frequency',
-       title = 'Relative Frequencies of ICD 10 Codes Before\nand During Covid Era') +
-  guides(color=guide_legend(ncol=2))
+# vital %>%
+#   # filter(!is.na(category))%>%
+#   group_by(covid,category)%>%
+#   summarise(n = n()) %>%
+#   mutate(freq = n / sum(n)) %>%
+#   ggplot(aes(covid,freq, group = category, color = str_wrap(paste0(category,'\n'),20)))+
+#   geom_line()+
+#   labs(colour="ICD 10 Code", x= 'Covid Era', y= 'Relative Frequency',
+#        title = 'Relative Frequencies of ICD 10 Codes Before\nand During Covid Era') +
+#   guides(color=guide_legend(ncol=2))
 ```
 
 
 When we overlay the racial distribution over the categories we note that of the deaths where race is recorded, it doesn't appear that the racial distribution is even across the categories. Calculating the relative risk of death by each category for black patients versus white patients shows that black patients are more than 2.5 times as likely to die from diseases of the blood and twice as likely to die from complications arising during the perinatal period. 
 
 ```{r, echo = F,  out.width = '100%', warning=FALSE, message=FALSE, fig.height = 15, fig.width=20}
+# vital %>%
+#   filter(!is.na(RACE))%>%
+#   ggplot(aes(category, fill = as.factor(RACE)))+
+#   geom_bar(position = "fill")+
+#   scale_x_discrete(labels = function(x) str_wrap(x, width = 5))+
+#   scale_fill_manual(values = rev(my_cols[1:6]), name = "Race")+
+#   labs(x= "ICD 10- Code", y= "Proportion", title = " Proportion of Mortalities by Race")+
+#   theme(axis.text = element_text(size = 14, color = "gray30"))+
+#   coord_flip()
+
 vital %>%
   filter(!is.na(RACE))%>%
+  # convert variable to a factor, ordered (in descending order) by the proportion of
+  # rows where the class == "1"
+  mutate(category = forcats::fct_reorder(.f = category, 
+                                         .x = as.factor(RACE),
+                                         .fun = function(.x) mean(.x == "White"),
+                                         .desc = TRUE)) %>%
   ggplot(aes(category, fill = as.factor(RACE)))+
   geom_bar(position = "fill")+
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 5))+
   scale_fill_manual(values = rev(my_cols[1:6]), name = "Race")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
   labs(x= "ICD 10- Code", y= "Proportion", title = " Proportion of Mortalities by Race")+
-  theme(axis.text = element_text(size = 14, color = "gray30"))+
+  theme( legend.position = "bottom")+
   coord_flip()
 ```
 
@@ -319,42 +328,47 @@ vital %>%
 tots = vital %>% 
   filter(RACE %in% c('White','Black')) %>%
   count(RACE)
-
 all_cat_death_tots = vital %>%
   filter(RACE %in% c('White','Black')) %>%
   group_by(RACE)%>%
   count(category, sort = T)
-
 calc_relative_risk = function(death_cat){
   cat_death = all_cat_death_tots %>%
-  filter(category == death_cat) %>%
-  select(n) %>%
-  summarise_all(funs(sum))
-
+    filter(category == death_cat) %>%
+    select(n) %>%
+    summarise_all(funs(sum))
   risk = cat_death/tots 
   risk = risk %>%
     select(n)
   relative_risk = risk[2,]/risk[1,]
 }
-
 relative_risk = data.frame()
 for( i in unique(na.omit(vital$category))){
   relative_risk = rbind(relative_risk, c(i,calc_relative_risk(i)))
 }
 colnames(relative_risk) = c('category','relative_risk')
 relative_risk[,2] <- as.numeric(relative_risk[,2])
-
-
+relative_risk$white_risk = 1
+relative_risk = relative_risk %>%
+  arrange(desc(relative_risk))
+relative_risk$category = factor(relative_risk$category, levels = rev(relative_risk$category))
 relative_risk %>%
-  arrange(desc(relative_risk)) %>%
-  # filter(RACE %in% c('White', 'Black'))%>%
-  ggplot(aes(reorder(category,relative_risk), relative_risk))+
-  geom_col(fill = my_cols[5])+
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
-  labs(x= "ICD 10- Code", y= "Relative Risk", title = "Relative Risk of Death of Black Patients to White Patients")+
-  geom_hline(yintercept = 1, color = "#E57200")+
-  coord_flip()+
-  theme(axis.text = element_text(size = 16, color = "gray30"))
+  ggplot(aes(x=white_risk, xend=relative_risk, y=category)) + 
+  geom_segment(aes(x=white_risk, 
+                   xend=relative_risk, 
+                   y=category, 
+                   yend=category), 
+               color=my_cols[1], size=1.5)+
+  geom_dumbbell(color=my_cols[5], 
+                size_x=0, 
+                size_xend = 5,
+                #Note: there is no US:'color' for UK:'colour' 
+                # in geom_dumbbel unlike standard geoms in ggplot()
+                colour_x="#edae52", 
+                colour_xend = my_cols[5])+
+  scale_x_log10() +
+  labs(x="Relative Risk", y="ICD 10 Code", 
+       title="Relative Risk of Death of Black Patients to White Patients")
 ```
 
 However, while the VDH data are helpful in evaluating underlying health disparities in the region, we did not notice an overall increase in mortality since the beginning of the COVID-19 pandemic, suggesting that the pandemic may have to play out longer before we are able to assess its overall effects on mortality in the region.
