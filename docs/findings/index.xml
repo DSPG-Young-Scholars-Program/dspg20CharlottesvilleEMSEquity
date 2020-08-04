@@ -26,7 +26,7 @@ Main Findings [Here you will describe the results and include important visualiz
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>/findings/context/</guid>
-      <description>COVID-19 COVID-19 has affected all parts of life and we are interested in how it has impacted Emergency Medical Services in Charlottesville and the larger Albermarle County. Counterintuitively, we can observe that there is a significant drop off in call volume to emergency medical services. This may be caused by people staying at home more and thus there being less emergency incidents.</description>
+      <description>Demographics Given this project&#39;s focus on health equity, we first wanted to develop a better understanding of the demographic makeup of Charlottesville and Albemarle. While this information is readily available from the American Community Survey (ACS), census tracts and block groups often don&#39;t present an accurate representation of the population distribution in a town or city. We therefore used data from the ACS in Charlottesville to estimate the demographic makeup of the city&#39;s actual neighborhoods.</description>
     </item>
     
     <item>
@@ -47,7 +47,7 @@ Measures of Model Fit We assessed the specification of our model using a posteri
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>/findings/covid-indicator/</guid>
-      <description>.footnotes { color:rgb(195,206,208) } .footnotes { color:rgb(195,206,208) }  Background While we were obviously interested in identifying patterns in COVID-19 symptoms across demographic groups, time, and space, this portion of the project was also quite exploratory, as it was unclear how difficult it might be to isolate potential COVID-19 cases in a large EMS dataset.
+      <description>Background While we were obviously interested in identifying patterns in COVID-19 symptoms across demographic groups, time, and space, this portion of the project was also quite exploratory, as it was unclear how difficult it might be to isolate potential COVID-19 cases in a large EMS dataset.
 According to the Johns Hopkins Center for Systems Science and Engineering, as of June 9, 2020 (the most current date in our data), there were 258 confirmed cases and 8 deaths in Albemarle County, and 141 confirmed cases and 3 deaths in Charlottesville City.</description>
     </item>
     

@@ -48,13 +48,13 @@ theme_set(theme_minimal() +
                   legend.title = element_text(size = 22, color = "gray10")))
 ```
 
-## Background
+### Background
 
 While we were obviously interested in identifying patterns in COVID-19 symptoms across demographic groups, time, and space, this portion of the project was also quite exploratory, as it was unclear how difficult it might be to isolate potential COVID-19 cases in a large EMS dataset.
 
 According to the Johns Hopkins Center for Systems Science and Engineering, as of June 9, 2020 (the most current date in our data), there were 258 confirmed cases and 8 deaths in Albemarle County, and 141 confirmed cases and 3 deaths in Charlottesville City.[^JHU] While experts expect that actual case counts may be as much as 10 times higher than the confirmed case counts[^NYT] it remains unclear whether this figure is reprsentative of the most severe cases, which are those most likely to appear in the EMS dataset. Given the uncertainty surrounding the total number of cases in the area as well as the proportion of cases that may be present in our dataset, it was unclear how effective an analysis of COVID-symptoms would be. Still, we were curious to see whether any trends would emerge, and in doing so hoped to learn about the potential for future use of EMS data in evaluating the state of the pandemic.
 
-## Mapping
+### Mapping
 
 ```{r, include=FALSE}
 # load neighborhoods
@@ -266,7 +266,7 @@ knitr::kable(transposed, digits = 2)
 ```
 
 
-## Modeling
+### Modeling
 
 While our initial exploration did not seem to indicate much variation in COVID-like symptoms, we still developed simple logistic regression models to confirm or refute these suspicions. 
 
