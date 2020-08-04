@@ -84,15 +84,15 @@ We began by using a linear model. Because the distribution of response times was
 
 \[
 \begin{align*}
-log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{iid}\sim N(\alpha &+ \beta_1 (\mbox{COVID era})_i  +
-\boldsymbol{\beta_2}^T\boldsymbol{(\mbox{Demographics})_i} +
-\boldsymbol{\beta_3}^T\boldsymbol{(\mbox{Symptoms})_i} +
-\boldsymbol{\beta_4}^T\boldsymbol{(\mbox{Vehicle})_i} + 
-\boldsymbol{\beta_5}^T\boldsymbol{(\mbox{Time of Day})_i} \\
-&+(\mbox{COVID era})_i* (
-\boldsymbol{\beta_6}^T\boldsymbol{(\mbox{Demographics})_i} +
-\boldsymbol{\beta_7}^T\boldsymbol{(\mbox{Symptoms})_i} + 
-\boldsymbol{\beta_8}^T\boldsymbol{(\mbox{Vehicle})_i} + 
+log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{iid}\sim N(&\alpha + \beta_1 (\mbox{COVID era})_i  +
+\boldsymbol{\beta_2}^T\boldsymbol{(\mbox{Demographics})_i} +\\
+&\boldsymbol{\beta_3}^T\boldsymbol{(\mbox{Symptoms})_i} +
+\boldsymbol{\beta_4}^T\boldsymbol{(\mbox{Vehicle})_i} + \\
+&\boldsymbol{\beta_5}^T\boldsymbol{(\mbox{Time of Day})_i} 
++(\mbox{COVID era})_i* \\
+(&\boldsymbol{\beta_6}^T\boldsymbol{(\mbox{Demographics})_i} +
+\boldsymbol{\beta_7}^T\boldsymbol{(\mbox{Symptoms})_i} + \\
+&\boldsymbol{\beta_8}^T\boldsymbol{(\mbox{Vehicle})_i} + 
 \boldsymbol{\beta_9}^T\boldsymbol{(\mbox{Time of Day})_i}),\; \sigma^2)
 \end{align*} \\
 \beta_1,\dots,\beta_9 \overset{iid}\sim N(0, 1.1)\\
@@ -100,15 +100,15 @@ log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{ii
 \sigma \sim Exp(2.2)
 \]
 
-_I think we could stand to mention why these particular priors were selected_
-
 Where COVID era is an indicator variable with value 1 for incidents after March 15th, 2020 and 0 otherwise. Note that each bolded coefficient actually represents a set of coefficients that accounts for the multiple categorical levels within each variable type.
 
 We included an interaction term for "During COVID-19" so we could assess whether the effects on response times of any of the other factors included in the model have changed with the advent of the COVID-19 pandemic.
 
-This model performed reasonably well, but didn't control for either spatial effects or travel time to location. _(The way this is written makes me wonder why we even ran the first model at all – should have a very brief explanation)_
+We chose these uniformitive priors due to our lack of any strong prior beliefs about the coefficients. On a technical note, these priors are in the column space of the Q matrix of a QR decomposition of the design matrix, which decreases convergence time of the MCMC algorithm. 
 
-In an attempt to control for these variables, we fit the following multilevel model:
+This model performed reasonably well. However there were confounding spatial effects, and it failed to control for travel time to location. 
+
+In an attempt to control for these issues, we fit the following multilevel model:
 
 \[
 log(\mbox{Response Time})\vert\alpha,\boldsymbol{\beta},\boldsymbol{b},\sigma \sim N(\alpha + \boldsymbol{X\beta} + \boldsymbol{Zb}, \sigma^2\boldsymbol{I}) \\
@@ -123,7 +123,7 @@ Here $\boldsymbol{X}$ and $\boldsymbol{\beta}$ are identical to the earlier spec
 
 By including information about the neighborhood that each incident occurred in, we hoped to both account for any spatial autocorrelation as well as our inability to more directly measure vehicle travel time.
 
-Both of these models were fit using Bayesian estimation with the R package rstanarm. Due to its superior performance (Might be worth a very brief explanation of how we determine “performance”) of the model including neighborhoods, we used the multilevel model for our interpretations (though results were similar for both models). Model assessment and results are discussed on the "Findings" page of this website.
+Both of these models were fit using Bayesian estimation with the R package rstanarm. Due to its superior performance on both spatial autocorrelation issues and information criterion, we used the multilevel model for our interpretations (though results were similar for both models). Model assessment and results are discussed on the "Findings" page of this website.
 
 <br>
 
