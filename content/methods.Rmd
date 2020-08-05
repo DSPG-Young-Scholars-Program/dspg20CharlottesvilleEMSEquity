@@ -162,7 +162,7 @@ knitr::kable(indicator_summary, "html", caption = "Summary of Symptoms Used For 
   column_spec(1, bold = T) %>%
   column_spec(3, width = "20em") %>%
   column_spec(4, width = "30em") %>%
-  footnote(symbol = "Because these medications are more generally used (and not specifically targeted toward a potential COVID symptom), we include them only as a catch-all: they do not contribute to the total symptom count if cough or shortness of breath are already listed in the impression/complaint columns.")
+  footnote(symbol = "Because these medications are more generally used (and not specifically targeted toward a potential COVID-19 symptom), we include them only as a catch-all: they do not contribute to the total symptom count if cough or shortness of breath are already listed in the impression/complaint columns.")
 ```
 
 

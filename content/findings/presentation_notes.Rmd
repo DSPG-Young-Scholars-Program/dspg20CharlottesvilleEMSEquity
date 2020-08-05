@@ -22,6 +22,7 @@ load(here::here("data", "working", "model_objects", "neighbor_model_bayes_yes_in
 
 load(here::here("data", "working", "model_objects", "local_morans_statistic.RData"))
 
+library(tidycensus)
 library(rstanarm)
 library(bayesplot)
 library(dplyr)
@@ -191,9 +192,7 @@ vital$category = category
 
 my_cols =  c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
- 
-## Basic lollipop
-tots = vital %>% 
+ tots = vital %>% 
   filter(RACE %in% c('White','Black')) %>%
   count(RACE)
 all_cat_death_tots = vital %>%
@@ -220,24 +219,26 @@ relative_risk$white_risk = 1
 relative_risk = relative_risk %>%
   arrange(desc(relative_risk))
 relative_risk$category = factor(relative_risk$category, levels = rev(relative_risk$category))
+
 relative_risk %>%
-  ggplot(aes(x=white_risk, xend=relative_risk, y=category)) + 
-  geom_segment(aes(x=white_risk, 
-                   xend=relative_risk, 
-                   y=category, 
-                   yend=category), 
-               color=my_cols[1], size=1.5)+
-  geom_dumbbell(color=my_cols[5], 
-                size_x = 0, 
+  ggplot(aes(x=white_risk, xend=relative_risk, y=category)) +
+  geom_segment(aes(x=white_risk,
+                   xend=relative_risk,
+                   y=category,
+                   yend=category),
+               color=cbbPalette[1], size=1.5)+
+  geom_dumbbell(color=cbbPalette[1],
+                size_x = 0,
                 size_xend = 5,
-                #Note: there is no US:'color' for UK:'colour' 
+                #Note: there is no US:'color' for UK:'colour'
                 # in geom_dumbbel unlike standard geoms in ggplot()
-                colour_x="#edae52", 
-                colour_xend = my_cols[5])+
+                colour_x=cbbPalette[1],
+                colour_xend = cbbPalette[5])+
   scale_x_log10() +
   labs(x="Relative Risk", y="ICD 10 Code",
        title="Relative Risk of Death", subtitle = "Black Patients vs. White Patients\n") +
-  theme(axis.title.y = element_blank())
+  theme(axis.title.y = element_blank(),
+        plot.margin = margin(0, 4, 0, 0, unit = "cm"))
 ```
 <br>
 <br>
@@ -304,9 +305,9 @@ volume_change <- pre_daily %>%
   left_join(post_daily, ., by = "NAME") %>%
   mutate(change_ratio = daily_post / daily_pre)
 
-color_pal <- c('#762a83','#af8dc3','#e7d4e8','#f7f7f7','#d9f0d3')
+sf_map_colors <- rev(c("#cc415a", "#ed9ab1", "#EBE8E8",'#92b2df','#2f75b3'))
 
-color_scale <- colorBin(color_pal, c(0, 1.5), c(0.1, 0.35, 0.65, 0.90, 1.10, 1.3))
+color_scale <- colorBin(sf_map_colors, c(0, 1.5), c(0.1, 0.35, 0.65, 0.90, 1.10, 1.3))
 
 volume_change %>%
   leaflet(width = "100%") %>%
@@ -376,6 +377,7 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
 ### Coefficient Map
 
 ```{r, fig.height=6}
+
 map_colors <- colorBin(sf_map_colors, c(0.5, 2), c(0.65, 0.8, .95, 1.05, 1.30, 1.8))
 
 bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
@@ -420,21 +422,46 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
 
 ## COVID-19 Indicator
 
-```{r, fig.height=6}
-source(here::here("src", "Profiling", "create_covid_indicator.R"));
+```{r, fig.height=6, results = "hide"}
+source(here::here("src", "Profiling", "create_covid_indicator.R"))
 
 # load neighborhoods
-neighborhoods <- st_read(here::here("data", "working", "neighborhood_demographics.geojson"),
-                         quiet = TRUE) %>%
-  rename(pop = n)
+city_neighborhoods <- st_read(here::here("data", "working", "neighborhood_demographics.geojson")) %>%
+  rename(total_population_estimate = n) %>%
+  select(c("NAME", "total_population_estimate", "geometry"))
 # filter ems data to cases with non-NA gps data
+
+# load census tract geometries and population estimates for the county
+acs_total_pop_tract <- get_acs(geography = "tract",
+                               year = 2018,
+                               variables = c(total_population = "DP05_0001"),
+                               state = "VA",
+                               county = c("albemarle")) %>%
+  pivot_wider(names_from = variable,
+              values_from = c(estimate, moe),
+              names_glue = "{variable}_{.value}")
+
+acs_total_pop_tract_sp <- tigris::tracts(state = "VA", county = c("albemarle"),
+                                         cb = TRUE, year = 2018, class = "sf") %>%
+  st_transform(crs = 4326) %>%
+  left_join(acs_total_pop_tract, by = "GEOID")
+
+county_census_tracts <- acs_total_pop_tract_sp %>%
+  select(c("NAME.y", "total_population_estimate", "geometry")) %>%
+  rename(NAME = NAME.y)
+
+geometries <- rbind(city_neighborhoods, county_census_tracts)
+
 ems_full_sp <- ems %>%
   distinct %>%
   filter(!is.na(scene_gps_latitude), !is.na(scene_gps_longitude)) %>%
   st_as_sf(coords = c("scene_gps_longitude", "scene_gps_latitude"), remove = FALSE, crs = 4326)
 
+city_border <- tigris::counties(state = "VA", cb = TRUE, year = 2018, class = "sf") %>%
+  filter(COUNTYFP == 540) %>%
+  st_transform(crs = 4326)
 
-joined <- st_join(neighborhoods, ems_full_sp, join = st_contains)
+joined <- st_join(geometries, ems_full_sp, join = st_contains)
 total_days <- as.numeric(range(ems_full_sp$incident_date)[2] - range(ems_full_sp$incident_date)[1])
 
 cutoff_string <- "2020-03-15"
@@ -444,57 +471,64 @@ symptom_threshold <- 0
 summed_data <- joined %>%
   filter(incident_date >= cutoff) %>%
   filter(covid_indicator > symptom_threshold) %>%
-  group_by(NAME, pop) %>%
+  group_by(NAME, total_population_estimate) %>%
   count() %>%
-  mutate(rate_per_1000 = round(n/pop * 1000)) %>%
+  mutate(rate_per_1000 = round(n/total_population_estimate * 1000)) %>%
   ungroup() %>%
   st_as_sf()
 
 pre_period <- joined %>%
-  filter(incident_date < cutoff)
+  filter(incident_date < cutoff) %>%
+  filter(covid_indicator > symptom_threshold)
 
 post_period <- joined %>%
-  filter(incident_date >= cutoff)
+  filter(incident_date >= cutoff) %>%
+  filter(covid_indicator > symptom_threshold)
 
 days_pre <- as.numeric(range(pre_period$incident_date)[2] - range(pre_period$incident_date)[1])
 days_post <- as.numeric(range(post_period$incident_date)[2] - range(post_period$incident_date)[1] )
 
 pre_period_summed <- pre_period %>%
-  group_by(NAME, pop) %>%
+  group_by(NAME, total_population_estimate) %>%
   count() %>%
-  mutate(rate_per_1000 = (n/pop * 1000/days_pre)) %>%
+  mutate(rate_per_1000 = (n/total_population_estimate * 1000/days_pre)) %>%
   ungroup() %>%
   st_as_sf()
 
 post_period_summed <- post_period %>%
-  group_by(NAME, pop) %>%
+  group_by(NAME, total_population_estimate) %>%
   count() %>%
-  mutate(rate_per_1000 = (n/pop * 1000/days_post)) %>%
+  mutate(rate_per_1000 = (n/total_population_estimate * 1000/days_post)) %>%
   ungroup() %>%
   st_as_sf()
-
-color_scale <- colorBin("BuPu", c(0, 1.6), c(0, 0.03, .15, .3, .5, .8, 1.25, 2))
+```
+```{r, fig.height = 6}
+#BAMMtools::getJenksBreaks(c(pre_period_summed$rate_per_1000, post_period_summed$rate_per_1000), 7)
+color_scale <- colorBin("BuPu", c(0, 0.4), c(0, 0.02, .05, .09, .13, .19, .27, 0.4))
 
 leaflet(width = "100%") %>%
+  #addTiles() %>%
   addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
+  addMapPane("border", zIndex = 410) %>%
   addPolygons(data = pre_period_summed,
               color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.7,
               fillColor = ~color_scale(rate_per_1000),
-              label = ~map(glue("{NAME}<br/>
+              label = ~map(glue("<strong>{NAME}</strong><br/>
                                 COVID-like Incident Rate Per 1000: {round(rate_per_1000, 2)}"), htmltools::HTML),
-              group = "Pre 2020") %>%
+              group = "Pre COVID-19 Era") %>%
   addPolygons(data = post_period_summed,
               color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.7,
               fillColor = ~color_scale(rate_per_1000),
-              label = ~map(glue("{NAME}<br/>
-                                COVID-like Incident Rate Per 1000: {round(rate_per_1000, 2)}"), htmltools::HTML),
-              group = "In 2020") %>%
+              label = ~map(glue("<strong>{NAME}</strong><br/>
+                      COVID-like Incident Rate Per 1000: {round(rate_per_1000, 2)}"), htmltools::HTML),
+              group = "During COVID-19 Era") %>%
+  addPolylines(data = city_border, color="black", weight = 3, opacity = 0.8, options = pathOptions(pane = "border")) %>%
   addLegend("bottomright", pal = color_scale, values = post_period_summed$rate_per_1000,
             title = "Incident Rate Per 1000",
             opacity = .8) %>%
-  addLayersControl(baseGroups = c("Pre 2020", "In 2020"),
+  addLayersControl(baseGroups = c("Pre COVID-19 Era", "During COVID-19 Era"),
                    options = layersControlOptions(collapsed = FALSE))
 ```
 

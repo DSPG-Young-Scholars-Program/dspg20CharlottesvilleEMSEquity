@@ -192,15 +192,13 @@ leaflet() %>%
               label = ~map(glue("<strong>{NAME}</strong><br/>
                       COVID-like Incident Rate Per 1000: {round(rate_per_1000, 2)}"), htmltools::HTML),
               group = "During COVID-19 Era") %>%
-  addPolylines(data = city_border, color="black", weight = 4, opacity = 0.8, options = pathOptions(pane = "border")) %>%
+  addPolylines(data = city_border, color="black", weight = 3, opacity = 0.8, options = pathOptions(pane = "border")) %>%
   addLegend("bottomright", pal = color_scale, values = post_period_summed$rate_per_1000,
             title = "Incident Rate Per 1000",
             opacity = .8) %>%
   addLayersControl(baseGroups = c("Pre COVID-19 Era", "During COVID-19 Era"),
                    options = layersControlOptions(collapsed = FALSE))
 ```
-
-<br>
 
 ```{r}
 tmp <- get_acs(geography = "county",
@@ -225,29 +223,42 @@ pop_estimates_by_race <- tibble(race = c("black or african american", "white", "
 
 <br>
 
-```{r, echo=FALSE, out.width="100%", fig.height = 10, fig.width = 15}
-ems$on_or_after_march_15th_2020 <- ymd(ems$incident_date) >= "2020-03-15"
+A similar pattern emerges when we break down COVID-like symptoms by racial group. Again, there does not appear to be a noticable difference in incidence of symptoms before and after the onset of the COVID-19 pandemic. There may be a slightly reduced incidence of symptoms for Latinx individuals, but this difference should be interpreted with caution. As we discuss below, this was one of the first indications that our indicator may not be extracting COVID-19 cases specifically enough for them to emerge over and above the baseline health differences between these populations. Any differences in COVID-19 itself is likely masked by the underlying health characteristics of these populations.
 
+<br>
+
+```{r, echo=FALSE, out.width="100%"}
+ems$on_or_after_march_15th_2020 <- ymd(ems$incident_date) >= "2020-03-15"
+incidents_by_race <- ems %>% 
+  group_by(race, on_or_after_march_15th_2020) %>% 
+  count() %>%
+  rename(pop_estimate = n)
+```
+
+```{r, echo=FALSE, out.width="100%", fig.height = 10, fig.width = 15}
 ems %>%
   filter(race %in% c("black or african american", "white", "hispanic or latino")) %>%
   group_by(race, covid1, on_or_after_march_15th_2020) %>%
   count() %>%
   filter(covid1 == 1) %>%
-  inner_join(pop_estimates_by_race, by = "race") %>%
+  inner_join(incidents_by_race, by = c("race", "on_or_after_march_15th_2020")) %>%
+  mutate(race_short = ifelse(race == "black or african american", "black",
+                             ifelse(race == "hispanic or latino", "latinx", "white"))) %>%
   mutate(prop_of_pop = n / pop_estimate) %>%
   ggplot(., aes(x = race_short, y = prop_of_pop, fill = on_or_after_march_15th_2020)) +
   geom_bar(stat = "identity", position = "dodge") + 
-  geom_text(aes(label = round(prop_of_pop, digits = 2)), position=position_dodge(width=0.9), vjust=-0.25) + 
-  labs(title = "Proportion of EMS Patients with at Least One Covid-like Symptom", x = "Racial Group", y = "Number of Patients") + 
-  scale_fill_manual(values = cbbPalette, name = "", labels = c("Pre-COVID-19", "During COVID-19")) + 
+  geom_text(aes(label = round(prop_of_pop, digits = 2)), position=position_dodge(width=0.9), vjust=-0.25, size = 7) + 
+  labs(title = "Patients with at Least One COVID-Like Symptom", x = "Racial Group", y = "Number of Patients") + 
+  scale_fill_manual(values = cbbPalette, name = "", labels = c("Pre COVID-19", "During COVID-19")) + 
+  scale_x_discrete(labels = c("Black", "Latinx", "White")) +
   theme(legend.position = "bottom",
         axis.title = element_blank(),
-        legend.key.size = unit(1, "line"),
-        legend.text = element_text(size = 16, color = "gray30"),
-        legend.title = element_text(size = 22, color = "gray10"))
+        legend.key.size = unit(2, "line"))
 ```
 
 <br>
+
+The following table summarizes how frequently each symptom that composes the COVID-19 indicator occurred. Shortness of breath and hypoxemia were more commonly represented in the dataset than many of the other symptoms. The racial groups with the maximum incidence for a particular symptom are highlighted in red (though these should be interpreted in the context of the overall patient count for each racial group). Unsurprisingly, variation exists in the symptoms expressed in different populations. While these numbers likely reflect the general health characteristics of these populations more so than COVID-19 rates themselves, this does raise the question of whether COVID-19 symptoms may be expressed differently across racial groups. Research on this possibility could be important in a more refined approach to identifying COVID-19 cases in EMS data.
 
 ```{r, echo=FALSE}
 covid_symptoms <- c("cough", "fever", "sob", "myalgia", "chills", "fatigue", "headache", "diarrhea", "nausea_or_vomit", "hypoxemia", "hypoxemia_no_improvement", "cyanosis", "covid_in_impressions", "young_person_stroke", "young_person_cardiac_arrest", "cough_sob_meds_catch_all")
@@ -341,6 +352,7 @@ transposed %>%
   kableExtra::column_spec(1, extra_css = "border-right: 1px solid")
 ```
 
+<br>
 
 ### Modeling
 
@@ -374,10 +386,10 @@ First, for EMS data to be a valuable source of information in assessing the cour
     * More cases may make it easier to detect cases in a dataset, and allow for a refinement of the symptoms included. This more specific scheme could then be implemented in other areas with fewer case counts.
 
 * Link multiple EMS datasets
-    * This could improve the sensitivity of our indicator, but perhaps more importantly would allow for an assessment of the standardization across EMS data platforms. In the future, a large-scale network of EMS data could be a valuable tool in identifying emerging diseases 
+    * This could improve the sensitivity of our indicator, but perhaps more importantly would allow for an assessment of the standardization across EMS data platforms. In the future, a large-scale network of EMS data could be a valuable tool in identifying emerging infectious diseases 
 
-It will also be valuable to revisit this topic continuously as the medical understanding of COVID-19 evolves. Symptoms that were once thought to be clear identifiers of the virus may become less important, and vice versa. The null results in our preliminary exploration in this area should not be interpreted as a referendum on the value of EMS data in understanding COVID-19, but as a guide to the considerations and improvements that will need to be made to more effectively use EMS data as a tool to fight emerging diseases in the future.
+It will also be valuable to revisit this topic continuously as the medical understanding of COVID-19 evolves. Symptoms that were once thought to be clear identifiers of the virus may become less important, and vice versa. The null results in our preliminary exploration in this area should not be interpreted as a referendum on the value of EMS data in understanding COVID-19, but as a guide to the considerations and improvements that will need to be made to more effectively use EMS data as a tool to fight emerging infectious diseases in the future.
 
 [^JHU]: https://coronavirus.jhu.edu/us-map
 
-[^NYT]: https://www.nytimes.com/2020/06/27/health/coronavirus-antibodies-asymptomatic.html
+[^NYT]: Mandavilli, A. (2020, June 27). Actual Coronavirus Infections Vastly Undercounted, C.D.C. Data Shows. _The New York Times_. Retrieved from https://www.nytimes.com/2020/06/27/health/coronavirus-antibodies-asymptomatic.html
