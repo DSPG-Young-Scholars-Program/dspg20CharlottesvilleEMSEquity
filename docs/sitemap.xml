@@ -3,10 +3,6 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>/findings/symposium_page/</loc>
-  </url>
-  
-  <url>
     <loc>/findings/context/</loc>
   </url>
   
@@ -16,6 +12,10 @@
   
   <url>
     <loc>/findings/covid-indicator/</loc>
+  </url>
+  
+  <url>
+    <loc>/findings/presentation_notes/</loc>
   </url>
   
   <url>
@@ -56,6 +56,10 @@
   
   <url>
     <loc>/</loc>
+  </url>
+  
+  <url>
+    <loc>/tags/visualization/</loc>
   </url>
   
 </urlset>

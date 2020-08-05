@@ -23,7 +23,8 @@ joined <- st_join(planning_area, synth_pop_sf, left = FALSE, join = st_covers) %
 ## Calculate mean/SE by neighborhood for age
 age_by_neighborhood <- joined %>% 
   group_by(NAME) %>% 
-  summarize(n = n(), mean_age = mean(AGEP), se_age = sd(AGEP) / sqrt(n))
+  summarize(n = n(), med_age = median(AGEP))
+            #mean_age = mean(AGEP), se_age = sd(AGEP) / sqrt(n))
 
 ## Calculate gender proportions by neighborhood
 sex_by_neighborhood <- joined %>% 
@@ -52,7 +53,7 @@ race_by_neighborhood <- joined %>%
 ## Combine into single source
 aggregate_data <- full_join(full_join(age_by_neighborhood, sex_by_neighborhood), race_by_neighborhood)
 
-#st_write(aggregate_data, here::here("data", "working", "neighborhood_demographics.geojson"), driver = "GeoJSON")
+# st_write(aggregate_data, here::here("data", "working", "neighborhood_demographics.geojson"), driver = "GeoJSON")
 
 #
 #
@@ -133,16 +134,16 @@ leaflet() %>%
   addLegend("bottomright", pal = pal, values = seq(0,1))
 
 ## Synthetic results for age:
-pal_age <- colorBin("Greens", domain = range(aggregate_data$mean_age))
+pal_age <- colorBin("Greens", domain = range(aggregate_data$med_age))
 
 leaflet() %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = aggregate_data,
               fillOpacity = 0.7,
-              fillColor = ~pal_age(mean_age),
+              fillColor = ~pal_age(med_age),
               weight = 3,
               color = "gray",
-              label = ~mean_age) %>%
+              label = ~med_age) %>%
   addLegend("bottomright", pal = pal_age, values = seq(0,1))
 
 

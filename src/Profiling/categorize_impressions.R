@@ -6,6 +6,7 @@ library(tidyr)
 
 ems_data <- vroom::vroom(here("data", "working", "first_unit_at_scene_data.csv"))
 #ems_data <- vroom::vroom(here("data", "working", "ems_clean_data_unit_observation.csv"))
+ems_data <- vroom::vroom(here("data", "final", "ems_clean_data.csv"))
 
 ## Mappings for provider impressions to impression categories
 categorize_impressions <- function(x) {
@@ -128,7 +129,7 @@ complaints_to_classify <- c("traffic|transp", "fall", "breath", "chest", "abdom"
 impressions_categorized_imputed <- impressions_categorized_full %>% 
   impute_impressions(freq_data = impression_complaint_freqs, complaint_strings = complaints_to_classify)
 
-# readr::write_csv(impressions_categorized_full, here::here("data", "working", "first_unit_at_scene_impressions_categorized.csv"))
+# readr::write_csv(impressions_categorized_full, here::here("data", "final", "ems_clean_data_impressions_categorized.csv"))
 
 
 

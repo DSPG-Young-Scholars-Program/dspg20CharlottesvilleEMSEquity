@@ -214,7 +214,7 @@ h3, h4 {
 </style>
 <div id="data-sources" class="section level3">
 <h3>Data Sources</h3>
-<p>This project relied primarily on a dataset of EMS incidents in Charlottesville City and Albemarle County that spanned from the December 2016 to June 2020. These data consisted of numerous variables regularly recorded by EMS providers when responding to an incident. The variables available can be broken down into three rough categories:</p>
+<p>This project relied primarily on a dataset of EMS incidents between December 2016 and June 2020 in Charlottesville City and Albemarle County. These data consisted of numerous variables regularly recorded by EMS providers when responding to an incident. The variables available can be broken down into three rough categories:</p>
 <ul>
 <li>Operations
 <ul>
@@ -229,6 +229,7 @@ h3, h4 {
 <li>Patient symptoms (based on provider's impression and/or patient's reported complaints)</li>
 <li>Vital signs (temperature, pulse, etc.)</li>
 <li>Medications provided</li>
+<li>Results of medical assessments</li>
 </ul></li>
 <li>Patient Characteristics
 <ul>
@@ -243,11 +244,11 @@ h3, h4 {
 </div>
 <div id="data-quality" class="section level3">
 <h3>Data Quality</h3>
-<p>This project required an extensive assessment of data quality because of the complicated nature of the underlying processes involved. For instance, in an ideal scenario, each entry in the dataset would correspond to a single patient, with a single response unit recording information for that patient. Of course, the real-world nature of these data make them far more messy.</p>
-<p>Most importantly, it is common that multiple units respond to the same incident, with each unit keeping records. For these cases, the dataset ends up with multiple rows that reference the same patient, and we risk over-counting the true number of patients serviced, with the potential to skew the actual distribution of the patient-level variables we hope to explore.</p>
-<p>Further complicating things is the fact that in some cases, multiple units may respond to a single incident, but may actually service <em>different</em> patients (this is often true for traffic-related incidents, which commonly have multiple patients involved).</p>
+<p>Because many of the observations in the dataset were recorded under high intensity scenarios (increasing the probability of errors), we knew that a thorough assessment of data quality would be necessary. While some errors (missing rows of data, logical inconsistencies between variables, etc.) were easy to spot, the complex real-world nature of the data presented additional challenges as well.</p>
+<p>For instance, in an ideal scenario, each entry in the dataset would correspond to a single patient, with a single response unit recording information for that patient. In actuality, multiple units often respond to the same incident, with each unit keeping records. For these cases, the dataset ends up with multiple rows that reference the same patient and we risk over-counting the true number of patients serviced, with the potential to skew the actual distribution of the patient-level variables we hope to explore.</p>
+<p>Further complicating things is the fact that in some cases, multiple units may respond to a single incident, but may actually service <em>different</em> patients (this is often true for traffic-related incidents, which frequently have multiple patients involved).</p>
 <p>Avoiding both the possibility of removing legitimate entries from the dataset while also identifying duplicated patients proved to be a challenge. Ultimately, we needed to reduce the raw dataset to two clean datasets: one where each observation is a single patient, and one where each observation is a single unit (either may be appropriate depending on the research question being explored).</p>
-<p>By cross-referencing demographic characteristics, medical numbers (where they existed), and operations variables across rows, we were ultimately able to identify approximately <em>HOW MANY</em> duplicate patients in the dataset and remove them. One key takeaway from this process is that the development of systems to better link EMS records when multiple units are involved would be valuable tool for more extensive analysis of EMS data in general.</p>
+<p>By cross-referencing demographic characteristics, medical numbers (where they existed), and operations variables across rows, we were ultimately able to identify many thousands of duplicate patients in the dataset and remove them. One key takeaway from this process is that the development of systems to better link EMS records when multiple units are involved would be valuable tool for more extensive analysis of EMS data in general.</p>
 <p><br></p>
 </div>
 <div id="response-time-modeling" class="section level3">
@@ -278,28 +279,30 @@ h3, h4 {
 <p>We began by using a linear model. Because the distribution of response times was heavily right skewed, we log transformed the data prior to fitting. Our model was as follows:</p>
 <p><span class="math display">\[
 \begin{align*}
-log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{iid}\sim N(\alpha &amp;+ \beta_1 (\mbox{COVID era})_i  +
-\boldsymbol{\beta_2}^T\boldsymbol{(\mbox{Demographics})_i} +
-\boldsymbol{\beta_3}^T\boldsymbol{(\mbox{Symptoms})_i} +
-\boldsymbol{\beta_4}^T\boldsymbol{(\mbox{Vehicle})_i} + 
-\boldsymbol{\beta_5}^T\boldsymbol{(\mbox{Time of Day})_i} \\
-&amp;+(\mbox{COVID era})_i* (
-\boldsymbol{\beta_6}^T\boldsymbol{(\mbox{Demographics})_i} +
-\boldsymbol{\beta_7}^T\boldsymbol{(\mbox{Symptoms})_i} + 
-\boldsymbol{\beta_8}^T\boldsymbol{(\mbox{Vehicle})_i} + 
+log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{iid}\sim N(&amp;\alpha + \beta_1 (\mbox{COVID era})_i  +
+\boldsymbol{\beta_2}^T\boldsymbol{(\mbox{Demographics})_i} +\\
+&amp;\boldsymbol{\beta_3}^T\boldsymbol{(\mbox{Symptoms})_i} +
+\boldsymbol{\beta_4}^T\boldsymbol{(\mbox{Vehicle})_i} + \\
+&amp;\boldsymbol{\beta_5}^T\boldsymbol{(\mbox{Time of Day})_i} 
++(\mbox{COVID era})_i* \\
+(&amp;\boldsymbol{\beta_6}^T\boldsymbol{(\mbox{Demographics})_i} +
+\boldsymbol{\beta_7}^T\boldsymbol{(\mbox{Symptoms})_i} + \\
+&amp;\boldsymbol{\beta_8}^T\boldsymbol{(\mbox{Vehicle})_i} + 
 \boldsymbol{\beta_9}^T\boldsymbol{(\mbox{Time of Day})_i}),\; \sigma^2)
-\end{align*} \\
+\end{align*}
+\]</span> <span class="math display">\[
 \beta_1,\dots,\beta_9 \overset{iid}\sim N(0, 1.1)\\
 \alpha \sim N(0, 4.6) \\
 \sigma \sim Exp(2.2)
 \]</span></p>
-<p><em>I think we could stand to mention why these particular priors were selected</em></p>
 <p>Where COVID era is an indicator variable with value 1 for incidents after March 15th, 2020 and 0 otherwise. Note that each bolded coefficient actually represents a set of coefficients that accounts for the multiple categorical levels within each variable type.</p>
-<p>We included an interaction term for &quot;During COVID-19&quot; so we could assess whether the effects on response times of any of the other factors included in the model have changed with the advent of the COVID-19 pandemic.</p>
-<p>This model performed reasonably well, but didn't control for either spatial effects or travel time to location. <em>(The way this is written makes me wonder why we even ran the first model at all – should have a very brief explanation)</em></p>
-<p>In an attempt to control for these variables, we fit the following multilevel model:</p>
+<p>We included an interaction term for &quot;COVID Era&quot; so we could assess whether the effects on response times of any of the other factors included in the model have changed with the advent of the COVID-19 pandemic.</p>
+<p>We chose these uniformitive priors due to our lack of any strong prior beliefs about the coefficients. On a technical note, these priors are in the column space of the Q matrix of a QR decomposition of the design matrix, which decreases convergence time of the MCMC algorithm.</p>
+<p>This model performed reasonably well. However there were confounding spatial effects, and it failed to control for travel time to location.</p>
+<p>In an attempt to control for these issues, we fit the following multilevel model:</p>
 <p><span class="math display">\[
-log(\mbox{Response Time})\vert\alpha,\boldsymbol{\beta},\boldsymbol{b},\sigma \sim N(\alpha + \boldsymbol{X\beta} + \boldsymbol{Zb}, \sigma^2\boldsymbol{I}) \\
+log(\mbox{Response Time})\vert\alpha,\boldsymbol{\beta},\boldsymbol{b},\sigma \sim N(\alpha + \boldsymbol{X\beta} + \boldsymbol{Zb}, \sigma^2\boldsymbol{I})
+\]</span> <span class="math display">\[
 \alpha \sim N(0,4.6)\\
 \boldsymbol{\beta} \sim N(0, 1.15\boldsymbol{I})\\
 \boldsymbol{b}\vert\boldsymbol{\Sigma} \sim N(0, \boldsymbol{\Sigma})\\
@@ -308,7 +311,7 @@ log(\mbox{Response Time})\vert\alpha,\boldsymbol{\beta},\boldsymbol{b},\sigma \s
 \]</span></p>
 <p>Here <span class="math inline">\(\boldsymbol{X}\)</span> and <span class="math inline">\(\boldsymbol{\beta}\)</span> are identical to the earlier specification and have been written as such for simplicity. <span class="math inline">\(\boldsymbol{Z}\)</span> is a matrix encoding deviations in intercepts and covariates across neighborhoods. The prior for <span class="math inline">\(\boldsymbol\Sigma\)</span> is complicated to write out, and is specificed using the <code>rstanarm</code> function <code>decov(1,1,1,1)</code>. More can be found on this specification <a href="http://mc-stan.org/rstanarm/articles/glmer.html">here</a>.</p>
 <p>By including information about the neighborhood that each incident occurred in, we hoped to both account for any spatial autocorrelation as well as our inability to more directly measure vehicle travel time.</p>
-<p>Both of these models were fit using Bayesian estimation with the R package rstanarm. Due to its superior performance (Might be worth a very brief explanation of how we determine “performance”) of the model including neighborhoods, we used the multilevel model for our interpretations (though results were similar for both models). Model assessment and results are discussed on the &quot;Findings&quot; page of this website.</p>
+<p>Both of these models were fit using Bayesian estimation with the R package rstanarm. Due to its superior performance on both spatial autocorrelation issues and information criterion, we used the multilevel model for our interpretations (though results were similar for both models). Model assessment and results are discussed in the <a href="https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/findings/response-time-modeling/">findings</a> section of the website.</p>
 <p><br></p>
 </div>
 </div>
@@ -329,7 +332,7 @@ log(\mbox{Response Time})\vert\alpha,\boldsymbol{\beta},\boldsymbol{b},\sigma \s
 <li>Cyanosis</li>
 <li>Stroke/cardiac arrest (in young people)</li>
 </ul>
-<p>Because information about the presence of these symptoms could be encoded in various places in the dataset (for instance, in EMS provider impressions, patient complaints, vital sign results, etc.), we consolidated the results from multiple variables as we searched for these symptoms. However, there were a variety of ways many of these symptoms could be recorded. For instance, shortness of breath could be recorded as &quot;difficulty breathing&quot;, &quot;shortness of breath&quot;, &quot;sob&quot;, etc.</p>
+<p>Because information about the presence of these symptoms could be encoded in various places in the dataset (for instance, in EMS provider impressions, patient complaints, vital sign results, etc.), we consolidated the results from multiple variables as we searched for these symptoms. However, there were a variety of ways many of these symptoms could be recorded. For instance, shortness of breath could be recorded as &quot;difficulty breathing&quot;, &quot;shortness of breath&quot;, &quot;sob&quot;, etc. Below we present a summary of the final classification system we used to develop our indicator of COVID-like symptoms. At this point, we had a record of the frequency that these symptoms appeard in the dataset, and could use our combined indicator to assess trends in these symptoms in Charlottesville and Albemarle.</p>
 <table class="table table-striped table-bordered table-hover" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
 <span id="tab:unnamed-chunk-3">Table 1: </span>Summary of Symptoms Used For COVID-19 Indicator
@@ -348,6 +351,12 @@ Assessments
 <th style="text-align:left;">
 Medications
 </th>
+<th style="text-align:right;">
+Pre-COVID Count
+</th>
+<th style="text-align:right;">
+During COVID Count
+</th>
 </tr>
 </thead>
 <tbody>
@@ -364,6 +373,12 @@ cough
 <td style="text-align:left;width: 30em; ">
 albuterol (proventil)*; albuterol/ipratropium (duoneb)*; ipratropium (atrovent)*
 </td>
+<td style="text-align:right;">
+264
+</td>
+<td style="text-align:right;">
+31
+</td>
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
@@ -373,10 +388,16 @@ Fever/Chills
 fever; chill; rigor; shiver
 </td>
 <td style="text-align:left;width: 20em; ">
---
+temperature measurment greater than or equal to 100.4 degrees F
 </td>
 <td style="text-align:left;width: 30em; ">
 --
+</td>
+<td style="text-align:right;">
+980
+</td>
+<td style="text-align:right;">
+89
 </td>
 </tr>
 <tr>
@@ -390,7 +411,13 @@ breath; sob
 --
 </td>
 <td style="text-align:left;width: 30em; ">
-racemic epinephrine, oxygen; albuterol (proventil)*; albuterol/ipratropium (duoneb)*; ipratropium (atrovent)*
+racemic epinephrine; oxygen; albuterol (proventil)*; albuterol/ipratropium (duoneb)*; ipratropium (atrovent)*
+</td>
+<td style="text-align:right;">
+8212
+</td>
+<td style="text-align:right;">
+490
 </td>
 </tr>
 <tr>
@@ -406,6 +433,12 @@ myalgia; muscle ache; muscle soreness; muscle pain
 <td style="text-align:left;width: 30em; ">
 --
 </td>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:right;">
+2
+</td>
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
@@ -419,6 +452,12 @@ fatigue
 </td>
 <td style="text-align:left;width: 30em; ">
 --
+</td>
+<td style="text-align:right;">
+83
+</td>
+<td style="text-align:right;">
+7
 </td>
 </tr>
 <tr>
@@ -434,6 +473,12 @@ headache; neuro - headache - migraine; neuro - headache
 <td style="text-align:left;width: 30em; ">
 --
 </td>
+<td style="text-align:right;">
+1492
+</td>
+<td style="text-align:right;">
+57
+</td>
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
@@ -447,6 +492,12 @@ diarrhea; gi/gu - diarrhea
 </td>
 <td style="text-align:left;width: 30em; ">
 --
+</td>
+<td style="text-align:right;">
+470
+</td>
+<td style="text-align:right;">
+23
 </td>
 </tr>
 <tr>
@@ -462,6 +513,12 @@ nausea, vomit; gi/gu - nausea (without vomiting); gi/gu - nausea (with vomiting)
 <td style="text-align:left;width: 30em; ">
 ondansetron (zofran)
 </td>
+<td style="text-align:right;">
+4458
+</td>
+<td style="text-align:right;">
+202
+</td>
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
@@ -471,10 +528,16 @@ Hypoxemia
 --
 </td>
 <td style="text-align:left;width: 20em; ">
-first or last pulse oximetry measurement less than or equal to 94% oxygen saturation
+first or last pulse oximetry measurement less than or equal to 94% oxygen saturation, last oximetry measurement less than or equal to initial oximetry measurement
 </td>
 <td style="text-align:left;width: 30em; ">
 oxygen
+</td>
+<td style="text-align:right;">
+13565
+</td>
+<td style="text-align:right;">
+778
 </td>
 </tr>
 <tr>
@@ -490,19 +553,31 @@ Cyanosis
 <td style="text-align:left;width: 30em; ">
 --
 </td>
+<td style="text-align:right;">
+73
+</td>
+<td style="text-align:right;">
+5
+</td>
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
 Stroke (in young people)
 </td>
 <td style="text-align:left;">
---
+neuro - stroke/cva
 </td>
 <td style="text-align:left;width: 20em; ">
---
+Patient age less than or equal to 64
 </td>
 <td style="text-align:left;width: 30em; ">
 --
+</td>
+<td style="text-align:right;">
+129
+</td>
+<td style="text-align:right;">
+5
 </td>
 </tr>
 <tr>
@@ -518,6 +593,12 @@ Patient age less than or equal to 64
 <td style="text-align:left;width: 30em; ">
 --
 </td>
+<td style="text-align:right;">
+443
+</td>
+<td style="text-align:right;">
+29
+</td>
 </tr>
 </tbody>
 <tfoot>
@@ -528,7 +609,6 @@ Patient age less than or equal to 64
 </tr>
 </tfoot>
 </table>
-<p>At this point, we had a record of the frequency that these symptoms appeard in the dataset, and could use our combined indicator to assess trends in these symptoms in Charlottesville and Albemarle.</p>
 </div>
 </div>
 
