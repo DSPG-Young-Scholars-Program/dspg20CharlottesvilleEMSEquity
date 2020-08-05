@@ -541,25 +541,25 @@ relative_risk = relative_risk %>%
   arrange(desc(relative_risk))
 relative_risk$category = factor(relative_risk$category, levels = rev(relative_risk$category))
 
-# relative_risk %>%
-#   ggplot(aes(x=white_risk, xend=relative_risk, y=category)) + 
-#   geom_segment(aes(x=white_risk, 
-#                    xend=relative_risk, 
-#                    y=category, 
-#                    yend=category), 
-#                color=cbbPalette, size=1.5)+
-#   geom_dumbbell(color="black", 
-#                 size_x = 0, 
-#                 size_xend = 5,
-#                 #Note: there is no US:'color' for UK:'colour' 
-#                 # in geom_dumbbel unlike standard geoms in ggplot()
-#                 colour_x="black", 
-#                 colour_xend = "black")+
-#   scale_x_log10() +
-#   labs(x="Relative Risk", y="ICD 10 Code", 
-#        title="Relative Risk of Death", subtitle = "Black Patients vs. White Patients\n") +
-#   theme(axis.title.y = element_blank(),
-#         plot.margin = margin(0, 4, 0, 0, unit = "cm"))
+relative_risk %>%
+  ggplot(aes(x=white_risk, xend=relative_risk, y=category)) +
+  geom_segment(aes(x=white_risk,
+                   xend=relative_risk,
+                   y=category,
+                   yend=category),
+               color=cbbPalette[1], size=1.5)+
+  geom_dumbbell(color=cbbPalette[1],
+                size_x = 0,
+                size_xend = 5,
+                #Note: there is no US:'color' for UK:'colour'
+                # in geom_dumbbel unlike standard geoms in ggplot()
+                colour_x=cbbPalette[1],
+                colour_xend = cbbPalette[5])+
+  scale_x_log10() +
+  labs(x="Relative Risk", y="ICD 10 Code",
+       title="Relative Risk of Death", subtitle = "Black Patients vs. White Patients\n") +
+  theme(axis.title.y = element_blank(),
+        plot.margin = margin(0, 4, 0, 0, unit = "cm"))
 ```
 
 <br>
