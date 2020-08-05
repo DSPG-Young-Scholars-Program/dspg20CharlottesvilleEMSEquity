@@ -124,7 +124,7 @@ options(mapbox.accessToken = Sys.getenv("MAPBOX_TOKEN"))
 ```
 
 
-## Has Covid Exacerbated Existing Healthcare Disparities in Charlottesville and Albemarle County Emergency Medical Services?
+## Has COVID-19 Exacerbated Existing Healthcare Disparities in Charlottesville and Albemarle County Emergency Medical Services?
 
 <br>
 <br>
@@ -363,7 +363,7 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
   labs(y = NULL, 
        x = glue("Scale Factor Compared to Reference Incident"),
        color = NULL,
-       title = "Neighborhood Level Model Coeffecients",
+       title = "Neighborhood Level Model Coefficients",
        caption = "Before Covid-19 is considered to be before Febuary 15th. Point estimates are median estimates.\nIntervals are 95% credible intervals.") +
   theme(legend.position = "bottom") +
   facet_grid(term_group ~ ., 
@@ -418,7 +418,7 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
 <br>
 <br>
 
-## Covid Indicator
+## COVID-19 Indicator
 
 ```{r, fig.height=6}
 source(here::here("src", "Profiling", "create_covid_indicator.R"));

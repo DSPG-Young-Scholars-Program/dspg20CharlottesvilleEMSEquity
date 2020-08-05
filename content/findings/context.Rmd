@@ -39,6 +39,8 @@ theme_set(theme_minimal() +
                   legend.title = element_text(size = 22, color = "gray10")))
 
 my_cols =  c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
 
 options(mapbox.accessToken = Sys.getenv("MAPBOX_TOKEN"))
 ```
@@ -284,12 +286,12 @@ char_race_gen_na = ems_full %>%
 
 char_race_gen_na %>%
   ggplot(aes(patient_race_list, as.numeric(patient_age), fill = patient_gender)) +
-  geom_split_violin(alpha= 1, color = "#fafafa")+
+  geom_split_violin(alpha= 1, size = 1, aes(color = patient_gender))+
   labs(title= "EMS Patient Demographics", x = "Race", y = "Age", fill = "Gender")+
   scale_x_discrete(expand=c(0, 0) ,labels = function(x) str_wrap(x, width = 10))+
   scale_fill_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))+
-  #scale_color_manual(values = cbPalette, name = "Sex", labels = c("Female", "Male"))+
-  geom_jitter(data =  sample_n(char_race_gen_na,7500), position = position_jitter(.025), size = .7, alpha =.25, show.legend = FALSE) +
+  scale_color_manual(values = c("#AF7100", "#0084B7"), name = "Sex", labels = c("Female", "Male"))+
+  geom_jitter(data =  sample_n(char_race_gen_na,7500), position = position_jitter(.025), size = .7, alpha =.1, show.legend = FALSE, color = "black") +
   theme(legend.position = "bottom",
         legend.title = element_blank(),
         legend.key.size = unit(1, "line"),
@@ -417,8 +419,9 @@ volume_change <- pre_daily %>%
   mutate(change_ratio = daily_post / daily_pre)
 
 color_pal <- c('#762a83','#af8dc3','#e7d4e8','#f7f7f7','#d9f0d3')
+sf_map_colors <- rev(c("#ed9ab1", "#EBE8E8",'#92b2df', "#2f75b3", "#163670"))
 
-color_scale <- colorBin(color_pal, c(0, 1.5), c(0.1, 0.35, 0.65, 0.90, 1.10, 1.3))
+color_scale <- colorBin(sf_map_colors, c(0, 1.5), c(0.1, 0.35, 0.65, 0.90, 1.10, 1.3))
 
 volume_change %>%
   leaflet(width = "100%") %>%
@@ -450,7 +453,7 @@ Using data from the Virginia Department of Health, we were able to investigate t
 vital %>%
   count(category, sort = T) %>%
   ggplot(aes(reorder(category,n),n))+
-  geom_bar(stat='identity', position=position_dodge(.5), fill = my_cols[5])+
+  geom_bar(stat='identity', position=position_dodge(.5), fill = cbbPalette[2])+
   #scale_x_discrete(labels = function(x) str_wrap(x, width = 15))+
   labs(x= "ICD 10- Code", y= "Count", title = "Number of Deaths by ICD-10 Code\n")+
   theme(axis.text = element_text(size = 14, color = "gray30"))+
@@ -538,25 +541,25 @@ relative_risk = relative_risk %>%
   arrange(desc(relative_risk))
 relative_risk$category = factor(relative_risk$category, levels = rev(relative_risk$category))
 
-relative_risk %>%
-  ggplot(aes(x=white_risk, xend=relative_risk, y=category)) + 
-  geom_segment(aes(x=white_risk, 
-                   xend=relative_risk, 
-                   y=category, 
-                   yend=category), 
-               color=my_cols[1], size=1.5)+
-  geom_dumbbell(color=my_cols[5], 
-                size_x = 0, 
-                size_xend = 5,
-                #Note: there is no US:'color' for UK:'colour' 
-                # in geom_dumbbel unlike standard geoms in ggplot()
-                colour_x="#edae52", 
-                colour_xend = my_cols[5])+
-  scale_x_log10() +
-  labs(x="Relative Risk", y="ICD 10 Code", 
-       title="Relative Risk of Death", subtitle = "Black Patients vs. White Patients\n") +
-  theme(axis.title.y = element_blank(),
-        plot.margin = margin(0, 4, 0, 0, unit = "cm"))
+# relative_risk %>%
+#   ggplot(aes(x=white_risk, xend=relative_risk, y=category)) + 
+#   geom_segment(aes(x=white_risk, 
+#                    xend=relative_risk, 
+#                    y=category, 
+#                    yend=category), 
+#                color=cbbPalette, size=1.5)+
+#   geom_dumbbell(color="black", 
+#                 size_x = 0, 
+#                 size_xend = 5,
+#                 #Note: there is no US:'color' for UK:'colour' 
+#                 # in geom_dumbbel unlike standard geoms in ggplot()
+#                 colour_x="black", 
+#                 colour_xend = "black")+
+#   scale_x_log10() +
+#   labs(x="Relative Risk", y="ICD 10 Code", 
+#        title="Relative Risk of Death", subtitle = "Black Patients vs. White Patients\n") +
+#   theme(axis.title.y = element_blank(),
+#         plot.margin = margin(0, 4, 0, 0, unit = "cm"))
 ```
 
 <br>
