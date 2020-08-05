@@ -17,6 +17,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 # load libraries
+library(knitr)
 library(tidycensus)
 library(tidyr)
 library(sf)
@@ -198,20 +199,43 @@ leaflet() %>%
 _Add in some more viz of demographic breakdown for COVID cases_
 _figure out why formatting is weird_
 
+```{r}
+tmp <- get_acs(geography = "county",
+                                   year = 2018,
+                                   variables = c(white_pop = "B02001_002", 
+                                                 black_pop = "B02001_003", 
+                                                 latinx_pop = "B03002_012"),
+                                   state = "VA",
+                                   county = c("albemarle", "charlottesville")) %>%
+  pivot_wider(names_from = variable,
+              values_from = c(estimate, moe),
+              names_glue = "{variable}_{.value}")
+
+white_pop_estimate <- sum(tmp$white_pop_estimate)
+black_pop_estimate <- sum(tmp$black_pop_estimate)
+latinx_pop_estimate <- sum(tmp$latinx_pop_estimate)
+
+pop_estimates_by_race <- tibble(race = c("black or african american", "white", "hispanic or latino"),
+                                race_short = c("black", "white", "latinx"), 
+                                pop_estimate = c(black_pop_estimate, white_pop_estimate, latinx_pop_estimate))
+```
+
 ```{r, echo=FALSE, out.width="100%"}
 ems$on_or_after_march_15th_2020 <- ymd(ems$incident_date) >= "2020-03-15"
 
 ems %>%
-  filter(race %in% c("black or african american", "white", "hispanic or latino", NA)) %>%
+  filter(race %in% c("black or african american", "white", "hispanic or latino")) %>%
   group_by(race, covid1, on_or_after_march_15th_2020) %>%
   count() %>%
   filter(covid1 == 1) %>%
-  ggplot(., aes(x = race, y = n, fill = on_or_after_march_15th_2020)) +
+  inner_join(pop_estimates_by_race, by = "race") %>%
+  mutate(prop_of_pop = n / pop_estimate) %>%
+  ggplot(., aes(x = race_short, y = prop_of_pop, fill = on_or_after_march_15th_2020)) +
     geom_bar(stat = "identity", position = "dodge") + 
-    geom_text(aes(label=n), position=position_dodge(width=0.9), vjust=-0.25) + 
+    geom_text(aes(label = round(prop_of_pop, digits = 2)), position=position_dodge(width=0.9), vjust=-0.25) + 
     labs(title = "Patients with at Least One Covid-Like Symptom", x = "Racial Group", y = "Number of Patients") + 
     scale_fill_discrete(name = "", labels = c("before 2020-03-15", "after 2020-03-15")) + 
-    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1), legend.position = "bottom")
+    theme(legend.position = "bottom")
     
 ```
 
@@ -257,7 +281,46 @@ transposed <- covid_symptom_props_by_race %>% select(-c("race")) %>% t(.)
 colnames(transposed) <- racial_groups
 row.names(transposed) <- c("cough", "fever", "shortness of breath", "myalgia", "chills", "fatigue", "headache", "diarrhea", "nausea/vomit", "hypoxemia", "hypoxemia (no improvement)", "cyanosis", "COVID in impressions", "young person stroke", "young person cardiac arrest", "breathing medications", "patient count")
 
-knitr::kable(transposed, digits = 2)
+
+r1 <- which.max(transposed[1,])
+r2 <- which.max(transposed[2,])
+r3 <- which.max(transposed[3,])
+r4 <- which.max(transposed[4,])
+r5 <- which.max(transposed[5,])
+r6 <- which.max(transposed[6,])
+r7 <- which.max(transposed[7,])
+r8 <- which.max(transposed[8,])
+r9 <- which.max(transposed[9,])
+r10 <- which.max(transposed[10,])
+r11 <- which.max(transposed[11,])
+r12 <- which.max(transposed[12,])
+r13 <- which.max(transposed[13,])
+r14 <- which.max(transposed[14,])
+r15 <- which.max(transposed[15,])
+r16 <- which.max(transposed[16,])
+r17 <- which.max(transposed[17,])
+
+col <- seq_len(ncol(transposed))
+
+transposed[1,] <- transposed[1,] %>% kableExtra::cell_spec(bold = col == r1)
+transposed[2,] <- transposed[2,] %>% kableExtra::cell_spec(bold = col == r2)
+transposed[3,] <- transposed[3,] %>% kableExtra::cell_spec(bold = col == r3)
+transposed[4,] <- transposed[4,] %>% kableExtra::cell_spec(bold = col == r4)
+transposed[5,] <- transposed[5,] %>% kableExtra::cell_spec(bold = col == r5)
+transposed[6,] <- transposed[6,] %>% kableExtra::cell_spec(bold = col == r6)
+transposed[7,] <- transposed[7,] %>% kableExtra::cell_spec(bold = col == r7)
+transposed[8,] <- transposed[8,] %>% kableExtra::cell_spec(bold = col == r8)
+transposed[9,] <- transposed[9,] %>% kableExtra::cell_spec(bold = col == r9)
+transposed[10,] <- transposed[10,] %>% kableExtra::cell_spec(bold = col == r10)
+transposed[11,] <- transposed[11,] %>% kableExtra::cell_spec(bold = col == r11)
+transposed[12,] <- transposed[12,] %>% kableExtra::cell_spec(bold = col == r12)
+transposed[13,] <- transposed[13,] %>% kableExtra::cell_spec(bold = col == r13)
+transposed[14,] <- transposed[14,] %>% kableExtra::cell_spec(bold = col == r14)
+transposed[15,] <- transposed[15,] %>% kableExtra::cell_spec(bold = col == r15)
+transposed[16,] <- transposed[16,] %>% kableExtra::cell_spec(bold = col == r16)
+transposed[17,] <- transposed[17,] %>% kableExtra::cell_spec(bold = col == r17)
+
+transposed %>% kable(booktabs = TRUE, escape = FALSE, digits = 2)
 ```
 
 
