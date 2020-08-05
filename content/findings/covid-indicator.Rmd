@@ -200,35 +200,23 @@ _Add in some more viz of demographic breakdown for COVID cases_
 _figure out why formatting is weird_
 
 ```{r}
-tmp <- get_acs(geography = "county",
-                                   year = 2018,
-                                   variables = c(white_pop = "B02001_002", 
-                                                 black_pop = "B02001_003", 
-                                                 latinx_pop = "B03002_012"),
-                                   state = "VA",
-                                   county = c("albemarle", "charlottesville")) %>%
-  pivot_wider(names_from = variable,
-              values_from = c(estimate, moe),
-              names_glue = "{variable}_{.value}")
-
-white_pop_estimate <- sum(tmp$white_pop_estimate)
-black_pop_estimate <- sum(tmp$black_pop_estimate)
-latinx_pop_estimate <- sum(tmp$latinx_pop_estimate)
-
-pop_estimates_by_race <- tibble(race = c("black or african american", "white", "hispanic or latino"),
-                                race_short = c("black", "white", "latinx"), 
-                                pop_estimate = c(black_pop_estimate, white_pop_estimate, latinx_pop_estimate))
+ems$on_or_after_march_15th_2020 <- ymd(ems$incident_date) >= "2020-03-15"
+incidents_by_race <- ems %>% 
+  group_by(race, on_or_after_march_15th_2020) %>% 
+  count() %>%
+  rename(pop_estimate = n)
 ```
 
 ```{r, echo=FALSE, out.width="100%"}
-ems$on_or_after_march_15th_2020 <- ymd(ems$incident_date) >= "2020-03-15"
 
 ems %>%
   filter(race %in% c("black or african american", "white", "hispanic or latino")) %>%
   group_by(race, covid1, on_or_after_march_15th_2020) %>%
   count() %>%
   filter(covid1 == 1) %>%
-  inner_join(pop_estimates_by_race, by = "race") %>%
+  inner_join(incidents_by_race, by = c("race", "on_or_after_march_15th_2020")) %>%
+  mutate(race_short = ifelse(race == "black or african american", "black",
+                             ifelse(race == "hispanic or latino", "latinx", "white"))) %>%
   mutate(prop_of_pop = n / pop_estimate) %>%
   ggplot(., aes(x = race_short, y = prop_of_pop, fill = on_or_after_march_15th_2020)) +
     geom_bar(stat = "identity", position = "dodge") + 
