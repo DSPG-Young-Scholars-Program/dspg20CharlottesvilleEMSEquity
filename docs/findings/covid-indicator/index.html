@@ -119,8 +119,8 @@ $(document).ready(function(){
       <meta name="twitter:card" content="summary">
       <meta name="twitter:image" content="/favicon/uva-dspg-logo.jpg" >
       
-    <meta property="description" content="Can we use EMS data to identify COVID-19 trends?">
-    <meta property="og:description" content="Can we use EMS data to identify COVID-19 trends?">
+    <meta property="description" content="How can we use EMS data to identify COVID-19 trends?">
+    <meta property="og:description" content="How can we use EMS data to identify COVID-19 trends?">
     
     <meta name="twitter:creator" content="">
     <meta name="twitter:site" content="">
@@ -195,7 +195,7 @@ $(document).ready(function(){
 
     <h4><a href="../../findings/covid-indicator/">COVID-19 Symptoms</a></h4>
     
-    <h5>Can we use EMS data to identify COVID-19 trends?</h5>
+    <h5>How can we use EMS data to identify COVID-19 trends?</h5>
 
     
     
@@ -231,12 +231,12 @@ $(document).ready(function(){
 <div id="background" class="section level3">
 <h3>Background</h3>
 <p>While we were obviously interested in identifying patterns in COVID-19 symptoms across demographic groups, time, and space, this portion of the project was also quite exploratory, as it was unclear how difficult it might be to isolate potential COVID-19 cases in a large EMS dataset.</p>
-<p>According to the Johns Hopkins Center for Systems Science and Engineering, as of June 9, 2020 (the most current date in our data), there were 258 confirmed cases and 8 deaths in Albemarle County, and 141 confirmed cases and 3 deaths in Charlottesville City.<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a> While experts expect that actual case counts may be as much as 10 times higher than the confirmed case counts<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a> it remains unclear whether this figure is reprsentative of the most severe cases, which are those most likely to appear in the EMS dataset. Given the uncertainty surrounding the total number of cases in the area as well as the proportion of cases that may be present in our dataset, it was unclear how effective an analysis of COVID-symptoms would be. Still, we were curious to see whether any trends would emerge, and in doing so hoped to learn about the potential for future use of EMS data in evaluating the state of the pandemic.</p>
+<p>According to the Johns Hopkins Center for Systems Science and Engineering, as of June 9, 2020 (the most current date in our data), there were 258 confirmed cases and 8 deaths in Albemarle County, and 141 confirmed cases and 3 deaths in Charlottesville City.<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a> While experts expect that actual case counts may be as much as 10 times higher than the confirmed case counts<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a> it remains unclear whether this figure is reprsentative of the most severe cases, which are those most likely to appear in the EMS dataset. Given the uncertainty surrounding the total number of cases in the area as well as the proportion of cases that may be present in our dataset, it was unclear how effective an analysis of COVID-like symptoms would be. Still, we were curious to see whether any trends would emerge, and in doing so hoped to learn about the potential for future use of EMS data in evaluating the state of the pandemic.</p>
 </div>
 <div id="mapping" class="section level3">
 <h3>Mapping</h3>
-<p>The map below breaks down the incident rates of our COVID-19 indicator across Charlottesville's neighborhoods and Albemarle County's census tracts. In this case, an incident is considered COVID-like when it includes at least one COVID symptom (as described in the <em>Data &amp; Methods</em> page).</p>
-<p>Few changes are visible from before and after March 15, 2020, though there appears to be a slightly higher prevalence of COVID-like symptoms downtown and in neighborhoods south of downtown. Interestingly, these neighborhoods also have a higher proportion of Black residents, which is consistent with widely-reported disparities in COVID-19 outcomes between Black and white populations.</p>
+<p>The map below breaks down the incident rates of our COVID-19 indicator across Charlottesville's neighborhoods and Albemarle County's census tracts. In this case, an incident is considered COVID-like when it includes at least one COVID-19 symptom (as described in the <a href="https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/methods/">Data &amp; Methods</a> page).</p>
+<p>Few changes are visible when comparing the incidence of COVID-like symptoms before and after March 15, 2020, though there appears to be a slightly higher prevalence of COVID-like symptoms downtown and in neighborhoods south of downtown. Interestingly, these neighborhoods also have a higher proportion of black residents, which is consistent with widely-reported disparities in COVID-19 outcomes between black and white populations.</p>
 <p>Also of note is the slightly elevated incidence rate in Census Tract 105 to the east of the city, which includes a larger proportion of older residents who are at particular health risk when contracting COVID-19.</p>
 <p>However, there appears to be a slight overall tendency for incidence to actually decrease in the COVID-19 era. This pattern may suggest that our indicator is not sensitive enough to COVID-19 cases, and that it may be incorporating too many other types of symptoms, masking out any effects of COVID-19 itself. We discuss this more below.</p>
 <div id="htmlwidget-1" style="width:100%;height:480px;" class="leaflet html-widget"></div>
@@ -452,36 +452,41 @@ $(document).ready(function(){
 \log(\frac{\pi}{1 - \pi}) = \alpha &amp;+ \boldsymbol{\beta^T_1}(\mbox{gender}) + \boldsymbol{\beta^T_2}({\mbox{race}}) + \boldsymbol{\beta^T_3}(\mbox{age range}) + \boldsymbol{\beta^T_4}(\mbox{COVID era}) \\
 &amp;+ (\mbox{COVID era}) \times (\boldsymbol{\beta^T_5}(\mbox{gender}) + \boldsymbol{\beta^T_6}({\mbox{race}}) + \boldsymbol{\beta^T_7}(\mbox{age range}))
 \end{align*}\]</span>
-<p>where <span class="math inline">\(\pi\)</span> represents the probability of a patient being classified as COVID-like based on our COVID indicator (which incorporates the presence of various symptoms). We initially included an interaction term between COVID era and the rest of our variables to determine whether the changes in COVID symptoms had varied across the levels of these variables. We ran a model of this general form with three different specifications of our outcome variable. In the first specification, we classifed patients as COVID-like if they had at least 1 COVID-like symptom. In the second, we used 2 COVID-like symptoms as the cutoff, and in the third we used 3 COVID-like symptoms as the cutoff. Differences in results at varying levels of &quot;strictness&quot; in classying COVID-like cases would potentially allow us to home in on an appropriate cutoff when classifying COVID cases in this dataset.</p>
-<p>Unfortunately, as was likely given our visual exploration of the data, none of these models produced any notable findings. In retrospect, this result seems entirely intuitive. Between the uncertainty surrounding the actual prevalence of COVID cases in our dataset (described above) and our inclusive approach in classifying COVID-like symptoms, we likely have incorporated a lot of noise into our COVID indicator variable. That is, our indicator likely captures many of the COVID cases that do exist in the datset, but is not specific enough, and so also captures so many non-COVID cases that we are unable to discern subtle trends in COVID symptoms.</p>
+<p>where <span class="math inline">\(\pi\)</span> represents the probability of a patient being classified as COVID-like based on our COVID-19 indicator (which incorporates the presence of various symptoms). We initially included an interaction term between COVID era and the rest of our variables to determine whether the changes in COVID-19 symptoms had varied across the levels of these variables. We ran a model of this general form with three different specifications of our outcome variable. In the first specification, we classifed patients as COVID-like if they had at least 1 COVID-like symptom. In the second, we used 2 COVID-like symptoms as the cutoff, and in the third we used 3 COVID-like symptoms as the cutoff. Differences in results at varying levels of &quot;strictness&quot; in classying COVID-like cases would potentially allow us to home in on an appropriate cutoff when classifying COVID-19 cases in this dataset.</p>
+<p>Unfortunately, as was likely given our visual exploration of the data, none of these models produced any notable findings. In retrospect, this result seems entirely intuitive. Between the uncertainty surrounding the actual prevalence of COVID-19 cases in our dataset (described above) and our inclusive approach in classifying COVID-like symptoms, we likely have incorporated a lot of noise into our COVID-19 indicator variable. That is, our indicator likely captures many of the COVID-19 cases that do exist in the datset, but is not specific enough, and so also captures so many non-COVID-19 cases that we are unable to discern subtle trends in COVID-19 symptoms.</p>
 </div>
 <div id="future-directions" class="section level3">
 <h3>Future Directions</h3>
-<p>While disappointing, this outcome does provide important ramifications for similar research going forward.</p>
-<p>First, for EMS data to be a valuable source of information in assessing the course of the COVID-19 pandemic, a more thorough effort to classify COVID symptoms accurately is required. Given the messy nature of EMS data, classifying symptoms effectively is a challenge. However, a more complex approach could certainly be implemented. Improvements on our methodology may be:</p>
+<p>While disappointing, this outcome does provide some important takeaways for similar research going forward.</p>
+<p>First, for EMS data to be a valuable source of information in assessing the course of the COVID-19 pandemic, a more thorough effort to classify COVID-19 symptoms accurately is required. Given the messy nature of EMS data, classifying symptoms effectively is a challenge. However, a more complex approach could certainly be implemented. Improvements on our methodology may be:</p>
 <ul>
 <li><p>Link EMS data with data on patient outcomes</p>
 <ul>
 <li>Being able to link the symptom data reported by EMS with COVID-19 results could vastly improve our ability to determine which symptoms in the EMS dataset are actually important in determining a COVID-19 diagnosis.</li>
-</ul></li>
+</ul>
+<p><br></p></li>
 <li><p>Implement more complex logic when classifying symptoms</p>
 <ul>
-<li>For instance, a certain symptom may be a strong indicator of COVID, but only in the presence of another symptom as well</li>
-</ul></li>
+<li>For instance, a certain symptom may be a strong indicator of COVID-19, but only in the presence of another symptom as well</li>
+</ul>
+<p><br></p></li>
 <li><p>Include a weighting scheme for more important symptoms</p>
 <ul>
-<li>This could reduce noise by highlighting those symptoms thare are known to be particularly indicative of COVID</li>
-</ul></li>
-<li><p>Develop an indicator using a dataset from an area with a greater proportion of COVID cases</p>
+<li>This could reduce noise by highlighting those symptoms thare are known to be particularly indicative of COVID-19</li>
+</ul>
+<p><br></p></li>
+<li><p>Develop an indicator using a dataset from an area with a greater proportion of COVID-19 cases</p>
 <ul>
 <li>More cases may make it easier to detect cases in a dataset, and allow for a refinement of the symptoms included. This more specific scheme could then be implemented in other areas with fewer case counts.</li>
-</ul></li>
+</ul>
+<p><br></p></li>
 <li><p>Link multiple EMS datasets</p>
 <ul>
-<li>This could improve the sensitivity of our indicator, but perhaps more importantly would allow for an assessment of the standardization across EMS data platforms. In the future, a large-scale network of EMS data could be a valuable tool in identifying emerging diseases</li>
-</ul></li>
+<li>This could improve the sensitivity of our indicator, but perhaps more importantly would allow for an assessment of the standardization across EMS data platforms. In the future, a large-scale network of EMS data could be a valuable tool in identifying emerging infectious diseases</li>
 </ul>
-<p>It will also be valuable to revisit this topic continuously as the medical understanding of COVID-19 evolves. Symptoms that were once thought to be clear identifiers of the virus may become less important, and vice versa. The null results in our preliminary exploration in this area should not be interpreted as a referendum on the value of EMS data in understanding COVID-19, but as a guide to the considerations and improvements that will need to be made to more effectively use EMS data as a tool to fight emerging diseases in the future.</p>
+<p><br></p></li>
+</ul>
+<p>It will also be valuable to revisit this topic continuously as the medical understanding of COVID-19 evolves. Symptoms that were once thought to be clear identifiers of the virus may become less important, and vice versa. The null results in our preliminary exploration in this area should not be interpreted as a referendum on the value of EMS data in understanding COVID-19, but as a guide to the considerations and improvements that will need to be made to more effectively use EMS data as a tool to fight emerging infectious diseases in the future.</p>
 </div>
 <div class="footnotes">
 <hr />

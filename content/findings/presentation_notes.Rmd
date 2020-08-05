@@ -1,8 +1,7 @@
 ---
 title: "Presentation Notes"
 description: "Quick Notes for Presentation"
-tags: ["R", "Bayesian", "Geospatial"]
-weight: 3
+weight: 4
 draft: false
 output: html_document
 ---
@@ -125,7 +124,7 @@ options(mapbox.accessToken = Sys.getenv("MAPBOX_TOKEN"))
 ```
 
 
-## Has Covid Exasperbated Existing Healthcare Disparities in Charlottesville and Albemarle County Emergency Medical Services?
+## Has Covid Exacerbated Existing Healthcare Disparities in Charlottesville and Albemarle County Emergency Medical Services?
 
 <br>
 <br>

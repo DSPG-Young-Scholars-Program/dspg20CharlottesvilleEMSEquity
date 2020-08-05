@@ -1,6 +1,6 @@
 ---
 title: "Response Time Analysis"
-description: "How do EMS response times vary throughout the region?"
+description: "Do EMS response times vary throughout the region?"
 tags: ["R", "Bayesian", "Geospatial"]
 weight: 3
 draft: false
@@ -307,11 +307,13 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
 
 <br>
 
-From this, we can gather that there is no signifcant difference in how long service takes across different races and genders. While this is not the only area of EMS services where equity issues can occur, there is no systematic discrimiation in response times. 
+From this, we can gather that there is no signifcant difference in how long service takes across different races and genders. While this is not the only area of EMS services where equity issues can occur, it does not appear that there is systematic discrimiation in response times. 
 
-Hpwever, we do see large differences in how long different symptoms take to treat. Some of these make sense, as a cardiovascular event is usually more time sensitive than a alcohol or drug related incident. How long these symtpms take to be treated also varies before and after covid. Based on the plot above, we can be pretty sure that GI/GU cases take longer to serve during the Covid-19 era than before. Unfortunatley, due to the smaller number of cases after March 15th compared to before, we are relatively unsure about these estimates, meaning that for most tyes of symtpoms, we are unable to be sure that response times are taking longer or shorter. 
+However, we do see large differences in the response times for different types of symptoms. Some of these make sense, as a cardiovascular event is likely considered more time-sensitive than an alcohol or drug-related incident. We do see some variation in the response times to some symptoms across the beginning of the COVID-19 pandemic. Based on the plot above, we can be fairly confident that GI/GU cases take longer to serve during the COVID-19 era than before. Unfortunately, due to the relatively few incidents after March 15th, our estimates are not highly precise. For most of these symptoms, we cannot say for sure whether response times have increased or decreased. These results still serve to point out possible trends worth monitoring as the pandemic continues.
 
 Because this is a neighborhood-level model, the expected change in response time due to being in a particular neighborhood is also interpretable (the interpretation of units is the same as explained above). When plotting response times across the region, we see that rural areas are expected to wait longer for emergency medical services than their urban counterparts. However, these results should be interpreted with caution because of our inability directly control for distance traveled. As neighborhood or census tract regions get larger, this deficiency in our model becomes more and more meaningful. Therefore, comparing smaller regions within Charlottesville to those in Albemarle is suspect. Still, differences within similarly-sized regions may be meaningful.
+
+<br>
 
 ```{r, fig.height = 6}
 map_colors <- colorBin(sf_map_colors, c(0.5, 2), c(0.65, 0.8, .95, 1.05, 1.30, 1.8))
@@ -404,8 +406,8 @@ Finally, COVID-19 has made calls take longer on average, although this increase 
 
 ### Next Steps
 
-The most obvious improvement to this analysis would be the inclusion of travel distance from dispatch to incident location. Even with our attempts to account for this, this variable is likely impacting many of our estimates to some degree, and it would not be surprising to see results shift were we to include it in the model. Unfortunately, this data is not reliably collected, and while alternative approaches to estimate it certainly exist, implementing them ended up being outside the timeframe of this summer project.
+The most obvious improvement to this analysis would be the inclusion of travel distance from dispatch to incident location. Even with our attempts to account for it, this variable is likely impacting many of our estimates to some degree, and it would not be surprising to see results shift were we to include it in the model. Unfortunately, this data is not reliably collected, and while alternative approaches to estimate it certainly exist, implementing them ended up being outside the timeframe of this summer project.
 
-Including travel time information would allow us to make more meaningful interpretation of neighborhood effects. As it stands, we assume that the neighborhood effects are capturing much of the travel distance information. It would be interesting to see if some neighborhoods are consistently under or over served. Of particular interest is the Pantops region, which has a large number of elderly residents at heightened risk of COVID-19. On the previous graphs, this region corresponds to census tract 105, just to the East of Charlottesville. Any changes in response times here would therefore be particularly consequential.
+Including travel time information would allow us to make more meaningful interpretation of neighborhood effects. As it stands, we assume that the neighborhood effects are capturing much of the travel distance information. It would be interesting to see if some neighborhoods are consistently under- or over-served. Of particular interest is the Pantops region, which has a large number of elderly residents at heightened risk of COVID-19. On the previous graphs, this region corresponds to census tract 105, just to the East of Charlottesville. Any changes in response times here would therefore be particularly consequential.
 
-Finally, it is worth noting that response times are not the only assessment of medical service delivery, and expanding our analysis to other variables would help provide a more nuanced view of changes across the COVID-19 pandemic. For instance, since the beginning of COVID-19, there have been significant drops in the number of calls received by EMS squads in Charlottesville and Albemarle, and understanding if some communities have become more hesitant to call than others would provide another indicator of disparities in service delivery. Other variables, like hospitals patients are transferred to, types of medical procedures implemented during calls, and more would also be relevant for further exploration.
+Finally, it is worth noting that response times are not the only way to assess medical service delivery, and expanding our analysis to other variables would help provide a more nuanced view of changes across the COVID-19 pandemic. For instance, drops in call volume (as discussed in the [background](https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/findings/context/) section of the site), may indicate certain communities who have become highly reluctant to rely on emergency services with potentially dangerous consequences. Other variables, like hospitals patients are transferred to, types of medical procedures implemented during calls, and more would also be relevant for further exploration.

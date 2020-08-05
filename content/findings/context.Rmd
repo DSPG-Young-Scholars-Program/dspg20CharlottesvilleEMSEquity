@@ -1,6 +1,6 @@
 ---
 title: "Background"
-description: "Putting the problem in context"
+description: "Putting the problem into context"
 tags: ["R", "Visualization"]
 weight: 2
 draft: false
@@ -216,12 +216,12 @@ leaflet(width = "100%") %>%
               color = "black", weight = 4, smoothFactor = 0.5,
               fill = NA, options = pathOptions(pane = "border")) %>%
   # addLayersControl(baseGroups = c("Black", "White")) %>%
-  addLegend("bottomright", pal = pal, values = county_neighborhoods_sp$prop_black)
+  addLegend("bottomright", pal = pal, values = county_neighborhoods_sp$prop_black, title = "Black Proportion of Population")
 ```
 
 <br>
 
-Data from the census also reveals the populations of rural areas of Albemarle County tend to be older than neighborhoods in Charlottesville proper and areas concentrated along the Route 29 corridor north of the city. Within the city, there are distinct pockets of young college students around the University of Virginia, but it doesn't appear to be the case that any neighborhoods stand out in both race and age makeup simultaneously, which might indicate a particularly vulnerable area to focus on in our analyses.
+Data from the census also reveals the populations of rural areas of Albemarle County tend to be older than neighborhoods in Charlottesville proper and areas concentrated along the Route 29 corridor north of the city. Within the city, there are distinct pockets of young college students around the University of Virginia, but it doesn't appear that any neighborhoods stand out in terms of both race and age makeup simultaneously, which may have indicated a particularly vulnerable area to focus on in our analyses.
 
 <br>
 
@@ -266,12 +266,12 @@ leaflet(width = "100%") %>%
               color = "black", weight = 4, smoothFactor = 0.5,
               fill = NA, options = pathOptions(pane = "border")) %>%
   # addLayersControl(baseGroups = c("Black", "White")) %>%
-  addLegend("bottomright", pal = pal, values = county_neighborhoods_sp$med_age)
+  addLegend("bottomright", pal = pal, values = county_neighborhoods_sp$med_age, title = "Median Age")
 ```
 
 <br>
 
-While these patterns describe the demographic makeup of the general population, it wasn't clear whether these patterns would generalize to the population represented in the EMS dataset. Unsurprisingly, black and white patients make up the vast majority of the EMS calls reported between late 2016 and mid 2020, but differences in age distribution across racial categories are present. The large proportion of young adults amongst the Asian population may be a result of the presence of the university, which has a higher representation of Asians amongst its student population than do the city and county as a whole. Similar patterns may be at play in the slight bump at young ages for black patients as well. While this pattern is less noticable for whites, this is likely a result of a generally larger white population muting out the effects of the university demographics. Given the increased risks of COVID-19 for older adults, the higher representation of blacks and whites at older ages is worth noting when considering groups at highest risk in Charlottesville.
+While these patterns describe the demographic makeup of the general population, it wasn't clear whether these patterns would generalize to the population represented in the EMS dataset. Unsurprisingly, black and white patients make up the vast majority of the EMS calls reported between late 2016 and mid 2020, but differences in age distribution across racial categories are present. The large proportion of young adults amongst the asian population may be a result of the presence of the university, which has a higher representation of asians amongst its student population than do the city and county as a whole. Similar patterns may be at play in the slight bump at young ages for black patients as well. While this pattern is less noticable for whites, this is likely a result of a generally larger white population muting out the effects of the university demographics. Given the increased risks of COVID-19 for older adults, the higher representation of blacks and whites at older ages is worth noting when considering groups at highest risk in Charlottesville.
 
 <br>
 
@@ -368,8 +368,6 @@ ggplot(plot_data) +
 <br>
 
 Call volume is not dropping uniformly across Charlottesville and Albemarle. The following map makes it clear that areas immediately surrounding the University have experienced the most drastic drop in call volume, which is almost certainly related to the departure of students from campus after the beginning of the pandemic (unsurprisingly, this is accompanied by a noticable drop in alcohol-related incidents). Similarly, areas surrounding downtown have also seen a more noticable decrease, likely related to the fewer interactions taking place in these public spaces after many bars and restaurants closed in the early stages of the pandemic.
-
-Importantly, the spatial patterns in call volume drop appear to be driven primarily by these peripheral factors. It is not immediately apparent that any particular residential neighborhoods have experienced substantially different call volume drops.
 
 <br>
 

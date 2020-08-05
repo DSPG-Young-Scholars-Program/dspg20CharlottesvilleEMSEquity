@@ -6,10 +6,6 @@ output: html_document
 h3, h4 {
   text-align: center
 }
-
-.footnotes {
-  color:rgb(195,206,208)
-}
 ```
 
 ### The Impact of COVID-19 on the Equitable Delivery of Emergency Medical Services
@@ -18,13 +14,13 @@ h3, h4 {
 
 #### Background
 
-In recent years, public health efforts have begun to focus increasingly on the social determinants of health as a means of understanding the prevailing health inequalities in the United States and across the world. While many of these determinants very clearly relate to population health (access to health care resources, for instance), others are more subtle in their health impacts, like residential segregation, education, and cultural values[^HP]. While disparities in health outcomes across socio-economic and racial groups exist around the world, there are few places where they are as stark as in the United States[^HA]$^,$[^AR]$^,$[^LANCET]. The COVID-19 pandemic has only emphasized these prevailing patterns: while comprehensive studies are still underway, preliminary research indicates that Black Americans make up a significantly outsized portion of the hospitalizations related to COVID-19[^NEJM].
+In recent years, public health efforts have begun to focus increasingly on the social determinants of health as a means of understanding the prevailing health inequalities in the United States and across the world. While many of these determinants very clearly relate to population health (access to health care resources, for instance), others are more subtle in their health impacts, like residential segregation, education, and cultural values.[^HP] While disparities in health outcomes across socio-economic and racial groups exist around the world, there are few places where they are as stark as in the United States.[^HA]$^,$[^AR]$^,$[^LANCET] The COVID-19 pandemic has only emphasized these prevailing patterns: while comprehensive studies are still underway, preliminary research indicates that Black Americans make up a significantly outsized portion of the hospitalizations related to COVID-19.[^NEJM]
 
 <br>
 
 #### Project Goals
 
-We are partnering with Charlottesville City and Albemarle County, Virginia to understand the role that the delivery of Emergency Medical Services (EMS) may play in these documented health disparities. We seek to understand how the COVID-19 panedmic has affected EMS operations, and whether these changes may disproportionately impact certain populations in the Charlottesville area.
+We are partnering with Charlottesville City and Albemarle County, Virginia to understand the role that the delivery of Emergency Medical Services (EMS) may play in these documented health disparities. We seek to understand how the COVID-19 pandemic has affected EMS operations, and whether these changes may disproportionately impact certain populations in the Charlottesville area.
 
 <br>
 

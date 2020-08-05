@@ -20,7 +20,7 @@ h3, h4 {
 
 ### Data Sources
 
-This project relied primarily on a dataset of EMS incidents in Charlottesville City and Albemarle County that spanned from the December 2016 to June 2020. These data consisted of numerous variables regularly recorded by EMS providers when responding to an incident. The variables available can be broken down into three rough categories:
+This project relied primarily on a dataset of EMS incidents between December 2016 and June 2020 in Charlottesville City and Albemarle County. These data consisted of numerous variables regularly recorded by EMS providers when responding to an incident. The variables available can be broken down into three rough categories:
 
 * Operations
     * Incident date and time
@@ -33,6 +33,7 @@ This project relied primarily on a dataset of EMS incidents in Charlottesville C
     * Patient symptoms (based on provider's impression and/or patient's reported complaints)
     * Vital signs (temperature, pulse, etc.)
     * Medications provided
+    * Results of medical assessments
 
 * Patient Characteristics
     * Age
@@ -46,11 +47,11 @@ In addition to this EMS dataset, we also used data from the American Community S
 
 ### Data Quality
 
-This project required an extensive assessment of data quality because of the complicated nature of the underlying processes involved. For instance, in an ideal scenario, each entry in the dataset would correspond to a single patient, with a single response unit recording information for that patient. Of course, the real-world nature of these data make them far more messy.
+Because many of the observations in the dataset were recorded under high intensity scenarios (increasing the probability of errors), we knew that a thorough assessment of data quality would be necessary. While some errors (missing rows of data, logical inconsistencies between variables, etc.) were easy to spot, the complex real-world nature of the data presented additional challenges as well. 
 
-Most importantly, it is common that multiple units respond to the same incident, with each unit keeping records. For these cases, the dataset ends up with multiple rows that reference the same patient, and we risk over-counting the true number of patients serviced, with the potential to skew the actual distribution of the patient-level variables we hope to explore.
+For instance, in an ideal scenario, each entry in the dataset would correspond to a single patient, with a single response unit recording information for that patient. In actuality, multiple units often respond to the same incident, with each unit keeping records. For these cases, the dataset ends up with multiple rows that reference the same patient and we risk over-counting the true number of patients serviced, with the potential to skew the actual distribution of the patient-level variables we hope to explore.
 
-Further complicating things is the fact that in some cases, multiple units may respond to a single incident, but may actually service _different_ patients (this is often true for traffic-related incidents, which commonly have multiple patients involved).
+Further complicating things is the fact that in some cases, multiple units may respond to a single incident, but may actually service _different_ patients (this is often true for traffic-related incidents, which frequently have multiple patients involved).
 
 Avoiding both the possibility of removing legitimate entries from the dataset while also identifying duplicated patients proved to be a challenge. Ultimately, we needed to reduce the raw dataset to two clean datasets: one where each observation is a single patient, and one where each observation is a single unit (either may be appropriate depending on the research question being explored).
 
@@ -129,7 +130,7 @@ Here $\boldsymbol{X}$ and $\boldsymbol{\beta}$ are identical to the earlier spec
 
 By including information about the neighborhood that each incident occurred in, we hoped to both account for any spatial autocorrelation as well as our inability to more directly measure vehicle travel time.
 
-Both of these models were fit using Bayesian estimation with the R package rstanarm. Due to its superior performance on both spatial autocorrelation issues and information criterion, we used the multilevel model for our interpretations (though results were similar for both models). Model assessment and results are discussed on the "Findings" page of this website.
+Both of these models were fit using Bayesian estimation with the R package rstanarm. Due to its superior performance on both spatial autocorrelation issues and information criterion, we used the multilevel model for our interpretations (though results were similar for both models). Model assessment and results are discussed in the [findings](https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/findings/response-time-modeling/) section of the website.
 
 <br>
 
