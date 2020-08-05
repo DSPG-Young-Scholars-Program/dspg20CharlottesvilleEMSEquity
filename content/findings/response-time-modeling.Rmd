@@ -271,7 +271,7 @@ Since few areas have extreme values for the local Moran’s I statistic, we did 
 
 #### Model Coefficients
 
-Having selected the neighborhood level model as the appropriate model, we move on to interpretations of the resulting coefficients. The following plot displays the effects of each variable included in the model when compared to a reference patient (in this case, the reference is a black women transported by ambulance with abuse of substance symptoms before COVID-19). The reference response time for this case is 9.9 minutes. As an example of coefficient interpretation, if the same woman instead had cardiovascular symptoms, but all other variables remained the same, we would expect an EMS unit to arrive in about 8.4 minutes, since the coefficient associated with cardiovascular symptoms is approximately 0.84.
+Having selected the neighborhood level model as the appropriate model, we move on to interpretations of the resulting coefficients. The following plot displays the effects of each variable included in the model when compared to a reference patient (in this case, the reference is a black woman transported by ambulance with abuse of substance symptoms before COVID-19). The reference response time for this case is 9.9 minutes. As an example of coefficient interpretation, if the same woman instead had cardiovascular symptoms, but all other variables remained the same, we would expect an EMS unit to arrive in about 8.4 minutes, since the coefficient associated with cardiovascular symptoms is approximately 0.84.
 
 <br>
 

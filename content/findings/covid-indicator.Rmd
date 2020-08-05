@@ -1,6 +1,6 @@
 ---
 title: "COVID-19 Symptoms"
-description: "How can we use EMS data to identify COVID-19 trends?"
+description: "Can we use EMS data to identify COVID-19 trends?"
 tags: ["R", "Geospatial"]
 weight: 4
 draft: false
@@ -14,9 +14,10 @@ output: html_document
 ```
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 # load libraries
+library(knitr)
 library(tidycensus)
 library(tidyr)
 library(sf)
@@ -29,7 +30,9 @@ library(purrr)
 library(leaflet.mapboxgl)
 
 # load in data
-source(here::here("src", "Profiling", "create_covid_indicator.R"));
+source(here::here("src", "Profiling", "create_covid_indicator.R"))
+
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 options(mapbox.accessToken = Sys.getenv("MAPBOX_TOKEN"))
 ```
@@ -52,7 +55,9 @@ theme_set(theme_minimal() +
 
 While we were obviously interested in identifying patterns in COVID-19 symptoms across demographic groups, time, and space, this portion of the project was also quite exploratory, as it was unclear how difficult it might be to isolate potential COVID-19 cases in a large EMS dataset.
 
-According to the Johns Hopkins Center for Systems Science and Engineering, as of June 9, 2020 (the most current date in our data), there were 258 confirmed cases and 8 deaths in Albemarle County, and 141 confirmed cases and 3 deaths in Charlottesville City.[^JHU] While experts expect that actual case counts may be as much as 10 times higher than the confirmed case counts[^NYT] it remains unclear whether this figure is reprsentative of the most severe cases, which are those most likely to appear in the EMS dataset. Given the uncertainty surrounding the total number of cases in the area as well as the proportion of cases that may be present in our dataset, it was unclear how effective an analysis of COVID-like symptoms would be. Still, we were curious to see whether any trends would emerge, and in doing so hoped to learn about the potential for future use of EMS data in evaluating the state of the pandemic.
+According to the Johns Hopkins Center for Systems Science and Engineering, as of June 9, 2020 (the most current date in our data), there were 258 confirmed cases and 8 deaths in Albemarle County, and 141 confirmed cases and 3 deaths in Charlottesville City.[^JHU] While experts expect that actual case counts may be as much as 10 times higher than the confirmed case counts[^NYT] it remains unclear whether this figure is reprsentative of the most severe cases, which are those most likely to appear in the EMS dataset. Given the uncertainty surrounding the total number of cases in the area as well as the proportion of cases that may be present in our dataset, it was unclear how effective an analysis of COVID-symptoms would be. Still, we were curious to see whether any trends would emerge, and in doing so hoped to learn about the potential for future use of EMS data in evaluating the state of the pandemic.
+
+<br>
 
 ### Mapping
 
@@ -65,16 +70,16 @@ city_neighborhoods <- st_read(here::here("data", "working", "neighborhood_demogr
 
 # load census tract geometries and population estimates for the county
 acs_total_pop_tract <- get_acs(geography = "tract",
-                                   year = 2018,
-                                   variables = c(total_population = "DP05_0001"),
-                                   state = "VA",
-                                   county = c("albemarle")) %>%
+                               year = 2018,
+                               variables = c(total_population = "DP05_0001"),
+                               state = "VA",
+                               county = c("albemarle")) %>%
   pivot_wider(names_from = variable,
               values_from = c(estimate, moe),
               names_glue = "{variable}_{.value}")
 
 acs_total_pop_tract_sp <- tigris::tracts(state = "VA", county = c("albemarle"),
-               cb = TRUE, year = 2018, class = "sf") %>%
+                                         cb = TRUE, year = 2018, class = "sf") %>%
   st_transform(crs = 4326) %>%
   left_join(acs_total_pop_tract, by = "GEOID")
 
@@ -134,15 +139,13 @@ summed_data <- joined %>%
 
 ```
 
-The map below breaks down the incident rates of our COVID-19 indicator across Charlottesville's neighborhoods and Albemarle County's census tracts. In this case, an incident is considered COVID-like when it includes at least one COVID-19 symptom (as described in the [Data & Methods](https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/methods/) page).
+The map below breaks down the incident rates of our COVID-19 indicator across Charlottesville's neighborhoods and Albemarle County's census tracts. In this case, an incident is considered COVID-like when it includes at least one COVID symptom (as described in the [Data & Methods](https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/methods/) page) tab.
 
-Few changes are visible when comparing the incidence of COVID-like symptoms before and after March 15, 2020, though there appears to be a slightly higher prevalence of COVID-like symptoms downtown and in neighborhoods south of downtown. Interestingly, these neighborhoods also have a higher proportion of black residents, which is consistent with widely-reported disparities in COVID-19 outcomes between black and white populations.
+Few changes are visible from before and after March 15, 2020, though there appears to be a slightly higher prevalence of COVID-like symptoms downtown and in neighborhoods south of downtown. Interestingly, these neighborhoods also have a higher proportion of Black residents, which is consistent with widely-reported disparities in COVID-19 outcomes between Black and white populations.
 
-Also of note is the slightly elevated incidence rate in Census Tract 105 to the east of the city, which includes a larger proportion of older residents who are at particular health risk when contracting COVID-19.
+<br>
 
-However, there appears to be a slight overall tendency for incidence to actually decrease in the COVID-19 era. This pattern may suggest that our indicator is not sensitive enough to COVID-19 cases, and that it may be incorporating too many other types of symptoms, masking out any effects of COVID-19 itself. We discuss this more below.
-
-```{r, echo=FALSE, out.width="100%"}
+```{r, echo=FALSE, out.width="100%", fig.height = 6}
 pre_period <- joined %>%
   filter(incident_date < cutoff) %>%
   filter(covid_indicator > symptom_threshold)
@@ -172,53 +175,79 @@ post_period_summed <- post_period %>%
 color_scale <- colorBin("BuPu", c(0, 0.4), c(0, 0.02, .05, .09, .13, .19, .27, 0.4))
 
 leaflet() %>%
-  addTiles() %>%
-  addMapPane(name = "border", zIndex = 450) %>%
-  addMapPane(name = "Pre COVID-19", zIndex = 440) %>%
-  addMapPane(name = "COVID-19 Era", zIndex = 440) %>%
+  #addTiles() %>%
   addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
+  addMapPane("border", zIndex = 410) %>%
   addPolygons(data = pre_period_summed,
               color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.7,
               fillColor = ~color_scale(rate_per_1000),
-              label = ~map(glue("<strong>{NAME}<br/></strong>
-                                COVID-like Incident Rate: {round(rate_per_1000, 2)}"), htmltools::HTML),
-              group = "Pre COVID-19",
-              options = pathOptions(pane = "Pre COVID-19")) %>%
+              label = ~map(glue("<strong>{NAME}</strong><br/>
+                                COVID-like Incident Rate Per 1000: {round(rate_per_1000, 2)}"), htmltools::HTML),
+              group = "Pre COVID-19 Era") %>%
   addPolygons(data = post_period_summed,
               color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.7,
               fillColor = ~color_scale(rate_per_1000),
-              label = ~map(glue("{NAME}<br/>
-                      COVID-like Incident Rate: {round(rate_per_1000, 2)}"), htmltools::HTML),
-              group = "COVID-19 Era",
-              options = pathOptions(pane = "COVID-19 Era")) %>%
+              label = ~map(glue("<strong>{NAME}</strong><br/>
+                      COVID-like Incident Rate Per 1000: {round(rate_per_1000, 2)}"), htmltools::HTML),
+              group = "During COVID-19 Era") %>%
   addPolylines(data = city_border, color="black", weight = 4, opacity = 0.8, options = pathOptions(pane = "border")) %>%
   addLegend("bottomright", pal = color_scale, values = post_period_summed$rate_per_1000,
             title = "Incident Rate Per 1000",
             opacity = .8) %>%
-  addLayersControl(baseGroups = c("Pre COVID-19", "COVID-19 Era"),
+  addLayersControl(baseGroups = c("Pre COVID-19 Era", "During COVID-19 Era"),
                    options = layersControlOptions(collapsed = FALSE))
 ```
 
-_Waiting on updated plot from Chase_
+<br>
 
-```{r, echo=FALSE, out.width="100%"}
+```{r}
+tmp <- get_acs(geography = "county",
+               year = 2018,
+               variables = c(white_pop = "B02001_002", 
+                             black_pop = "B02001_003", 
+                             latinx_pop = "B03002_012"),
+               state = "VA",
+               county = c("albemarle", "charlottesville")) %>%
+  pivot_wider(names_from = variable,
+              values_from = c(estimate, moe),
+              names_glue = "{variable}_{.value}")
+
+white_pop_estimate <- sum(tmp$white_pop_estimate)
+black_pop_estimate <- sum(tmp$black_pop_estimate)
+latinx_pop_estimate <- sum(tmp$latinx_pop_estimate)
+
+pop_estimates_by_race <- tibble(race = c("black or african american", "white", "hispanic or latino"),
+                                race_short = c("black", "white", "latinx"), 
+                                pop_estimate = c(black_pop_estimate, white_pop_estimate, latinx_pop_estimate))
+```
+
+<br>
+
+```{r, echo=FALSE, out.width="100%", fig.height = 10, fig.width = 15}
 ems$on_or_after_march_15th_2020 <- ymd(ems$incident_date) >= "2020-03-15"
 
 ems %>%
-  filter(race %in% c("black or african american", "white", "hispanic or latino", NA)) %>%
+  filter(race %in% c("black or african american", "white", "hispanic or latino")) %>%
   group_by(race, covid1, on_or_after_march_15th_2020) %>%
   count() %>%
   filter(covid1 == 1) %>%
-  ggplot(., aes(x = race, y = n, fill = on_or_after_march_15th_2020)) +
-    geom_bar(stat = "identity", position = "dodge") + 
-    geom_text(aes(label=n), position=position_dodge(width=0.9), vjust=-0.25) + 
-    labs(title = "Patients with at Least One Covid-Like Symptom", x = "Racial Group", y = "Number of Patients") + 
-    scale_fill_discrete(name = "", labels = c("before 2020-03-15", "after 2020-03-15")) + 
-    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1), legend.position = "bottom")
-    
+  inner_join(pop_estimates_by_race, by = "race") %>%
+  mutate(prop_of_pop = n / pop_estimate) %>%
+  ggplot(., aes(x = race_short, y = prop_of_pop, fill = on_or_after_march_15th_2020)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  geom_text(aes(label = round(prop_of_pop, digits = 2)), position=position_dodge(width=0.9), vjust=-0.25) + 
+  labs(title = "Proportion of EMS Patients with at Least One Covid-like Symptom", x = "Racial Group", y = "Number of Patients") + 
+  scale_fill_manual(values = cbbPalette, name = "", labels = c("Pre-COVID-19", "During COVID-19")) + 
+  theme(legend.position = "bottom",
+        axis.title = element_blank(),
+        legend.key.size = unit(1, "line"),
+        legend.text = element_text(size = 16, color = "gray30"),
+        legend.title = element_text(size = 22, color = "gray10"))
 ```
+
+<br>
 
 ```{r, echo=FALSE}
 covid_symptoms <- c("cough", "fever", "sob", "myalgia", "chills", "fatigue", "headache", "diarrhea", "nausea_or_vomit", "hypoxemia", "hypoxemia_no_improvement", "cyanosis", "covid_in_impressions", "young_person_stroke", "young_person_cardiac_arrest", "cough_sob_meds_catch_all")
@@ -258,11 +287,58 @@ covid_symptom_props_by_race <- covid_symptom_counts_by_race %>%
   mutate_at(covid_symptoms, divide, denom = quote(total))
 
 racial_groups <- covid_symptom_props_by_race$race
-transposed <- covid_symptom_props_by_race %>% select(-c("race")) %>% t(.)
-colnames(transposed) <- racial_groups
-row.names(transposed) <- c("cough", "fever", "shortness of breath", "myalgia", "chills", "fatigue", "headache", "diarrhea", "nausea/vomit", "hypoxemia", "hypoxemia (no improvement)", "cyanosis", "COVID in impressions", "young person stroke", "young person cardiac arrest", "breathing medications", "patient count")
+transposed <- covid_symptom_props_by_race %>% 
+  mutate(across(-race, ~round(., 2))) %>%
+  select(-c("race")) %>% 
+  t(.)
 
-knitr::kable(transposed, digits = 2)
+
+colnames(transposed) <- str_to_title(racial_groups)
+row.names(transposed) <- str_to_title(c("cough", "fever", "shortness of breath", "myalgia", "chills", "fatigue", "headache", "diarrhea", "nausea/vomit", "hypoxemia", "hypoxemia (no improvement)", "cyanosis", "provider impression of COVID-19", "stroke (young person)", "cardiac arrest (young person)", "breathing medications", "patient count"))
+
+
+r1 <- which.max(transposed[1,])
+r2 <- which.max(transposed[2,])
+r3 <- which.max(transposed[3,])
+#r4 <- which.max(transposed[4,])
+r5 <- which.max(transposed[5,])
+r6 <- which.max(transposed[6,])
+r7 <- which.max(transposed[7,])
+r8 <- which.max(transposed[8,])
+r9 <- which.max(transposed[9,])
+r10 <- which.max(transposed[10,])
+r11 <- which.max(transposed[11,])
+#r12 <- which.max(transposed[12,])
+r13 <- which.max(transposed[13,])
+r14 <- which.max(transposed[14,])
+r15 <- which.max(transposed[15,])
+r16 <- which.max(transposed[16,])
+
+col <- seq_len(ncol(transposed))
+
+transposed[1,] <- transposed[1,] %>% kableExtra::cell_spec(bold = col == r1, color = ifelse(col == r1, "red", "black"))
+transposed[2,] <- transposed[2,] %>% kableExtra::cell_spec(bold = col == r2, color = ifelse(col == r2, "red", "black"))
+transposed[3,] <- transposed[3,] %>% kableExtra::cell_spec(bold = col == r3, color = ifelse(col == r3, "red", "black"))
+transposed[4,] <- transposed[4,] %>% kableExtra::cell_spec(color = "black")
+transposed[5,] <- transposed[5,] %>% kableExtra::cell_spec(bold = col == r5, color = ifelse(col == r5, "red", "black"))
+transposed[6,] <- transposed[6,] %>% kableExtra::cell_spec(bold = col == r6, color = ifelse(col == r6, "red", "black"))
+transposed[7,] <- transposed[7,] %>% kableExtra::cell_spec(bold = col == r7, color = ifelse(col == r7, "red", "black"))
+transposed[8,] <- transposed[8,] %>% kableExtra::cell_spec(bold = col == r8, color = ifelse(col == r8, "red", "black"))
+transposed[9,] <- transposed[9,] %>% kableExtra::cell_spec(bold = col == r9, color = ifelse(col == r9, "red", "black"))
+transposed[10,] <- transposed[10,] %>% kableExtra::cell_spec(bold = col == r10, color = ifelse(col == r10, "red", "black"))
+transposed[11,] <- transposed[11,] %>% kableExtra::cell_spec(bold = col == r11, color = ifelse(col == r11, "red", "black"))
+transposed[12,] <- transposed[12,] %>% kableExtra::cell_spec(color = "black")
+transposed[13,] <- transposed[13,] %>% kableExtra::cell_spec(bold = col == r13, color = ifelse(col == r13, "red", "black"))
+transposed[14,] <- transposed[14,] %>% kableExtra::cell_spec(bold = col == r14, color = ifelse(col == r14, "red", "black"))
+transposed[15,] <- transposed[15,] %>% kableExtra::cell_spec(bold = col == r15, color = ifelse(col == r15, "red", "black"))
+transposed[16,] <- transposed[16,] %>% kableExtra::cell_spec(bold = col == r16, color = ifelse(col == r16, "red", "black"))
+
+transposed %>% 
+  kable(booktabs = TRUE, escape = FALSE, digits = 2, caption = "Summary of Incidence of Symptoms Used in COVID-19 Indicator") %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "bordered", "hover"), full_width = FALSE) %>%
+  kableExtra::column_spec(1, bold = T) %>%
+  kableExtra::row_spec(nrow(transposed), bold = T, color = "white", background = "#666666") %>%
+  kableExtra::column_spec(1, extra_css = "border-right: 1px solid")
 ```
 
 
@@ -275,47 +351,32 @@ While our initial exploration did not seem to indicate much variation in COVID-l
 &+ (\mbox{COVID era}) \times (\boldsymbol{\beta^T_5}(\mbox{gender}) + \boldsymbol{\beta^T_6}({\mbox{race}}) + \boldsymbol{\beta^T_7}(\mbox{age range}))
 \end{align*}
 
-where $\pi$ represents the probability of a patient being classified as COVID-like based on our COVID-19 indicator (which incorporates the presence of various symptoms). We initially included an interaction term between COVID era and the rest of our variables to determine whether the changes in COVID-19 symptoms had varied across the levels of these variables. We ran a model of this general form with three different specifications of our outcome variable. In the first specification, we classifed patients as COVID-like if they had at least 1 COVID-like symptom. In the second, we used 2 COVID-like symptoms as the cutoff, and in the third we used 3 COVID-like symptoms as the cutoff. Differences in results at varying levels of "strictness" in classying COVID-like cases would potentially allow us to home in on an appropriate cutoff when classifying COVID-19 cases in this dataset.
+where $\pi$ represents the probability of a patient being classified as COVID-like based on our COVID indicator (which incorporates the presence of various symptoms). We initially included an interaction term between COVID era and the rest of our variables to determine whether the changes in COVID symptoms had varied across the levels of these variables. We ran a model of this general form with three different specifications of our outcome variable. In the first specification, we classifed patients as COVID-like if they had at least 1 COVID-like symptom. In the second, we used 2 COVID-like symptoms as the cutoff, and in the third we used 3 COVID-like symptoms as the cutoff. Differences in results at varying levels of "strictness" in classying COVID-like cases would potentially allow us to home in on an appropriate cutoff when classifying COVID cases in this dataset.
 
-Unfortunately, as was likely given our visual exploration of the data, none of these models produced any notable findings. In retrospect, this result seems entirely intuitive. Between the uncertainty surrounding the actual prevalence of COVID-19 cases in our dataset (described above) and our inclusive approach in classifying COVID-like symptoms, we likely have incorporated a lot of noise into our COVID-19 indicator variable. That is, our indicator likely captures many of the COVID-19 cases that do exist in the datset, but is not specific enough, and so also captures so many non-COVID-19 cases that we are unable to discern subtle trends in COVID-19 symptoms.
+Unfortunately, as was likely given our visual exploration of the data, none of these models produced any notable findings. In retrospect, this result seems entirely intuitive. Between the uncertainty surrounding the actual prevalence of COVID cases in our dataset (described above) and our inclusive approach in classifying COVID-like symptoms, we likely have incorporated a lot of noise into our COVID indicator variable. That is, our indicator likely captures many of the COVID cases that do exist in the datset, but is not specific enough, and so also captures so many non-COVID cases that we are unable to discern subtle trends in COVID symptoms.
 
 ### Future Directions
 
-While disappointing, this outcome does provide some important takeaways for similar research going forward.
+While disappointing, this outcome does provide important ramifications for similar research going forward.
 
-First, for EMS data to be a valuable source of information in assessing the course of the COVID-19 pandemic, a more thorough effort to classify COVID-19 symptoms accurately is required. Given the messy nature of EMS data, classifying symptoms effectively is a challenge. However, a more complex approach could certainly be implemented. Improvements on our methodology may be:
+First, for EMS data to be a valuable source of information in assessing the course of the COVID-19 pandemic, a more thorough effort to classify COVID symptoms accurately is required. Given the messy nature of EMS data, classifying symptoms effectively is a challenge. However, a more complex approach could certainly be implemented. Improvements on our methodology may be:
 
 * Link EMS data with data on patient outcomes
-
     * Being able to link the symptom data reported by EMS with COVID-19 results could vastly improve our ability to determine which symptoms in the EMS dataset are actually important in determining a COVID-19 diagnosis.
-    
-    <br>
 
 * Implement more complex logic when classifying symptoms
+    * For instance, a certain symptom may be a strong indicator of COVID, but only in the presence of another symptom as well
 
-    * For instance, a certain symptom may be a strong indicator of COVID-19, but only in the presence of another symptom as well
-    
-    <br>
-    
 * Include a weighting scheme for more important symptoms
+    * This could reduce noise by highlighting those symptoms thare are known to be particularly indicative of COVID
 
-    * This could reduce noise by highlighting those symptoms thare are known to be particularly indicative of COVID-19
-    
-    <br>
-    
-* Develop an indicator using a dataset from an area with a greater proportion of COVID-19 cases
-
+* Develop an indicator using a dataset from an area with a greater proportion of COVID cases
     * More cases may make it easier to detect cases in a dataset, and allow for a refinement of the symptoms included. This more specific scheme could then be implemented in other areas with fewer case counts.
-    
-    <br>
-    
+
 * Link multiple EMS datasets
+    * This could improve the sensitivity of our indicator, but perhaps more importantly would allow for an assessment of the standardization across EMS data platforms. In the future, a large-scale network of EMS data could be a valuable tool in identifying emerging diseases 
 
-    * This could improve the sensitivity of our indicator, but perhaps more importantly would allow for an assessment of the standardization across EMS data platforms. In the future, a large-scale network of EMS data could be a valuable tool in identifying emerging infectious diseases 
-    
-    <br>
-
-It will also be valuable to revisit this topic continuously as the medical understanding of COVID-19 evolves. Symptoms that were once thought to be clear identifiers of the virus may become less important, and vice versa. The null results in our preliminary exploration in this area should not be interpreted as a referendum on the value of EMS data in understanding COVID-19, but as a guide to the considerations and improvements that will need to be made to more effectively use EMS data as a tool to fight emerging infectious diseases in the future.
+It will also be valuable to revisit this topic continuously as the medical understanding of COVID-19 evolves. Symptoms that were once thought to be clear identifiers of the virus may become less important, and vice versa. The null results in our preliminary exploration in this area should not be interpreted as a referendum on the value of EMS data in understanding COVID-19, but as a guide to the considerations and improvements that will need to be made to more effectively use EMS data as a tool to fight emerging diseases in the future.
 
 [^JHU]: https://coronavirus.jhu.edu/us-map
 
