@@ -1,7 +1,6 @@
 ---
 title: "COVID-19 Symptoms"
 description: "Can we use EMS data to identify COVID-19 trends?"
-tags: ["R", "Geospatial"]
 weight: 4
 draft: false
 output: html_document
@@ -305,7 +304,7 @@ transposed <- covid_symptom_props_by_race %>%
 
 
 colnames(transposed) <- str_to_title(racial_groups)
-row.names(transposed) <- str_to_title(c("cough", "fever", "shortness of breath", "myalgia", "chills", "fatigue", "headache", "diarrhea", "nausea/vomit", "hypoxemia", "hypoxemia (no improvement)", "cyanosis", "provider impression of COVID-19", "stroke (young person)", "cardiac arrest (young person)", "breathing medications", "patient count"))
+row.names(transposed) <- c(str_to_title(c("cough", "fever", "shortness of breath", "myalgia", "chills", "fatigue", "headache", "diarrhea", "nausea/vomit", "hypoxemia", "hypoxemia (no improvement)", "cyanosis")), "Provider Impression of COVID-19", str_to_title(c("stroke (young person)", "cardiac arrest (young person)", "breathing medications", "patient count")))
 
 
 r1 <- which.max(transposed[1,])

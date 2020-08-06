@@ -20,6 +20,11 @@ knitr::opts_chunk$set(echo = TRUE)
   width: 25%;
 }
 
+.column_sponsor {
+  float: left;
+  width: 33.3333333%
+}
+
 .row:after {
   content: "";
   display: table;
@@ -95,9 +100,30 @@ Kathryn Linehan, Research Scientist (insert link)
 
 <br>
 
+
 ### Project Sponsors/Stakeholders {style=text-align:center}
 
-##### [Photos, information, and/or links about your sponsor go about here. You may want to use materials that your sponsors have already shared with you about their institution or coordinate with your stakeholders to include pertinent information here.] {style=text-align:center}
+<div class="column_sponsor">
+![Emily Peliccia](/findings/head_shots/Emily_Peliccia.jpg "Emily Peliccia"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
+
+Acting Fire Chief, Charlottesville Fire Department
+</div>
+
+<div class="column_sponsor">
+![Dan Eggleston](/findings/head_shots/Dan_Eggleston.jpg "Dan Eggleston"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
+
+Fire Rescue Chief, Albemarle County
+</div>
+
+<div class="column_sponsor">
+![Michael Williams](/findings/head_shots/Michael_Williams.jpeg "Michael Williams"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
+
+Associate Professor of Surgery, University of Virginia Medical School
+</div>
+
+<br>
+<br>
+<br>
 
 ### Acknowledgements {style=text-align:center}
 
@@ -106,7 +132,7 @@ Damon Pettitt, GISP, Senior Systems Analyst for Fire Rescue, Albemarle County, V
 [Josh Goldstein, Research Assistant Professor](https://biocomplexity.virginia.edu/joshua-goldstein)   
 
 <div class="justify">
-We would like to thank Lucas and Damon for their help and guidance with the EMS data. We appreciate the email exchanges, phone calls, and all of the time that they put in to gather, adjust, and send the data to us.   
+We would like to thank Lucas and Damon for their help and guidance with the EMS data. We appreciate the prompt email exchanges, phone/Zoom calls, and all of the time that they put in to gather, adjust, send, and re-send data. 
 
 We would like to thank Josh for sharing his expertise in statistical modeling techniques and synthetic population estimation.
 </div>
