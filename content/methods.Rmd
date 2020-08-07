@@ -109,7 +109,7 @@ Where COVID era is an indicator variable with value 1 for incidents after March 
 
 We included an interaction term for "COVID Era" so we could assess whether the effects on response times of any of the other factors included in the model have changed with the advent of the COVID-19 pandemic.
 
-We chose these uniformitive priors due to our lack of any strong prior beliefs about the coefficients. On a technical note, these priors are in the column space of the Q matrix of a QR decomposition of the design matrix, which decreases convergence time of the MCMC algorithm. 
+We chose these uninformative priors due to our lack of any strong prior beliefs about the coefficients. On a technical note, these priors are in the column space of the Q matrix of a QR decomposition of the design matrix, which decreases convergence time of the MCMC algorithm. 
 
 This model performed reasonably well. However there were confounding spatial effects, and it failed to control for travel distance to location. 
 
@@ -126,7 +126,7 @@ log(\mbox{Response Time})\vert\alpha,\boldsymbol{\beta},\boldsymbol{b},\sigma \s
 \boldsymbol{\Sigma} \sim \mbox{Decomposition of Covariance}(1, 1, 1, 1)
 \]
 
-Here $\boldsymbol{X}$ and $\boldsymbol{\beta}$ are identical to the earlier specification and have been written as such for simplicity. $\boldsymbol{Z}$ is a matrix encoding deviations in intercepts and covariates across neighborhoods. The prior for $\boldsymbol\Sigma$ is complicated to write out, and is specificed using the `rstanarm` function `decov(1,1,1,1)`. More can be found on this specification [here](http://mc-stan.org/rstanarm/articles/glmer.html).
+Here $\boldsymbol{X}$ and $\boldsymbol{\beta}$ are identical to the earlier specification and have been written as such for simplicity. $\boldsymbol{Z}$ is a matrix encoding deviations in intercepts and covariates across neighborhoods. The prior for $\boldsymbol\Sigma$ is complicated to write out, and is specified using the `rstanarm` function `decov(1,1,1,1)`. More can be found on this specification [here](http://mc-stan.org/rstanarm/articles/glmer.html).
 
 By including information about the neighborhood that each incident occurred in, we hoped to both account for any spatial autocorrelation as well as our inability to more directly measure vehicle travel distance.
 
@@ -152,7 +152,7 @@ After multiple conversations with medical professionals, we decided to focus on 
 * Cyanosis
 * Stroke/cardiac arrest (in young people)
 
-Because information about the presence of these symptoms could be encoded in various places in the dataset (for instance, in EMS provider impressions, patient complaints, vital sign results, etc.), we consolidated the results from multiple variables as we searched for these symptoms. However, there were a variety of ways many of these symptoms could be recorded. For instance, shortness of breath could be recorded as "difficulty breathing", "shortness of breath", "sob", etc. Below we present a summary of the final classification system we used to develop our indicator of COVID-like symptoms. At this point, we had a record of the frequency that these symptoms appeard in the dataset, and could use our combined indicator to assess trends in these symptoms in Charlottesville and Albemarle.
+Because information about the presence of these symptoms could be encoded in various places in the dataset (for instance, in EMS provider impressions, patient complaints, vital sign results, etc.), we consolidated the results from multiple variables as we searched for these symptoms. However, there were a variety of ways many of these symptoms could be recorded. For instance, shortness of breath could be recorded as "difficulty breathing", "shortness of breath", "sob", etc. Below we present a summary of the final classification system we used to develop our indicator of COVID-like symptoms. At this point, we had a record of the frequency that these symptoms appeared in the dataset, and could use our combined indicator to assess trends in these symptoms in Charlottesville and Albemarle.
 
 ```{r}
 indicator_summary <- readr::read_csv(here::here("data", "working", "covid_indicator_table_updated-copy.csv")) %>% select(-X5)
