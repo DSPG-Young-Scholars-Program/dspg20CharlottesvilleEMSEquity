@@ -68,7 +68,7 @@ h3, h4 {
 <li>Covariates to control for:
 <ul>
 <li>Type of vehicle responding</li>
-<li>Travel time to location</li>
+<li>Travel distance to location</li>
 <li>Time of Day</li>
 <li>Possible Spatial Effects</li>
 </ul></li>
@@ -96,7 +96,7 @@ log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{ii
 <p>Where COVID era is an indicator variable with value 1 for incidents after March 15th, 2020 and 0 otherwise. Note that each bolded coefficient actually represents a set of coefficients that accounts for the multiple categorical levels within each variable type.</p>
 <p>We included an interaction term for &quot;COVID Era&quot; so we could assess whether the effects on response times of any of the other factors included in the model have changed with the advent of the COVID-19 pandemic.</p>
 <p>We chose these uniformitive priors due to our lack of any strong prior beliefs about the coefficients. On a technical note, these priors are in the column space of the Q matrix of a QR decomposition of the design matrix, which decreases convergence time of the MCMC algorithm.</p>
-<p>This model performed reasonably well. However there were confounding spatial effects, and it failed to control for travel time to location.</p>
+<p>This model performed reasonably well. However there were confounding spatial effects, and it failed to control for travel distance to location.</p>
 <p>In an attempt to control for these issues, we fit the following multilevel model:</p>
 <p><span class="math display">\[
 log(\mbox{Response Time})\vert\alpha,\boldsymbol{\beta},\boldsymbol{b},\sigma \sim N(\alpha + \boldsymbol{X\beta} + \boldsymbol{Zb}, \sigma^2\boldsymbol{I})
@@ -108,7 +108,7 @@ log(\mbox{Response Time})\vert\alpha,\boldsymbol{\beta},\boldsymbol{b},\sigma \s
 \boldsymbol{\Sigma} \sim \mbox{Decomposition of Covariance}(1, 1, 1, 1)
 \]</span></p>
 <p>Here <span class="math inline">\(\boldsymbol{X}\)</span> and <span class="math inline">\(\boldsymbol{\beta}\)</span> are identical to the earlier specification and have been written as such for simplicity. <span class="math inline">\(\boldsymbol{Z}\)</span> is a matrix encoding deviations in intercepts and covariates across neighborhoods. The prior for <span class="math inline">\(\boldsymbol\Sigma\)</span> is complicated to write out, and is specificed using the <code>rstanarm</code> function <code>decov(1,1,1,1)</code>. More can be found on this specification <a href="http://mc-stan.org/rstanarm/articles/glmer.html">here</a>.</p>
-<p>By including information about the neighborhood that each incident occurred in, we hoped to both account for any spatial autocorrelation as well as our inability to more directly measure vehicle travel time.</p>
+<p>By including information about the neighborhood that each incident occurred in, we hoped to both account for any spatial autocorrelation as well as our inability to more directly measure vehicle travel distance.</p>
 <p>Both of these models were fit using Bayesian estimation with the R package rstanarm. Due to its superior performance on both spatial autocorrelation issues and information criterion, we used the multilevel model for our interpretations (though results were similar for both models). Model assessment and results are discussed in the <a href="https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/findings/response-time-modeling/">findings</a> section of the website.</p>
 <p><br></p>
 </div>

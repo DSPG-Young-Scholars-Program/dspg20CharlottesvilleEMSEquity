@@ -77,7 +77,7 @@ We used an iterative process to specify our final model. We began by explicitly 
     *	Whether the COVID-19 pandemic had begun yet
 *	Covariates to control for:
     *	Type of vehicle responding
-    *	Travel time to location
+    *	Travel distance to location
     *	Time of Day
     *	Possible Spatial Effects
 
@@ -111,7 +111,7 @@ We included an interaction term for "COVID Era" so we could assess whether the e
 
 We chose these uniformitive priors due to our lack of any strong prior beliefs about the coefficients. On a technical note, these priors are in the column space of the Q matrix of a QR decomposition of the design matrix, which decreases convergence time of the MCMC algorithm. 
 
-This model performed reasonably well. However there were confounding spatial effects, and it failed to control for travel time to location. 
+This model performed reasonably well. However there were confounding spatial effects, and it failed to control for travel distance to location. 
 
 In an attempt to control for these issues, we fit the following multilevel model:
 
@@ -128,7 +128,7 @@ log(\mbox{Response Time})\vert\alpha,\boldsymbol{\beta},\boldsymbol{b},\sigma \s
 
 Here $\boldsymbol{X}$ and $\boldsymbol{\beta}$ are identical to the earlier specification and have been written as such for simplicity. $\boldsymbol{Z}$ is a matrix encoding deviations in intercepts and covariates across neighborhoods. The prior for $\boldsymbol\Sigma$ is complicated to write out, and is specificed using the `rstanarm` function `decov(1,1,1,1)`. More can be found on this specification [here](http://mc-stan.org/rstanarm/articles/glmer.html).
 
-By including information about the neighborhood that each incident occurred in, we hoped to both account for any spatial autocorrelation as well as our inability to more directly measure vehicle travel time.
+By including information about the neighborhood that each incident occurred in, we hoped to both account for any spatial autocorrelation as well as our inability to more directly measure vehicle travel distance.
 
 Both of these models were fit using Bayesian estimation with the R package rstanarm. Due to its superior performance on both spatial autocorrelation issues and information criterion, we used the multilevel model for our interpretations (though results were similar for both models). Model assessment and results are discussed in the [findings](https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/findings/response-time-modeling/) section of the website.
 

@@ -420,21 +420,22 @@ volume_change <- pre_daily %>%
 color_pal <- c('#762a83','#af8dc3','#e7d4e8','#f7f7f7','#d9f0d3')
 sf_map_colors <- rev(c("#ed9ab1", "#EBE8E8",'#92b2df', "#2f75b3", "#163670"))
 
-color_scale <- colorBin(sf_map_colors, c(0, 1.5), c(0.1, 0.35, 0.65, 0.90, 1.10, 1.3))
+color_scale <- colorBin(sf_map_colors, 100 * c(0, 1.5), 100 * c(0.1, 0.35, 0.65, 0.90, 1.10, 1.3))
 
 volume_change %>%
+  mutate(change_ratio = change_ratio * 100) %>%
   leaflet(width = "100%") %>%
   addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
   addPolygons(color = "#444444", weight = 0.5, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.7,
               fillColor = ~color_scale(change_ratio),
               label = ~map(glue("<strong>{NAME}</strong><br/>
-                                Ratio of Daily Incident Rate: {round(change_ratio, 2)}"), htmltools::HTML)) %>%
+                                Percentage of Regular Call Volume During COVID-19: {round(change_ratio, 2)}%"), htmltools::HTML)) %>%
   addPolygons(data = city_border,
               color = "#222222", weight = 3, smoothFactor = 0.5,
               fill = NA) %>%
   addLegend("bottomright", pal = color_scale, values = ~change_ratio,
-            title = htmltools::HTML("Ratio of Daily Incidents:<br/>Post COVID-19 to Pre COVID-19"),
+            title = htmltools::HTML("Percentage of Regular Call Volume During COVID-19"),
             opacity = .8,
             labFormat = labelFormat(suffix = "%", between = " to "))
 
