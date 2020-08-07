@@ -111,7 +111,7 @@ We included an interaction term for "COVID Era" so we could assess whether the e
 
 We chose these uninformative priors due to our lack of any strong prior beliefs about the coefficients. On a technical note, these priors are in the column space of the Q matrix of a QR decomposition of the design matrix, which decreases convergence time of the MCMC algorithm. 
 
-This model performed reasonably well. However there were confounding spatial effects, and it failed to control for travel distance to location. 
+This model performed reasonably well. However, there were confounding spatial effects, and it failed to control for travel distance to location. 
 
 In an attempt to control for these issues, we fit the following multilevel model:
 

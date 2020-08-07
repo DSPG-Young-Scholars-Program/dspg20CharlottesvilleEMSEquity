@@ -272,7 +272,7 @@ leaflet(width = "100%") %>%
 
 <br>
 
-While these patterns describe the demographic makeup of the general population, it wasn't clear whether these patterns would generalize to the population represented in the EMS dataset. Unsurprisingly, black and white patients make up the vast majority of the EMS calls reported between late 2016 and mid 2020, but differences in age distribution across racial categories are present. The large proportion of young adults amongst the asian population may be a result of the presence of the university, which has a higher representation of asians amongst its student population than do the city and county as a whole. Similar patterns may be at play in the slight bump at young ages for black patients as well. While this pattern is less noticable for whites, this is likely a result of a generally larger white population muting out the effects of the university demographics. Given the increased risks of COVID-19 for older adults, the higher representation of blacks and whites at older ages is worth noting when considering groups at highest risk in Charlottesville.
+While these patterns describe the demographic makeup of the general population, it wasn't clear whether these patterns would generalize to the population represented in the EMS dataset. Unsurprisingly, black and white patients make up the vast majority of the EMS calls reported between late 2016 and mid 2020, but differences in age distribution across racial categories are present. The large proportion of young adults amongst the Asian population may be a result of the presence of the university, which has a higher representation of Asians amongst its student population than do the city and county as a whole. Similar patterns may be at play in the slight bump at young ages for black patients as well. While this pattern is less noticeable for whites, this is likely a result of a generally larger white population muting out the effects of the university demographics. Given the increased risks of COVID-19 for older adults, the higher representation of blacks and whites at older ages is worth noting when considering groups at highest risk in Charlottesville.
 
 <br>
 
@@ -368,7 +368,7 @@ ggplot(plot_data) +
 
 <br>
 
-Call volume is not dropping uniformly across Charlottesville and Albemarle. The following map makes it clear that areas immediately surrounding the University have experienced the most drastic drop in call volume, which is almost certainly related to the departure of students from campus after the beginning of the pandemic (unsurprisingly, this is accompanied by a noticable drop in alcohol-related incidents). Similarly, areas surrounding downtown have also seen a more noticable decrease, likely related to the fewer interactions taking place in these public spaces after many bars and restaurants closed in the early stages of the pandemic.
+Call volume is not dropping uniformly across Charlottesville and Albemarle. The following map makes it clear that areas immediately surrounding the University have experienced the most drastic drop in call volume, which is almost certainly related to the departure of students from campus after the beginning of the pandemic (unsurprisingly, this is accompanied by a noticeable drop in alcohol-related incidents). Similarly, areas surrounding downtown have also seen a more noticeable decrease, likely related to the fewer interactions taking place in these public spaces after many bars and restaurants closed in the early stages of the pandemic.
 
 <br>
 

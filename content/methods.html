@@ -96,7 +96,7 @@ log(\mbox{Response Time})_i\vert \alpha, \beta_1,\dots\beta_9,\sigma \overset{ii
 <p>Where COVID era is an indicator variable with value 1 for incidents after March 15th, 2020 and 0 otherwise. Note that each bolded coefficient actually represents a set of coefficients that accounts for the multiple categorical levels within each variable type.</p>
 <p>We included an interaction term for &quot;COVID Era&quot; so we could assess whether the effects on response times of any of the other factors included in the model have changed with the advent of the COVID-19 pandemic.</p>
 <p>We chose these uninformative priors due to our lack of any strong prior beliefs about the coefficients. On a technical note, these priors are in the column space of the Q matrix of a QR decomposition of the design matrix, which decreases convergence time of the MCMC algorithm.</p>
-<p>This model performed reasonably well. However there were confounding spatial effects, and it failed to control for travel distance to location.</p>
+<p>This model performed reasonably well. However, there were confounding spatial effects, and it failed to control for travel distance to location.</p>
 <p>In an attempt to control for these issues, we fit the following multilevel model:</p>
 <p><span class="math display">\[
 log(\mbox{Response Time})\vert\alpha,\boldsymbol{\beta},\boldsymbol{b},\sigma \sim N(\alpha + \boldsymbol{X\beta} + \boldsymbol{Zb}, \sigma^2\boldsymbol{I})
