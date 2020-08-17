@@ -305,6 +305,8 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
   facet_grid(term_group ~ ., 
              scales = "free_y",
              space = "free_y")
+
+#ggsave(here::here("output", "coef_plot.png"), device = "png", height = 12, width = 15)
 ```
 
 <br>
