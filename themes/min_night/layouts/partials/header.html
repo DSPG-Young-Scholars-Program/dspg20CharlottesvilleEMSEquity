@@ -63,10 +63,11 @@
       src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
     </script>
     {{ end }}
+    
 
     <body id = "bigbody">
         <nav class="navbar navbar-default navbar-fixed-top">
-            <div class="container">
+            <div class="container" style="width:800px; margin: auto;">
                 <div class="navbar-header">
                     <a class="navbar-brand visible-xs" href="#">{{ .Title }}</a>
                     <button class="navbar-toggle" data-target=".navbar-collapse" data-toggle="collapse">
@@ -78,13 +79,15 @@
                 <div class="collapse navbar-collapse">
                     {{ if .Site.Menus.main }}
                         <ul class="nav navbar-nav">
+                          <li class="header_img">
+                            <img class="img-responsive" src="{{ .Site.BaseURL }}img/AEMLogoGatesColors-11.png" alt="Whoopsies, this is my bad side!" style = "margin: 0 auto; height: 42px"></li>
                             {{ range sort .Site.Menus.main }}
                                 <li><a href="{{ .URL }}">{{ .Name }}</a></li>
                             {{ end }}
                         </ul>
                     {{ end }}
                     {{ if .Site.Menus.icon }}
-                        <ul class="nav navbar-nav navbar-right">
+                        <ul class="nav navbar-nav">
                             {{ range sort .Site.Menus.icon }}
                                 <li class="navbar-icon"><a href="{{ .URL }}"><i class="{{ .Name }}"></i></a></li>
                             {{ end }}
@@ -94,3 +97,5 @@
                 </div>
             </div>
         </nav>
+        
+        

@@ -3,15 +3,36 @@
 <main class = "content-box">
 
     <div class="intro">
-
-        <div class="avatar">
-            <img class="img-responsive" src="{{ .Site.BaseURL }}img/{{ .Site.Params.logo }}" alt="Whoopsies, this is my bad side!" style = "margin: 0 auto;">
-            <h1>{{ .Title }}</h1>
+        
+        <div style = "margin-top: 5px">
+            <h2>{{ .Site.Params.description }}</h2>
         </div>
         
-        
-        <div style = "margin-top: 50px">
-            <h2>{{ .Site.Params.description }}</h2>
+        <div>
+          <h2>Background</h2>
+          <div style="text-align: justify">
+          In recent years, public health efforts have begun to focus increasingly on the social determinants of health as a means of understanding the prevailing health inequalities in the United States and across the world. While many of these determinants very clearly relate to population health (access to health care resources, for instance), others are more subtle in their health impacts, like residential segregation, education, and cultural values.<sup>1</sup> While disparities in health outcomes across socio-economic and racial groups exist around the world, there are few places where they are as stark as in the United States.<sup>2,3,4</sup> The COVID-19 pandemic has only emphasized these prevailing patterns: while comprehensive studies are still underway, preliminary research indicates that Black Americans make up a significantly outsized portion of the hospitalizations related to COVID-19.<sup>5</sup>
+          </div>
+          <h2>Project Goals</h2>
+          <div style="text-align: justify">
+          We are partnering with Charlottesville City and Albemarle County, Virginia to understand the role that the delivery of Emergency Medical Services (EMS) may play in these documented health disparities. We seek to understand how the COVID-19 pandemic has affected EMS operations, and whether these changes may disproportionately impact certain populations in the Charlottesville area.
+          </div>
+          <h2>Approach</h2>
+          <div style="text-align: justify">
+          Using a database of EMS incidents in Charlottesville and Albemarle spanning the course of several years, we attempt to characterize the changes in call volume across the COVID-19 pandemic and identify any other potential patterns in EMS operations over the same time period. We also develop a model to predict EMS response times from various demographic variables in an attempt to understand whether disparities in service delivery exist for various populations. Finally, with significant input from local medical professionals, we attempt to use the data regularly recorded by EMS providers to identify potential COVID-19 cases in the dataset, and model change in the prevalence of this indicator across the pandemic.
+          </div>
+          <hr />
+          <div style="text-align: justify">
+          1: Healthy People 2020 [Internet]. Washington, DC: U.S. Department of Health and Human Services, Office of Disease Prevention and Health Promotion [cited August 8, 2020]. Available from: https://www.healthypeople.gov/2020/topics-objectives/topic/social-determinants-of-health.
+          <br />
+          2: Hero, J. O., Zaslavsky, A. M., & Blendon, R. J. (2017). The United States leads other nations in differences by income in perceptions of health and health care. <i>Health Affairs</i>, 36(6), 1032-1040.
+          <br />
+          3: Adler, N. E., & Rehkopf, D. H. (2008). US disparities in health: descriptions, causes, and mechanisms. <i>Annual Review of Public Health</i>, 29, 235-252.
+          <br />
+          4: Marmot, M. (2005). Social determinants of health inequalities. <i>The Lancet</i>, 365(9464), 1099-1104.
+          <br />
+          5: Price-Haywood, E. G., Burton, J., Fort, D., & Seoane, L. (2020). Hospitalization and mortality among black patients and white patients with Covid-19. <i>New England Journal of Medicine</i>.
+          </div>
         </div>
     </div>
 
