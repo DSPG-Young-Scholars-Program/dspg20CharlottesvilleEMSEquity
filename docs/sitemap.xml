@@ -3,47 +3,47 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>/findings/context/</loc>
+    <loc>/temp2/findings/context/</loc>
   </url>
   
   <url>
-    <loc>/findings/response-time-modeling/</loc>
+    <loc>/temp2/findings/response-time-modeling/</loc>
   </url>
   
   <url>
-    <loc>/findings/covid-indicator/</loc>
+    <loc>/temp2/findings/covid-indicator/</loc>
   </url>
   
   <url>
-    <loc>/findings/presentation_notes/</loc>
+    <loc>/temp2/findings/presentation_notes/</loc>
   </url>
   
   <url>
-    <loc>/methods/</loc>
+    <loc>/temp2/methods/</loc>
   </url>
   
   <url>
-    <loc>/overview/</loc>
+    <loc>/temp2/overview/</loc>
   </url>
   
   <url>
-    <loc>/team/</loc>
+    <loc>/temp2/team/</loc>
   </url>
   
   <url>
-    <loc>/categories/</loc>
+    <loc>/temp2/categories/</loc>
   </url>
   
   <url>
-    <loc>/findings/</loc>
+    <loc>/temp2/findings/</loc>
   </url>
   
   <url>
-    <loc>/tags/</loc>
+    <loc>/temp2/tags/</loc>
   </url>
   
   <url>
-    <loc>/</loc>
+    <loc>/temp2/</loc>
   </url>
   
 </urlset>
