@@ -1,4 +1,4 @@
-baseURL = "https://dads2busy.github.io/temp2/"
+baseURL = "https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/"
 languageCode = "en-us"
 title = "UVA Biocomplexity Institute"
 description = "A website for University of Virginia's 2020 Data Science for the Public Good Program."
@@ -7,7 +7,6 @@ disqusShortname = ""
 googleAnalytics = ""
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "public/"]
 publishDir = "docs"
-relativeurls = false
 
 [permalinks]
     post = "/:year/:month/:day/:slug/"
