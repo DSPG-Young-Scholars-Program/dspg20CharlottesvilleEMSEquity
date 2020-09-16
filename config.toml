@@ -1,4 +1,4 @@
-baseURL = "/"
+baseURL = "https://dads2busy.github.io/temp2/"
 languageCode = "en-us"
 title = "UVA Biocomplexity Institute"
 description = "A website for University of Virginia's 2020 Data Science for the Public Good Program."
