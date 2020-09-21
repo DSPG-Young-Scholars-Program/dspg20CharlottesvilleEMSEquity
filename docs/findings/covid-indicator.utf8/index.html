@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>COVID-19 Symptoms</title>
+        <link rel="canonical" href="/dspg20CharlottesvilleEMSEquity/findings/covid-indicator.utf8/">
+        <style>
+
+    html body {
+        font-family: 'Oxygen', sans-serif;
+        background-color: #FFFFFF;
+    }
+
+    :root {
+        --accent: #232D4B;
+        --border-width:  0 ;
+    }
+
+</style>
+
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Oxygen">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=VT323">
+
+
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/ascetic.min.css"> 
+
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.0/css/all.css" integrity="sha384-Mmxa0mLqhmOeaE8vgOSbKacftZcsNYDjQzuCOm6D02luYSzBG8vpaOykv9lFQ51Y" crossorigin="anonymous">
+
+
+<link rel="stylesheet" href="/dspg20CharlottesvilleEMSEquity/css/main.css">
+
+
+
+
+ 
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/bash.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/go.min.js"></script>
+    
+
+    <script>hljs.initHighlightingOnLoad();</script>
+
+
+
+
+
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+
+<link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+<script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+
+
+<script>$(document).on('click', function() { $('.collapse').collapse('hide'); })</script>
+
+
+<script>
+$(document).ready(function(){
+    
+  var input = $('#night-mode-toggle');
+  var container = $('#bigbody');
+  var stat = $('#button-status');
+  
+  container.toggleClass(localStorage.toggled);
+  stat.bootstrapToggle(localStorage.button).change();
+  
+  input.on('click', function() {
+      if (localStorage.toggled != "-nightmode" ) {
+          container.toggleClass("-nightmode", true );
+          localStorage.toggled = "-nightmode";
+          localStorage.button = "on";
+       } else {
+          container.toggleClass("-nightmode", false );
+          localStorage.toggled = "";
+          localStorage.button = "off"
+       }
+  })
+});
+</script>
+ <meta name="generator" content="Hugo 0.70.0" />
+        <link href="" rel="alternate" type="application/rss+xml" title="UVA Biocomplexity Institute" />
+        <link href="" rel="feed" type="application/rss+xml" title="UVA Biocomplexity Institute" />
+        
+
+    
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="mask-icon" href="/img/favicon/safari-pinned-tab.svg" color="#000000">
+    <link rel="shortcut icon" href="/img/favicon/favicon.ico">
+    <meta name="msapplication-TileColor" content="#2b5797">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="theme-color" content="#ffffff">
+
+    
+    
+    <meta property="og:title" content="COVID-19 Symptoms">
+    <meta property="og:type" content="article">
+      
+      <meta name="twitter:card" content="summary">
+      <meta name="twitter:image" content="/dspg20CharlottesvilleEMSEquity/favicon/uva-dspg-logo.jpg" >
+      
+    <meta property="description" content="Can we use EMS data to identify COVID-19 trends?">
+    <meta property="og:description" content="Can we use EMS data to identify COVID-19 trends?">
+    
+    <meta name="twitter:creator" content="">
+    <meta name="twitter:site" content="">
+
+    </head>
+
+    
+    
+    <script type="text/javascript" async
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    </script>
+    
+
+
+    <style>
+      .container {
+      	text-align: center;
+      	border: 0px solid green;
+      }
+      .container ul {
+      	border: 0px solid red;
+      	display: inline-block;
+      	margin: 10px 0;
+      	padding: 2px;
+      }
+      .container li {
+      	display: inline-block;
+      	font-weight: bold;
+      }
+      .container li a {
+      	display: inline-block;
+      	color: #FFF;
+      	padding: 5px;
+      	text-decoration: none;
+      }
+
+    </style>
+
+    <body id = "bigbody">
+        <nav class="navbar navbar-default navbar-fixed-top">
+            <div class="container" style="width:800px; margin: auto;">
+                <div class="collapse navbar-collapse container">
+                    
+                        <ul class="nav">
+                          <li class="header_img">
+                            <img class="img-responsive" src="/dspg20CharlottesvilleEMSEquity/img/AEMLogoGatesColors-11.png" alt="Whoopsies, this is my bad side!" style = "margin: 0 auto; height: 42px"></li>
+                            
+                                <li><a href="/dspg20CharlottesvilleEMSEquity/" style="background-color: transparent;">Overview</a></li>
+                            
+                                <li><a href="/dspg20CharlottesvilleEMSEquity/methods/" style="background-color: transparent;">Data &amp; Methods</a></li>
+                            
+                                <li><a href="/dspg20CharlottesvilleEMSEquity/findings/" style="background-color: transparent;">Findings</a></li>
+                            
+                                <li><a href="/dspg20CharlottesvilleEMSEquity/team/" style="background-color: transparent;">Team</a></li>
+                            
+                        </ul>
+                    
+                    
+                        <ul class="nav">
+                            
+                                <li class="navbar-icon"><a href="https://github.com/DSPG-Young-Scholars-Program/dspg20CharlottesvilleEMSEquity" style="background-color: transparent;"><i class="fab fa-github"></i></a></li>
+                            
+                                <li class="navbar-icon"><a href="mailto:kb7hp@virginia.edu" style="background-color: transparent;"><i class="far fa-envelope"></i></a></li>
+                            
+                            
+                        </ul>
+                    
+                </div>
+            </div>
+        </nav>
+
+
+
+
+<main>
+
+    <div class="item">
+
+    
+    
+    
+
+    
+      
+      
+    
+
+    <h4><a href="/dspg20CharlottesvilleEMSEquity/findings/covid-indicator.utf8/">COVID-19 Symptoms</a></h4>
+    
+    <h5>Can we use EMS data to identify COVID-19 trends?</h5>
+
+    
+    
+
+</div>
+
+
+    <br> <div class="text-justify"><h3 id="background">Background</h3>
+<p>While we were obviously interested in identifying patterns in COVID-19 symptoms across demographic groups, time, and space, this portion of the project was also quite exploratory, as it was unclear how difficult it might be to isolate potential COVID-19 cases in a large EMS dataset.</p>
+<p>According to the Johns Hopkins Center for Systems Science and Engineering, as of June 9, 2020 (the most current date in our data), there were 258 confirmed cases and 8 deaths in Albemarle County, and 141 confirmed cases and 3 deaths in Charlottesville City.<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup> While experts expect that actual case counts may be as much as 10 times higher than the confirmed case counts<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup> it remains unclear whether this figure is representative of the most severe cases, which are those most likely to appear in the EMS dataset. Given the uncertainty surrounding the total number of cases in the area as well as the proportion of cases that may be present in our dataset, it was unclear how effective an analysis of COVID-symptoms would be. Still, we were curious to see whether any trends would emerge, and in doing so hoped to learn about the potential for future use of EMS data in evaluating the state of the pandemic.</p>
+<!-- raw HTML omitted -->
+<h3 id="mapping">Mapping</h3>
+<p>The map below breaks down the incident rates of our COVID-19 indicator across Charlottesville&rsquo;s neighborhoods and Albemarle County&rsquo;s census tracts. In this case, an incident is considered COVID-like when it includes at least one COVID symptom (as described in the <a href="https://dspg-young-scholars-program.github.io/dspg20CharlottesvilleEMSEquity/methods/">Data &amp; Methods</a> page) tab.</p>
+<p>Few changes are visible from before and after March 15, 2020, though there appears to be a slightly higher prevalence of COVID-like symptoms downtown and in neighborhoods south of downtown. Interestingly, these neighborhoods also have a higher proportion of Black residents, which is consistent with widely-reported disparities in COVID-19 outcomes between Black and white populations.</p>
+<!-- raw HTML omitted -->
+<p>preserve02c2c28929f2b5e3</p>
+<!-- raw HTML omitted -->
+<p>A similar pattern emerges when we break down COVID-like symptoms by racial group. Again, there does not appear to be a noticeable difference in incidence of symptoms before and after the onset of the COVID-19 pandemic. There may be a slightly reduced incidence of symptoms for Latinx individuals, but this difference should be interpreted with caution. As we discuss below, this was one of the first indications that our indicator may not be extracting COVID-19 cases specifically enough for them to emerge over and above the baseline health differences between these populations. Any differences in COVID-19 itself is likely masked by the underlying health characteristics of these populations.</p>
+<!-- raw HTML omitted -->
+<p><!-- raw HTML omitted --></p>
+<!-- raw HTML omitted -->
+<p>The following table summarizes how frequently each symptom that composes the COVID-19 indicator occurred. Shortness of breath and hypoxemia were more commonly represented in the dataset than many of the other symptoms. The racial groups with the maximum incidence for a particular symptom are highlighted in red (though these should be interpreted in the context of the overall patient count for each racial group). Unsurprisingly, variation exists in the symptoms expressed in different populations. While these numbers likely reflect the general health characteristics of these populations more so than COVID-19 rates themselves, this does raise the question of whether COVID-19 symptoms may be expressed differently across racial groups. Research on this possibility could be important in a more refined approach to identifying COVID-19 cases in EMS data.</p>
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<h3 id="modeling">Modeling</h3>
+<p>While our initial exploration did not seem to indicate much variation in COVID-like symptoms, we still developed simple logistic regression models to confirm or refute these suspicions.</p>
+<p>\begin{align*}
+\log(\frac{\pi}{1 - \pi}) = \alpha &amp;+ \boldsymbol{\beta^T_1}(\mbox{gender}) + \boldsymbol{\beta^T_2}({\mbox{race}}) + \boldsymbol{\beta^T_3}(\mbox{age range}) + \boldsymbol{\beta^T_4}(\mbox{COVID era}) \<br>
+&amp;+ (\mbox{COVID era}) \times (\boldsymbol{\beta^T_5}(\mbox{gender}) + \boldsymbol{\beta^T_6}({\mbox{race}}) + \boldsymbol{\beta^T_7}(\mbox{age range}))
+\end{align*}</p>
+<p>where $\pi$ represents the probability of a patient being classified as COVID-like based on our COVID indicator (which incorporates the presence of various symptoms). We initially included an interaction term between COVID era and the rest of our variables to determine whether the changes in COVID symptoms had varied across the levels of these variables. We ran a model of this general form with three different specifications of our outcome variable. In the first specification, we classified patients as COVID-like if they had at least 1 COVID-like symptom. In the second, we used 2 COVID-like symptoms as the cutoff, and in the third we used 3 COVID-like symptoms as the cutoff. Differences in results at varying levels of &ldquo;strictness&rdquo; in classifying COVID-like cases would potentially allow us to home in on an appropriate cutoff when classifying COVID cases in this dataset.</p>
+<p>Unfortunately, as was likely given our visual exploration of the data, none of these models produced any notable findings. In retrospect, this result seems entirely intuitive. Between the uncertainty surrounding the actual prevalence of COVID cases in our dataset (described above) and our inclusive approach in classifying COVID-like symptoms, we likely have incorporated a lot of noise into our COVID indicator variable. That is, our indicator likely captures many of the COVID cases that do exist in the dataset, but is not specific enough, and so also captures so many non-COVID cases that we are unable to discern subtle trends in COVID symptoms.</p>
+<h3 id="future-directions">Future Directions</h3>
+<p>While disappointing, this outcome does provide important ramifications for similar research going forward.</p>
+<p>First, for EMS data to be a valuable source of information in assessing the course of the COVID-19 pandemic, a more thorough effort to classify COVID symptoms accurately is required. Given the messy nature of EMS data, classifying symptoms effectively is a challenge. However, a more complex approach could certainly be implemented. Improvements on our methodology may be:</p>
+<ul>
+<li>
+<p>Link EMS data with data on patient outcomes</p>
+<ul>
+<li>Being able to link the symptom data reported by EMS with COVID-19 results could vastly improve our ability to determine which symptoms in the EMS dataset are actually important in determining a COVID-19 diagnosis.</li>
+</ul>
+</li>
+<li>
+<p>Implement more complex logic when classifying symptoms</p>
+<ul>
+<li>For instance, a certain symptom may be a strong indicator of COVID, but only in the presence of another symptom as well</li>
+</ul>
+</li>
+<li>
+<p>Include a weighting scheme for more important symptoms</p>
+<ul>
+<li>This could reduce noise by highlighting those symptoms that are known to be particularly indicative of COVID</li>
+</ul>
+</li>
+<li>
+<p>Develop an indicator using a dataset from an area with a greater proportion of COVID cases</p>
+<ul>
+<li>More cases may make it easier to detect cases in a dataset, and allow for a refinement of the symptoms included. This more specific scheme could then be implemented in other areas with fewer case counts.</li>
+</ul>
+</li>
+<li>
+<p>Link multiple EMS datasets</p>
+<ul>
+<li>This could improve the sensitivity of our indicator, but perhaps more importantly would allow for an assessment of the standardization across EMS data platforms. In the future, a large-scale network of EMS data could be a valuable tool in identifying emerging infectious diseases</li>
+</ul>
+</li>
+</ul>
+<p>It will also be valuable to revisit this topic continuously as the medical understanding of COVID-19 evolves. Symptoms that were once thought to be clear identifiers of the virus may become less important, and vice versa. The null results in our preliminary exploration in this area should not be interpreted as a referendum on the value of EMS data in understanding COVID-19, but as a guide to the considerations and improvements that will need to be made to more effectively use EMS data as a tool to fight emerging infectious diseases in the future.</p>
+<section class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1" role="doc-endnote">
+<p><a href="https://coronavirus.jhu.edu/us-map">https://coronavirus.jhu.edu/us-map</a> <a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:2" role="doc-endnote">
+<p>Mandavilli, A. (2020, June 27). Actual Coronavirus Infections Vastly Undercounted, C.D.C. Data Shows. <em>The New York Times</em>. Retrieved from <a href="https://www.nytimes.com/2020/06/27/health/coronavirus-antibodies-asymptomatic.html">https://www.nytimes.com/2020/06/27/health/coronavirus-antibodies-asymptomatic.html</a> <a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</section>
+</div>
+
+    
+    
+
+    
+
+    
+
+    
+
+    
+
+</main>
+
+        <footer id = "bigfooter">
+            <div style = "padding:15px;">
+                <p>Powered by <a href="https://gohugo.io">Hugo</a>. Themed by <a href="https://github.com/nathancday/min_night">min_night_dspg</a>. <a href="https://biocomplexity.virginia.edu/social-decision-analytics">Website by University of Virginia Biocomplexity Institute.</a>
+                </p>
+                <a rel="license" href="https://creativecommons.org/licenses/by/4.0/"
+                title="Creative Commons Attribution 4.0 International license">
+                <i class="fab fa-creative-commons" aria-hidden="true"></i> Attribution 4.0 International license
+                </a>
+            </div>
+        </footer>
+        
+        <script async src="https://www.googletagmanager.com/gtag/js?id="></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments)};
+          gtag('js', new Date());
+          gtag('config', '');
+        </script>
+        
+        <script>
+           var referer = document.referrer;
+           var n = referer.includes('economic');
+           var x = document.getElementsByClassName('header_img');
+           if (n != true) {
+             x[0].innerHTML = '<div><a href="https://datascienceforthepublicgood.org/events/symposium2020/poster-sessions">' +
+                              '<img src="\/dspg20CharlottesvilleEMSEquity\/img/DSPG_white-01.png", alt="DSPG 2020 Symposium Proceedings", style="height:42px; margin-top:5px;">' +
+                              '</a></div>';
+           } else {
+             x[0].innerHTML = '<div><a href="https://datascienceforthepublicgood.org/economic-mobility/community-insights">' +
+                              '<img src="./img/AEMLogoGatesColors-11.png", alt="Gates Economic Mobility Case Studies", style="height:42px; margin-top:5px;">' +
+                              '</a></div>';
+           }
+    </script>
+       
+    </body>
+
+</html>
+

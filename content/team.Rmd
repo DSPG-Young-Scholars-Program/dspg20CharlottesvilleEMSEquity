@@ -56,7 +56,7 @@ The Charlottesville Fire Department, the Albemarle County Department of Fire and
 
 <div class="row">
 <div class="column">
-![Finn Roberts](/findings/head_shots/UVA.fellow.Finn_Roberts.jpg "Finn Roberts"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}  
+![Finn Roberts](/dspg20CharlottesvilleEMSEquity/findings/head_shots/UVA.fellow.Finn_Roberts.jpg "Finn Roberts"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}  
 [Finn Roberts](https://github.com/robe2037), Fellow
 
 University of Minnesota  
@@ -64,7 +64,7 @@ University of Minnesota
 Biostatistics, Geographic Information Systems
 </div>
 <div class="column">
-![Chase Dawson](/findings/head_shots/UVA.intern.Chase.Dawson.jpg "Chase Dawson"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}  
+![Chase Dawson](/dspg20CharlottesvilleEMSEquity/findings/head_shots/UVA.intern.Chase.Dawson.jpg "Chase Dawson"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}  
 [Chase Dawson](https://github.com/chasedawson), Intern
 
 University of Virginia   
@@ -72,7 +72,7 @@ University of Virginia
 Computer Science
 </div>
 <div class="column">
-![Ellen Graham](/findings/head_shots/UVA.intern.Ellen_Graham.jpg "Ellen Graham"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
+![Ellen Graham](/dspg20CharlottesvilleEMSEquity/findings/head_shots/UVA.intern.Ellen_Graham.jpg "Ellen Graham"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
 [Ellen Graham](https://github.com/grahamammal), Intern
 
 Macalester College  
@@ -80,7 +80,7 @@ Macalester College
 Applied Mathematics and Statistics, Computer Science 
 </div>
 <div class="column">
-![Saimun Habib](/findings/head_shots/UVA.intern.Saimun.Habib.jpg "Saimun Habib"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
+![Saimun Habib](/dspg20CharlottesvilleEMSEquity/findings/head_shots/UVA.intern.Saimun.Habib.jpg "Saimun Habib"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
 [Saimun Habib](https://github.com/saibib), Intern  
 
 Harvard College  
@@ -104,19 +104,19 @@ Kathryn Linehan, Research Scientist (insert link)
 ### Project Sponsors/Stakeholders {style=text-align:center}
 
 <div class="column_sponsor">
-![Emily Peliccia](/findings/head_shots/Emily_Peliccia.jpg "Emily Peliccia"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
+![Emily Peliccia](/dspg20CharlottesvilleEMSEquity/findings/head_shots/Emily_Peliccia.jpg "Emily Peliccia"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
 
 Acting Fire Chief, Charlottesville Fire Department
 </div>
 
 <div class="column_sponsor">
-![Dan Eggleston](/findings/head_shots/Dan_Eggleston.jpg "Dan Eggleston"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
+![Dan Eggleston](/dspg20CharlottesvilleEMSEquity/findings/head_shots/Dan_Eggleston.jpg "Dan Eggleston"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
 
 Fire Rescue Chief, Albemarle County
 </div>
 
 <div class="column_sponsor">
-![Michael Williams](/findings/head_shots/Michael_Williams.jpeg "Michael Williams"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
+![Michael Williams](/dspg20CharlottesvilleEMSEquity/findings/head_shots/Michael_Williams.jpeg "Michael Williams"){style="width:60%; display: block; margin-left: auto; margin-right: auto;"}    
 
 Associate Professor of Surgery, University of Virginia Medical School
 </div>

@@ -34,6 +34,7 @@ source(here::here("src", "Profiling", "create_covid_indicator.R"))
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 options(mapbox.accessToken = Sys.getenv("MAPBOX_TOKEN"))
+
 ```
 
 ```{r, include=FALSE}
