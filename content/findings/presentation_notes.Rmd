@@ -28,6 +28,7 @@ library(dplyr)
 library(ggplot2)
 library(sf)
 library(broom)
+library(broom.mixed)
 library(purrr)
 library(glue)
 library(stringr)
@@ -207,6 +208,7 @@ category = case_when(
   grepl("^V|^W|^X|^Y", firt) ~ "External Causes of Morbidity",
   grepl("^Z", firt) ~ "Factors Influencing Healthcare Access"
 )
+
 
  
 
@@ -427,7 +429,7 @@ bayes_model_coefs_trans$neighbor_model_bayes_yes_interact %>%
   select(term_pretty, everything()) %>% 
   inner_join(prepared_data_sp, ., by = "NAME") %>% 
   group_by(NAME) %>% 
-  slice_head(1) %>% 
+  slice_head(n = 1) %>% 
   ungroup() %>% 
   leaflet(width = "100%") %>% 
   addMapboxGL(style = "mapbox://styles/mapbox/light-v9") %>%
