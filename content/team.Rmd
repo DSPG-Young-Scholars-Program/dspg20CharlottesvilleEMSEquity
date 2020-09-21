@@ -32,6 +32,7 @@ knitr::opts_chunk$set(echo = TRUE)
 }
 ```
 
+
 ### UVA Data Science for the Public Good Program {style=text-align:center}
 
 <div class = "justify">
